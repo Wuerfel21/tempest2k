@@ -1,0 +1,38 @@
+.text
+
+.globl INIT_SOUND	
+.globl NT_VBL		
+.globl PT_MOD_INIT	
+.globl START_MOD	
+.globl STOP_MOD	
+.globl PLAYFX2		
+.globl CHANGE_VOLUME
+.globl SET_VOLUME	
+.globl NOFADE		
+.globl FADEUP		
+.globl FADEDOWN	
+.globl ENABLE_FX	
+.globl DISABLE_FX	
+.globl CHANGEFX	
+.globl HALT_DSP	
+.globl RESUME_DSP	
+.globl intmask		
+
+INIT_SOUND:
+NT_VBL:
+PT_MOD_INIT:
+START_MOD:
+STOP_MOD:
+PLAYFX2:
+CHANGE_VOLUME:
+SET_VOLUME:
+NOFADE:
+FADEUP:
+FADEDOWN:
+ENABLE_FX:
+DISABLE_FX:
+CHANGEFX:
+HALT_DSP:
+RESUME_DSP:
+intmask:
+            rts

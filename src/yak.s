@@ -10,6 +10,25 @@
 ;	.globl ENABLETIMER
 ;	.globl DISABLETIMER
 
+.if ^^defined PROPELLER
+	.extern INIT_SOUND	
+	.extern NT_VBL		
+	.extern PT_MOD_INIT	
+	.extern START_MOD	
+	.extern STOP_MOD	
+	.extern PLAYFX2		
+	.extern CHANGE_VOLUME
+	.extern SET_VOLUME	
+	.extern NOFADE		
+	.extern FADEUP		
+	.extern FADEDOWN	
+	.extern ENABLE_FX	
+	.extern DISABLE_FX	
+	.extern CHANGEFX	
+	.extern HALT_DSP	
+	.extern RESUME_DSP	
+	.extern intmask		
+.else
 	INIT_SOUND	EQU	$4040	;jump table for the SFX/Tunes module
 	NT_VBL		EQU 	$4046
 	PT_MOD_INIT	EQU	$404c
@@ -27,6 +46,7 @@
 	HALT_DSP	EQU	$408e
 	RESUME_DSP	EQU	$4094
 	intmask		EQU	$40a0
+.endif
 
 	.extern pal		;set =1 by VIDINIT if pal is detected
 
@@ -51,9 +71,11 @@
 
 	screensize EQU $34800		;was $2d000 for old 240-pixel-high screens
 	TIMERINTBIT equ 3
-	samtab	EQU $9ac800
-	modbase	EQU $8d6800
-	tune1	EQU $8e6900
+	;samtab	EQU $9ac800
+	.extern samtab
+;	modbase	EQU $8d6800
+	.extern modbase
+;	tune1	EQU $8e6900
 ;	eeprom EQU $980000 
 	allbutts EQU $22002000
 	allkeys EQU $000f00ff
@@ -77,15 +99,21 @@
 	height EQU 240
 	centx EQU width/2
 	centy EQU height/2
-	pic EQU $820000
-	pic2 EQU pic+$1f400
-	pic3 EQU pic2+$1f400
-	pic4 EQU pic3+$25800
-	pic5 EQU pic4+(640*128)
-	pic6 EQU pic5+(640*200)
+	;pic EQU $820000
+	;pic2 EQU pic+$1f400
+	;pic3 EQU pic2+$1f400
+	;pic4 EQU pic3+$25800
+	;pic5 EQU pic4+(640*128)
+	;pic6 EQU pic5+(640*200)
+	.extern pic
+	.extern pic2
+	.extern pic3
+	.extern pic4
+	.extern pic5
+	.extern pic6
+	.extern digits
 	vpang	equ G_RAM+$f00	; viewpoint angles
 
-	digits EQU pic2+92800	;start address of zero digit
 	p_sines equ $30000
 	field1 equ $31000	;space for the starfield
 	gpu_sem EQU $30100
@@ -116,6 +144,18 @@
 
 
 .text
+
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
 
 	move.l #$70007,G_END	;NEW mode
 	move.l #$70007,D_END	;NEW mode

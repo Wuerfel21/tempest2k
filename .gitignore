@@ -3,4 +3,7 @@
 *.DTA
 *.TX
 *.rom
-src/bin/
+*.bin
+*.lst
+bin*/
+stuff/
