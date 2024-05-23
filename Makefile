@@ -16,19 +16,21 @@ t2000.abs:
 	./rmac/rmac -l*yak.lst -fb -isrc src/yak.s -o bin/yak.cof
 	./rmac/rmac -l*yakgpu.lst -fb -isrc src/yakgpu.s -o bin/yakgpu.cof
 	./rmac/rmac -l*vidinit.lst -fb -isrc src/vidinit.s -o bin/vidinit.cof
+	./rmac/rmac -l*eeprim.lst -fb -isrc src/eeprim.s -o bin/eeprim.cof
 	./rmac/rmac -fb -Isrc src/images_sounds.s -o bin/images_sounds.o
-	./rln/rln -m -v -e -a 802000 4000 efa8 bin/yak.cof bin/vidinit.cof bin/yakgpu.cof bin/images_sounds.o -o t2000.abs
+	./rln/rln -m -v -e -a 802000 4000 efa8 bin/yak.cof bin/eeprim.cof bin/vidinit.cof bin/yakgpu.cof bin/images_sounds.o -o t2000.abs
 #	echo "515c0e0fcfe9a96d24c858968c3bad72  t2000.abs" | md5sum -c
 
-t2000p2.bin:
+t2000p2.dat:
 	$(shell mkdir -p bin_p2)
-	./rmac/rmac -fb -isrc src/yak.s -o bin_p2/yak.cof
-	./rmac/rmac -fb -isrc src/stubgpu.s -o bin_p2/stubgpu.cof
+	./rmac/rmac -l*yak.lst -fb -isrc -DPROPELLER src/yak.s -o bin_p2/yak.cof
+	./rmac/rmac -fb -isrc src/vidinit_stub.s -o bin_p2/vidinit_stub.cof
 	./rmac/rmac -fb -isrc src/stubsound.s -o bin_p2/stubsound.cof
-	./rmac/rmac -fb -isrc src/vidinit.s -o bin_p2/vidinit.cof
 	./rmac/rmac -fb -Isrc src/images_sounds.s -o bin_p2/images_sounds.o
-	./rln/rln -v -n -a 802000 4000 efa8 bin_p2/yak.cof bin_p2/vidinit.cof bin_p2/stubgpu.cof bin_p2/stubsound.cof bin_p2/images_sounds.o -o t2000p2.bin
-
+	./rln/rln -v -n -a 80000000 2000 r bin_p2/yak.cof bin_p2/vidinit_stub.cof bin_p2/stubsound.cof bin_p2/images_sounds.o -o t2000p2.dat
+	
+t2000p2.binary:
+	./spin2cpp/build/flexspin -2 -H 0x50000 --compress src/t2000p2.spin2 -l -o t2000p2.binary
 
 
 cartridge: t2000.abs
@@ -38,6 +40,9 @@ cartridge: t2000.abs
 
 run: cartridge
 	wine ./utils/t2k.exe t2k.rom
+
+runp2: t2000p2.binary t2000p2.dat
+	loadp2 t2000p2.binary -9 . -t -b 2000000
 
 clean:
 	-rm bin/*.o
@@ -49,5 +54,7 @@ clean:
 	-rm T2000.TX
 	-rm T2000.DTA
 	-rm t2k.rom
-	-rm t2000p2.bin
+	-rm t2000p2.dat
+	-rm t2000p2.binary
+	-rm t2000p2.p2asm
 	-rm *.lst

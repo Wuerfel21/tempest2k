@@ -1,0 +1,17 @@
+{
+    "[spin2]": {
+        "editor.useTabStops": false,
+        "editor.detectIndentation": false,
+        "editor.tabSize": 2,
+    },
+    "[m68k]": {
+        "editor.tabSize": 8
+    },
+    "[plaintext]": {
+        "editor.tabSize": 8
+    },
+    "files.associations": {
+        "*.s": "m68k",
+        "*.inc": "m68k"
+    }
+}

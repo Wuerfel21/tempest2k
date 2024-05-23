@@ -4,3 +4,6 @@
 [submodule "rmac"]
 	path = rmac
 	url = https://github.com/mwenge/rmac.git
+[submodule "spin2cpp"]
+	path = spin2cpp
+	url = https://github.com/totalspectrum/spin2cpp

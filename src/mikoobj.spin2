@@ -1,0 +1,349 @@
+OBJ {{
+      Pseudo Object Processor
+      (screen composite + CRY->RGB conversion)
+}}
+CON
+
+#include "p2defs.inc"
+
+MAX_LINE_OBJ = 3
+
+PUB start(exmem,scanbuffer_ptr,lock)
+scanbuffer_base := scanbuffer_ptr
+exmem_mailbox := exmem
+coginit(HUBEXEC_NEW,@init,0)
+
+DAT
+              orgh
+init          
+              loc pa,#@cogcode
+              setq #495
+              rdlong 0-0,pa
+
+              loc pa,#@lutcode
+              setq2 #511
+              rdlong 0-0,pa
+
+              cogid pa
+              mul pa,#12
+              add exmem_mailbox,pa
+
+              loc ptra,#\$2004
+              mov tmp1,##$00020000
+              'mov tmp1,##$80480000
+              'mov tmp1,##$800156CC
+              'mov tmp2,##0 + 320<<16
+              mov tmp2,##0 + 384<<16
+              mov tmp3,##0 + 240<<16
+              movbyts tmp1,#%%0123
+              movbyts tmp2,#%%2301
+              movbyts tmp3,#%%2301
+              wrlong #1,ptra++
+              wrlong tmp1,ptra++
+              wrlong tmp2,ptra++
+              wrlong tmp3,ptra++
+              wrlong #0,ptra++
+
+              loc ptra,#\$2004
+              movbyts ptra,#%%0123
+              wrlong ptra,##OBJLIST
+
+
+              'wrword ##$4488,##BG
+              jmp #\lutcode
+
+              org
+cogcode
+crytab        
+long  $0000FFFF, $0011FFFF, $0022FFFF, $0033FFFF, $0044FFFF, $0055FFFF, $0066FFFF, $0077FFFF, $0088FFFF, $0099FFFF, $00AAFFFF, $00BBFFFF, $00CCFFFF, $00DDFFFF, $00EEFFFF, $00FFFFFF
+long  $2200FFFF, $2213FFFF, $2226FFFF, $2239FFFF, $224DFFFF, $2260FFFF, $2273FFFF, $2286FFFF, $229AFFFF, $22ADFFFF, $22C0FFFF, $22D3FFFF, $22E7FFFF, $22FFFFFF, $13FFF0FF, $00FFDDFF
+long  $4400FFFF, $4415FFFF, $442BFFFF, $4440FFFF, $4456FFFF, $446BFFFF, $4481FFFF, $4496FFFF, $44ACFFFF, $44C1FFFF, $44D7FFFF, $44ECFFFF, $40FFFCFF, $2BFFE6FF, $15FFD0FF, $00FFBBFF
+long  $6600FFFF, $6617FFFF, $662FFFFF, $6647FFFF, $665FFFFF, $6677FFFF, $668EFFFF, $66A6FFFF, $66BEFFFF, $66D6FFFF, $66EEFFFF, $5FFFF8FF, $47FFE0FF, $2FFFC8FF, $17FFB1FF, $00FF99FF
+long  $8700FFFF, $871AFFFF, $8734FFFF, $874EFFFF, $8768FFFF, $8782FFFF, $879CFFFF, $87B6FFFF, $87D0FFFF, $87EAFFFF, $82FFF9FF, $68FFDFFF, $4EFFC5FF, $34FFABFF, $1AFF91FF, $00FF77FF
+long  $A900FFFF, $A91CFFFF, $A938FFFF, $A955FFFF, $A971FFFF, $A98DFFFF, $A9AAFFFF, $A9C6FFFF, $A9E2FFFF, $AAFFFFFF, $8DFFE3FF, $71FFC6FF, $55FFAAFF, $38FF8DFF, $1CFF71FF, $00FF55FF
+long  $CB00FFFF, $CB1EFFFF, $CB3DFFFF, $CB5BFFFF, $CB7AFFFF, $CB99FFFF, $CBB7FFFF, $CBD6FFFF, $CBF4FFFF, $B7FFEBFF, $99FFCCFF, $7AFFADFF, $5BFF8FFF, $3DFF70FF, $1EFF51FF, $00FF33FF
+long  $ED00FFFF, $ED20FFFF, $ED41FFFF, $ED62FFFF, $ED83FFFF, $EDA4FFFF, $EDC5FFFF, $EDE6FFFF, $E6FFF7FF, $C5FFD6FF, $A4FFB5FF, $83FF94FF, $62FF73FF, $41FF52FF, $20FF31FF, $00FF11FF
+long  $FF00EDFF, $FF20EDFF, $FF41EDFF, $FF62EDFF, $FF83EDFF, $FFA4EDFF, $FFC5EDFF, $FFE6EDFF, $F7FFE6FF, $D6FFC5FF, $B5FFA4FF, $94FF83FF, $73FF62FF, $52FF41FF, $31FF20FF, $11FF00FF
+long  $FF00CBFF, $FF1ECBFF, $FF3DCBFF, $FF5BCBFF, $FF7ACBFF, $FF99CBFF, $FFB7CBFF, $FFD6CBFF, $FFF4CBFF, $EBFFB7FF, $CCFF99FF, $ADFF7AFF, $8FFF5BFF, $70FF3DFF, $51FF1EFF, $33FF00FF
+long  $FF00A9FF, $FF1CA9FF, $FF38A9FF, $FF55A9FF, $FF71A9FF, $FF8DA9FF, $FFAAA9FF, $FFC6A9FF, $FFE2A9FF, $FFFFAAFF, $E3FF8DFF, $C6FF71FF, $AAFF55FF, $8DFF38FF, $71FF1CFF, $55FF00FF
+long  $FF0087FF, $FF1A87FF, $FF3487FF, $FF4E87FF, $FF6887FF, $FF8287FF, $FF9C87FF, $FFB687FF, $FFD087FF, $FFEA87FF, $F9FF82FF, $DFFF68FF, $C5FF4EFF, $ABFF34FF, $91FF1AFF, $77FF00FF
+long  $FF0066FF, $FF1766FF, $FF2F66FF, $FF4766FF, $FF5F66FF, $FF7766FF, $FF8E66FF, $FFA666FF, $FFBE66FF, $FFD666FF, $FFEE66FF, $F8FF5FFF, $E0FF47FF, $C8FF2FFF, $B1FF17FF, $99FF00FF
+long  $FF0044FF, $FF1544FF, $FF2B44FF, $FF4044FF, $FF5644FF, $FF6B44FF, $FF8144FF, $FF9644FF, $FFAC44FF, $FFC144FF, $FFD744FF, $FFEC44FF, $FCFF40FF, $E6FF2BFF, $D0FF15FF, $BBFF00FF
+long  $FF0022FF, $FF1322FF, $FF2622FF, $FF3922FF, $FF4D22FF, $FF6022FF, $FF7322FF, $FF8622FF, $FF9A22FF, $FFAD22FF, $FFC022FF, $FFD322FF, $FFE722FF, $FFFF22FF, $F0FF13FF, $DDFF00FF
+long  $FF0000FF, $FF1100FF, $FF2200FF, $FF3300FF, $FF4400FF, $FF5500FF, $FF6600FF, $FF7700FF, $FF8800FF, $FF9900FF, $FFAA00FF, $FFBB00FF, $FFCC00FF, $FFDD00FF, $FFEE00FF, $FFFF00FF
+
+cry2rgb
+              rep @.loop,#384/2
+
+              alts pptr,crybuf_inc
+              mov tmp1,0-0
+
+              setbyte .sm1,tmp1,#0 ' self modify chroma 1
+              getbyte pa,tmp1,#2
+              setbyte .sm2,pa,#0 ' self modify chroma 2
+
+              movbyts tmp1,#%%1113
+.sm1          mulpix tmp1,0-0 ' bottom byte stays as-is because table has $FF there
+              wflong tmp1
+
+              movbyts tmp1,#%%0000 ' recover luma for odd pixel
+.sm2          mulpix tmp1,0-0
+              wflong tmp1
+.loop
+              {
+              mov pa,curline
+              shl pa,#2
+              add pa,ptra
+              wrlong ##$FFFF,pa
+              }
+
+              jmp #lineloop   
+
+scanbuffer_base long 0
+vblank_lock   long 0
+exmem_mailbox long 0
+crytab_ptr    long @@@crytab
+crybuf_inc    long crybuffer + (1<<9)
+fbbuffers     long @@@extfbbuffer
+cry320        long 320*2
+cry384        long 384*2
+yellow        long $FFFF
+
+curline       res 1
+
+tmp1          res 1
+tmp2          res 1
+tmp3          res 1
+tmp4          res 1
+pptr          res 1
+
+slotleft       res 1
+exrqcount        res 1
+objlist_tmp     res 1
+
+objbuf        res 4
+
+exmem_cmd     res 1
+exmem_target  res 1
+exmem_len     res 1
+exmem_link    res 1
+
+fb1base       res 1
+fb2base       res 1
+
+crybuffer     res 384/2
+
+              fit 502
+
+              org 512
+lutcode
+
+lineloop
+              rdlong pa,#SCANLINE_CTR
+              'debug(sdec(pa))
+              cmp pa,curline wz
+        if_z  jmp #lineloop
+              mov curline,pa
+              cmps curline,#240 wcz
+        if_ae jmp #vblank
+              cmps curline,##-1 wcz
+        if_b  jmp #lineloop
+
+              ' Start writing into request list
+              testbn curline,#0 wc
+        if_c  loc ptra,#rqlist_buffer_odd
+        if_nc loc ptra,#rqlist_buffer_even
+              mov exmem_link,exmem_mailbox
+              add exmem_link,#4
+              mov exrqcount,#0
+
+              rdlong objlist_tmp,##OBJLIST wz
+        if_z  jmp #objfetchdone
+              movbyts objlist_tmp,#%%0123
+
+              ' Object format is like this
+              ' long format (?) zero is sentinel
+              ' long source address
+              ' word xpos,width
+              ' word ypos,height
+
+              ' First iteration over objects to generate PSRAM request list
+              mov ptrb,objlist_tmp
+              mov slotleft,#MAX_LINE_OBJ
+objfetchloop
+              setq #4-1
+              rdlong objbuf,ptrb++
+              tjz objbuf+0,#objfetchdone
+
+              movbyts objbuf+0,#%%0123
+              movbyts objbuf+1,#%%0123
+              movbyts objbuf+2,#%%2301
+              movbyts objbuf+3,#%%2301
+
+              getword tmp3,objbuf+3,#0 ' ypos
+              signx tmp3,#15
+              subr tmp3,#1
+              add tmp3,curline
+              getword tmp1,objbuf+3,#1 ' height
+              cmp tmp3,tmp1 wc
+        if_ae jmp #objfetchloop ' skip object
+              
+              ' Try buffering up the next scanline for external obj
+              tjns objbuf+1,#.notext
+
+              getword exmem_len,objbuf+2,#1 ' width
+              shl exmem_len,#1
+
+              mov exmem_cmd,tmp3
+              mul exmem_cmd,exmem_len
+              add exmem_cmd,objbuf+1 ' base address
+              setnib exmem_cmd,#$B,#7
+
+
+              testbn curline,#0 wc
+              mov exmem_target,slotleft
+              subr exmem_target,#MAX_LINE_OBJ
+              rcl exmem_target,#1
+              mul exmem_target,cry384
+              add exmem_target,fbbuffers
+
+              fle exmem_len,cry384
+
+              wrlong ptra,exmem_link
+              setq #2
+              wrlong exmem_cmd,ptra++
+              mov exmem_link,ptra
+              add ptra,#4
+              add exrqcount,#1
+.notext
+              djnz slotleft,#objfetchloop
+objfetchdone
+
+
+              tjz exrqcount,#.noextrq
+              wrlong #0,exmem_link ' terminate list
+              wrlong ##-1,exmem_mailbox ' trigger list
+
+              tjs curline,#lineloop
+.noextrq
+
+
+              ' Fill BG color into crybuffer
+              rdword pa,##BG
+              mov pptr,#0
+              rep #2,#384/2
+              altr pptr,crybuf_inc
+              movbyts pa,#%%1010
+
+              tjz objlist_tmp,#objdrawdone
+
+              ' Second iteration over objects to actually draw
+              mov ptrb,objlist_tmp
+              mov slotleft,#MAX_LINE_OBJ
+objdrawloop
+              setq #4-1
+              rdlong objbuf,ptrb++
+              tjz objbuf+0,#objdrawdone
+
+              movbyts objbuf+0,#%%0123
+              movbyts objbuf+1,#%%0123
+              movbyts objbuf+2,#%%2301
+              movbyts objbuf+3,#%%2301
+
+
+              getword tmp3,objbuf+3,#0 ' ypos
+              signx tmp3,#15
+              subr tmp3,#0
+              add tmp3,curline
+              getword tmp1,objbuf+3,#1 ' height
+              cmp tmp3,tmp1 wc
+        if_ae jmp #objdrawloop ' skip object
+
+              {
+              mov pptr,slotleft
+              subr pptr,#MAX_LINE_OBJ
+              mul pptr,#4
+              add pptr,#33
+              altsw pptr,crybuf_inc
+              setword yellow
+              }
+
+              tjns objbuf+1,#.notext   
+              ' address for external line buffer      
+              testb curline,#0 wc
+              mov tmp2,slotleft
+              subr tmp2,#MAX_LINE_OBJ
+              rcl tmp2,#1
+              mul tmp2,cry384
+              add tmp2,fbbuffers
+              jmp #.notlocal
+.notext
+              ' address for normal object
+              getword tmp2,objbuf+2,#1 ' width
+              mul tmp2,tmp3
+              shl tmp2,#1
+              add tmp2,objbuf+1 ' add base address
+.notlocal
+              getword tmp4,objbuf+2,#1 ' width
+              getword pptr,objbuf+2,#0 ' xpos
+              signx pptr,#15 wc
+        if_c  add tmp4,pptr
+        if_c  sub tmp2,pptr
+        if_c  sub tmp2,pptr
+        if_c  mov pptr,#0
+              mov tmp1,pptr
+              sub tmp1,#384 wc
+        if_nc sub tmp4,tmp1
+
+              cmps tmp4,#0 wcz
+        if_be jmp #.objoffscreen
+              ' do actual drawing
+              rdfast #0,tmp2
+              rep @.tlp,tmp4
+              rfword pb wz
+              altsw pptr,crybuf_inc
+        if_nz setword pb
+
+              'altsw pptr,crybuf_inc
+              'setword yellow
+.tlp
+.objoffscreen
+
+
+              djnz slotleft,#objdrawloop
+objdrawdone
+              {
+              mov pptr,curline
+              add pptr,#32
+              altsw pptr,crybuf_inc
+              setword yellow
+              }
+
+
+              testb curline,#0 wc
+              mov ptra,scanbuffer_base
+        if_c  add ptra,##384*4
+
+              wrfast #0,ptra
+              mov pptr,#0
+
+              jmp #cry2rgb
+
+
+              fit 1024
+
+vblank
+              cmp curline,#240 wz
+        if_nz jmp #lineloop
+              locktry vblank_lock
+              lockrel vblank_lock
+              'rdword pa,##BG
+              'add pa,#257
+              'wrword pa,##BG
+              jmp #lineloop
+
+              orgh
+extfbbuffer   word 0[384*2*MAX_LINE_OBJ]
+
+rqlist_buffer_even long 0[MAX_LINE_OBJ*2]
+rqlist_buffer_odd long 0[MAX_LINE_OBJ*2]

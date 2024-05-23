@@ -1,0 +1,2508 @@
+OBJ {{
+          MotoKore 68000 emulation
+   Adapted for Tempest 2000 virtualization
+}}
+CON
+
+#include "p2defs.inc"
+
+PUB start(mailboxes,irqlock) : r
+  '' Stub for now
+  mk_exmem_mailbox := mailboxes
+  r := coginit(HUBEXEC_NEW,@mk_init,$10+irqlock)
+  
+
+CON ' MotoKore 68000 constants
+
+#0,MK_CARRY_BIT,MK_OVER_BIT,MK_ZERO_BIT,MK_NEG_BIT,MK_EXT_BIT
+
+MK_SUPER_BIT = 13
+MK_TRACE_BIT = 15
+
+MK_CARRY_MASK = 1<<MK_CARRY_BIT
+MK_OVER_MASK  = 1<<MK_OVER_BIT
+MK_ZERO_MASK  = 1<<MK_ZERO_BIT
+MK_NEG_MASK   = 1<<MK_NEG_BIT
+MK_EXT_MASK   = 1<<MK_EXT_BIT
+
+MK_SUPER_MASK = 1<<MK_SUPER_BIT
+MK_TRACE_MASK = 1<<MK_TRACE_BIT
+
+
+MK_ROMQUE_SIZE = 16 ' words
+
+
+DAT ' MotoKore 68000 cog resident code
+              org
+mk_cogbase
+mk_d0         long 0
+mk_d1         long 0
+mk_d2         long 0
+mk_d3         long 0
+mk_d4         long 0
+mk_d5         long 0
+mk_d6         long 0
+mk_d7         long 0
+mk_a0         long 0
+mk_a1         long 0
+mk_a2         long 0
+mk_a3         long 0
+mk_a4         long 0
+mk_a5         long 0
+mk_a6         long 0
+mk_a7         long 0
+
+mk_othersp    long 0
+mk_sr         long 0
+
+mk_nibble_impl_tbl
+              long mk_nibble_0 ' 0 (immediate ops)
+              long mk_nibble_1 ' 1 (MOVE BYTE)
+              long mk_nibble_2 ' 2 (MOVE LONG)
+              long mk_nibble_3 ' 3 (MOVE WORD)
+              long mk_nibble_4 ' 4 (weird stuff idk)
+              long mk_nibble_5 ' 5 (ADDQ/SUBQ and also Scc/DBcc)
+              long mk_nibble_6 ' 6 (branches)
+              long mk_nibble_7 ' 7 (MOVEQ)
+              long mk_nibble_8 ' 8 (OR and stuffs)
+              long mk_nibble_9 ' 9 (subtracts)
+              long mk_nibble_A ' A (LINE A EMULATOR TRAP)
+              long mk_nibble_B ' B (CMP and EOR)
+              long mk_nibble_C ' C (AND or stuffs)
+              long mk_nibble_D ' D (adds)
+              long mk_nibble_E ' E (Bit shifts)
+              long mk_nibble_F ' F (LINE F EMULATOR TRAP)
+
+
+mk_condition_truth_table
+              '' Remember, status register is %XNZVC
+              long $10001 * %1111_1111_1111_1111 '' %0000 : True
+              'long $10001 * %0000_0000_0000_0000 '' %0001 : False
+              long $10001 * %0000_0101_0000_0101 '' %0010 : High
+              'long $10001 * %1111_1010_1111_1010 '' %0011 : Low or same
+              long $10001 * %0101_0101_0101_0101 '' %0100 : carry clear
+              'long $10001 * %1010_1010_1010_1010 '' %0101 : carry set
+              long $10001 * %0000_1111_0000_1111 '' %0110 : not equal
+              'long $10001 * %1111_0000_1111_0000 '' %0111 : equal
+              long $10001 * %0011_0011_0011_0011 '' %1000 : overflow clear
+              'long $10001 * %1100_1100_1100_1100 '' %1001 : overflow set
+              long $10001 * %0000_0000_1111_1111 '' %1010 : plus
+              'long $10001 * %1111_1111_0000_0000 '' %1011 : minus
+              long $10001 * %1100_1100_0011_0011 '' %1100 : greater or equal (N==V)
+              'long $10001 * %0011_0011_1100_1100 '' %1101 : less than (N!=V)
+              long $10001 * %0000_1100_0000_0011 '' %1110 : greater than (N==V)&!Z (???)
+              'long $10001 * %1111_0011_1111_1100 '' %1111 : less or equal (N!=V)|Z (???)
+
+mk_shift_impl_tbl
+              long mk_do_asr
+              long mk_do_asl
+              long mk_do_lsr
+              long mk_do_lsl
+              long mk_do_roxr
+              long mk_do_roxl
+              long mk_do_ror
+              long mk_do_rol
+
+mk_flowop_impl_tbl
+              long mk_hub_reset
+              long mk_hub_nop
+              long mk_hub_stop
+              long mk_hub_rte
+              long mk_illegal
+              long mk_hub_rts
+              long mk_hub_trapv
+              long mk_hub_rtr
+
+
+mk_rd_nothing
+        _ret_ mov mk_memvalue,#0
+
+mk_rd8_reg
+        _ret_ getbyte mk_memvalue,0-0,#0
+mk_wr8_reg
+        _ret_ setbyte 0-0,mk_memvalue,#0
+mk_rd16_reg
+        _ret_ getword mk_memvalue,0-0,#0
+mk_wr16_reg
+        _ret_ setword 0-0,mk_memvalue,#0
+mk_rd32_reg
+        _ret_ mov mk_memvalue,0-0
+mk_wr32_reg
+        _ret_ mov 0-0,mk_memvalue
+
+mk_rd8_rom
+              setq #2
+              wrlong mk_romio_addr,mk_exmem_mailbox
+              'cogatn mk_romio_atnval
+              waitatn
+mk_rd8_ram
+        _ret_ rdbyte mk_memvalue,mk_eacache
+mk_wr8_ram
+              'call #mk_debug_wrchk8
+        _ret_ wrbyte mk_memvalue,mk_eacache
+
+mk_rd16_rom
+              setq #2
+              wrlong mk_romio_addr,mk_exmem_mailbox
+              'cogatn mk_romio_atnval
+              waitatn
+mk_rd16_ram
+              rdword mk_memvalue,mk_eacache
+        _ret_ movbyts mk_memvalue,#%%3201
+mk_wr16_ram
+              'call #mk_debug_wrchk16
+              movbyts mk_memvalue,#%%3201
+        _ret_ wrword mk_memvalue,mk_eacache
+
+mk_rd32_rom
+              setq #2
+              wrlong mk_romio_addr,mk_exmem_mailbox
+              'cogatn mk_romio_atnval
+              waitatn
+mk_rd32_ram
+              rdlong mk_memvalue,mk_eacache
+        _ret_ movbyts mk_memvalue,#%%0123
+mk_wr32_ram
+              'call #mk_debug_wrchk32
+              movbyts mk_memvalue,#%%0123
+        _ret_ wrlong mk_memvalue,mk_eacache
+
+mk_wrrom      ret ' obviously nothing
+
+mk_rdimm
+        _ret_ mov mk_memvalue,mk_eacache
+
+
+mk_longio_tmp long 0
+
+
+mk_wr_sr
+              xor mk_memvalue,mk_sr
+              testn mk_memvalue,#255 wz
+              xor mk_memvalue,mk_sr
+              testb mk_sr,#MK_SUPER_BIT wc
+  if_nz_or_nc jmp #mk_hub_wr_sr
+
+mk_wr_ccr
+              setq #%11111
+              muxq mk_sr,mk_memvalue
+              ret wcz
+mk_rd_sr
+        _ret_ mov mk_memvalue,mk_sr
+
+
+mk_illegal
+              debug("ILLEGAL INSTRUCTION ",uhex_word(mk_opword),uhex_long(mk_virtualpc))
+              'drvh #38
+              mov pb,#$10
+              jmp #mk_hub_trapit
+
+
+mk_nextop
+              'debug("registers: ",ubin_word(mk_sr),13,uhex_reg_array(#mk_d0,#8),13,uhex_reg_array(#mk_a0,#8))
+              'debug("last 16 RAM bytes: ",uhex_byte_array(#main_ram + $FFF0,#16))
+              'tjnz mk_debug_ctr,#mk_nextop_nohook
+              'jatn mk_cogatnptr
+mk_ihook1     nop
+'mk_ihook2     nop
+mk_nextop_nohook
+              'cmp mk_virtualpc,mk_debug_tripwire wz
+        'if_z drvh #38
+       'if_z  mov mk_debug_tripwire,#0
+       'if_z   mov mk_debug_ctr,#1
+              'incmod mk_debug_ctr,##7919-1 wc
+              'debug("getting op with ",uhex_long(mk_virtualpc))
+              'debug(uhex_long_(mk_virtualpc))
+              'debug(uhex_word_array(#@fake_rom+$200,#4))
+              call mk_getopf
+              'debug("got op: ",uhex_word(mk_opword))
+              'debug("got op: ",uhex_word_(mk_opword)," before ",uhex_long_(mk_virtualpc))
+              'tjnz mk_debug_tripwire,#.no_trace
+              'tjz mk_debug_ctr,#.no_trace
+              'sub mk_debug_ctr,#1
+              'cmp mk_debug_tripwire,mk_virtualpc wz
+        'if_nz jmp #.no_trace
+      'if_nc jmp #.no_trace
+              'debug("tripwired' ",uhex_long(mk_virtualpc))
+              'call #mk_check_core_integrity
+              'debug("got: ",uhex_word_(mk_opword)," before ",uhex_long_(mk_virtualpc))
+              'debug("registers: ",ubin_word(mk_sr),10,13,uhex_reg_array(#mk_d0,#8),10,13,uhex_reg_array(#mk_a0,#8))
+
+              'debug("got op: ",uhex_word(mk_opword)," before ",uhex_long(mk_virtualpc),uhex_long(mk_a7))
+              'waitx ##174_00
+.no_trace
+              push #mk_nextop
+              getnib mk_memtmp0,mk_opword,#3
+              altd mk_memtmp0,#mk_nibble_impl_tbl
+              jmp 0-0
+
+mk_irq1ptr    long @@@mk_hub_irq1
+'mk_cogatnptr long @@@mk_hub_cogatn
+
+
+mk_write_second_reg_or_ea '' for ops that have two directional modes
+              testb mk_opword,#8 wc
+        if_c  jmp mk_writef
+mk_write_second_reg
+              neg pb,#1
+              shr pb,mk_shiftit
+              setq pb
+              and mk_opword,mk_dreg_mask ' assume we don't need it anymore
+              alti mk_opword,#%000_100_000
+        _ret_ muxq 0-0,mk_memvalue
+
+
+mk_nibble_0   ' Immediate ops (decode headache!)
+              testb mk_opword,#8 wc
+              test mk_opword,#%110_000 wz
+              testb mk_opword,#3 andz
+        if_c_and_z jmp #mk_hub_movep
+        if_c  jmp #.register_bitop ' not actually an immediate op...
+              getnib mk_optmp2,mk_opword,#2
+              cmp mk_optmp2,#%1000 wz
+        if_z  jmp #.imm_bitop
+              ' ok, we know it's a sized ***I type op
+              mov pb,mk_opword
+              call #mk_getopimm_auto
+              'debug("xxxI type op... imm is ",uhex_long(mk_optmp1))
+              mov pb,mk_opword
+              and pb,#%111_111
+              cmp pb,#%111_100 wz ' <- if Z, is op to SR/CCR
+        if_z  mov mk_readf,#mk_rd_sr
+        if_z  mov mk_shiftit,#16
+        if_z  testb mk_opword,#6 wc
+        if_z_and_c  mov mk_writef,#mk_wr_sr
+        if_z_and_nc mov mk_writef,#mk_wr_ccr
+        if_nz callpb mk_opword,#mk_setup_operand_auto
+
+              call mk_readf
+              cmp mk_optmp2,#%1100 wz
+        if_z  jmp #mk_cmp_swapped ' CMPI (doesn't write)
+              push mk_writef ' setup write return
+              cmp mk_optmp2,#%0110 wz
+        if_z  jmp #mk_add_common ' ADDI
+              cmp mk_optmp2,#%0100 wz
+        if_z  jmp #mk_sub_common ' SUBI
+              ' ok, only logic ops left
+              setr mk_thelogicop,#%0101000_01 ' P2 AND WZ opcode (assume this if no other logic op)
+              cmp mk_optmp2,#%0000 wz
+        if_z  setr mk_thelogicop,#%0101010_01 ' P2 OR WZ opcode
+              cmp mk_optmp2,#%1010 wz
+        if_z  setr mk_thelogicop,#%0101011_01 ' P2 XOR WZ opcode
+              jmp #mk_multilogic_common
+
+.imm_bitop
+              push #.bitop_common
+              jmp #mk_getopimm8
+.register_bitop
+              mov pb,mk_opword
+              shr pb,#9
+              and pb,#7
+              alts pb,#mk_d0
+              mov mk_optmp1,0-0
+.bitop_common
+              test mk_opword,#%110_000 wz ' Register op?
+              mov pb,mk_opword
+        if_z  call #mk_setup_reg32
+        if_nz and mk_optmp1,#7
+        if_nz call #mk_setup_operand8_move
+              call mk_readf
+              'debug("doing bitop with ",uhex_byte(mk_optmp1),uhex_long(mk_memvalue))
+              testbn mk_memvalue,mk_optmp1 wc
+              bitc mk_sr,#MK_ZERO_BIT
+              testb mk_opword,#6 wz
+              testb mk_opword,#7 wc
+        if_00 ret ' BTST
+              and mk_optmp1,#31 ' bitfield-sensitive ops ahead
+        if_01 bitnot mk_memvalue,mk_optmp1 ' BCHG
+        if_1x bitz mk_memvalue,mk_optmp1 ' BCLR/BSET
+              'debug("bitop result ",uhex_long(mk_memvalue))
+              jmp mk_writef
+
+
+
+mk_cmp
+              callpb mk_opword,#mk_setup_operand_auto
+              call mk_readf
+              push #mk_cmp_common
+              jmp #mk_get_second_reg
+
+mk_cmpa
+              testb mk_opword,#8 wc ' long sized?
+        if_nc callpb mk_opword,#mk_setup_operand16_move
+        if_c  callpb mk_opword,#mk_setup_operand32_move
+              call mk_readf
+        if_nc signx mk_memvalue,#15
+              
+              shr mk_opword,#9
+              and mk_opword,#7
+              skipf #%11_111_00 ' Skip swap and shift
+              alts mk_opword,#mk_a0
+              mov mk_optmp1,0-0
+mk_cmp_swapped
+              xor mk_memvalue,mk_optmp1
+              xor mk_optmp1,mk_memvalue
+              xor mk_memvalue,mk_optmp1
+mk_cmp_common
+              'debug("in mk_cmp_common ",uhex_long(mk_d0),uhex_long(mk_memvalue),uhex_long(mk_optmp1),udec(mk_shiftit))
+              shl mk_memvalue,mk_shiftit
+              shl mk_optmp1,mk_shiftit
+              ' NOTE: the operands are swapped compared to sub_common
+              ' generate stupid overflow flag
+              mov mk_optmp0,mk_optmp1
+              subs mk_optmp0,mk_memvalue wc
+              testb mk_optmp0,#31 xorc
+              bitc mk_sr,#MK_OVER_BIT
+              ' do actual sub
+              sub mk_optmp1,mk_memvalue wcz
+              bitc mk_sr,#MK_CARRY_BIT
+              bitz mk_sr,#MK_ZERO_BIT
+              testb mk_optmp0,#31 wc
+        _ret_ bitc mk_sr,#MK_NEG_BIT
+
+
+
+
+mk_move_shoot_the_shit ' handle all the common MOVE stuff
+               ' Doing MOVEA?
+              test mk_opword,#%110_000_000 wz
+              testb mk_opword,#6 andz
+        if_z  jmp #.movea
+              signx mk_memvalue,pa wcz
+              bitc mk_sr,#MK_NEG_BIT
+              bitz mk_sr,#MK_ZERO_BIT
+              andn mk_sr,#MK_OVER_MASK|MK_CARRY_MASK
+.mangle_ea2   ' format for second operand is stupid
+              setnib mk_opword,#0,#3
+              mov pa,mk_opword
+              and pa,#%111_000_000
+              shl pa,#6
+              or mk_opword,pa
+        _ret_ shr mk_opword,#9
+.movea
+              shr mk_opword,#9
+              and mk_opword,#7
+              altr mk_opword,#mk_a0
+              signx mk_memvalue,pa
+              jmp #mk_nextop ' don't need the rest of the op
+
+
+mk_nibble_1 ' MOVE (byte)
+              callpb mk_opword,#mk_setup_operand8_move
+              call mk_readf
+              callpa #7,#mk_move_shoot_the_shit
+              callpb mk_opword,#mk_setup_operand8_move
+              'debug("in move.b, writing ",uhex_byte(mk_memvalue)," to ",uhex_long(mk_effaddr))
+              jmp mk_writef
+
+mk_nibble_3 ' MOVE (word)
+              'debug("in move.w")
+              callpb mk_opword,#mk_setup_operand16_move
+              call mk_readf
+              callpa #15,#mk_move_shoot_the_shit
+              callpb mk_opword,#mk_setup_operand16_move
+              'debug("in move.w, writing ",uhex_word(mk_memvalue)," to ",uhex_long(mk_effaddr))
+              jmp mk_writef
+
+mk_nibble_2 ' MOVE (long)
+              callpb mk_opword,#mk_setup_operand32_move
+              call mk_readf
+              callpa #31,#mk_move_shoot_the_shit
+              callpb mk_opword,#mk_setup_operand32_move
+              jmp mk_writef
+
+
+mk_nibble_5 ' ADDQ/SUBQ/Scc/DBcc
+              test mk_opword,#%11_000_000 wcz
+        if_00 jmp #mk_nibble_5_not_addsub
+              ' get operand
+              mov mk_optmp1,mk_opword
+              shr mk_optmp1,#9 wc ' C = SUBQ, NC = ADDQ
+              and mk_optmp1,#7 wz
+        if_z  mov mk_optmp1,#8
+              ' Check if An reg
+              test mk_opword,#%110_000 wz
+              testb mk_opword,#3 andz
+        if_z  jmp #.addsubq_areg
+              callpb mk_opword,#mk_setup_operand_auto
+              call mk_readf
+              push mk_writef
+        if_c  jmp #mk_sub_common
+              jmp #mk_add_common
+
+.addsubq_areg
+              and mk_opword,#7
+              altd mk_opword,#mk_a0
+        _ret_ sumc 0-0,mk_optmp1
+
+
+
+mk_nibble_9
+mk_nibble_D
+              ' ADD/SUB (X/A)
+              ' check for ADDA/SUBA
+              test mk_opword,#%11_000_000 wcz
+        if_00 jmp #mk_addsuba
+              ' check for ADDX/SUBX
+              test mk_opword,#%110_000 wz
+              testb mk_opword,#8 andz
+        if_z  jmp #mk_hub_addsubx
+
+              ' Okay, normal ADD/SUB
+              callpb mk_opword,#mk_setup_operand_auto
+              call mk_readf
+              call #mk_get_second_reg
+              push #mk_write_second_reg_or_ea
+              testb mk_opword,#14 wc ' C = ADD,NC = SUB ?
+        if_nc jmp #mk_sub_withdir
+              ' fall through
+mk_add_common
+              shl mk_memvalue,mk_shiftit
+              shl mk_optmp1,mk_shiftit
+              ' generate stupid overflow flag
+              mov mk_optmp0,mk_optmp1
+              adds mk_optmp0,mk_memvalue wc
+              testb mk_optmp0,#31 xorc
+              bitc mk_sr,#MK_OVER_BIT
+              ' do actual add
+              add mk_memvalue,mk_optmp1 wcz
+              muxc mk_sr,#MK_CARRY_MASK|MK_EXT_MASK
+              bitz mk_sr,#MK_ZERO_BIT
+              testb mk_optmp0,#31 wc
+              bitc mk_sr,#MK_NEG_BIT
+
+        _ret_  shr mk_memvalue,mk_shiftit
+
+mk_sub_withdir
+              ' if dir bit clear, swap operands
+              testb mk_opword,#8 wc
+        if_nc xor mk_memvalue,mk_optmp1
+        if_nc xor mk_optmp1,mk_memvalue
+        if_nc xor mk_memvalue,mk_optmp1
+mk_sub_common
+              'debug("in mk_sub_common ",uhex_long(mk_d0),uhex_long(mk_memvalue),uhex_long(mk_optmp1),udec(mk_shiftit))
+              shl mk_memvalue,mk_shiftit
+              shl mk_optmp1,mk_shiftit
+
+              ' generate stupid overflow flag
+              mov mk_optmp0,mk_memvalue
+              subs mk_optmp0,mk_optmp1 wc
+              testb mk_optmp0,#31 xorc
+              bitc mk_sr,#MK_OVER_BIT
+              ' do actual sub
+              sub mk_memvalue,mk_optmp1 wcz
+              muxc mk_sr,#MK_CARRY_MASK|MK_EXT_MASK
+              bitz mk_sr,#MK_ZERO_BIT
+              testb mk_optmp0,#31 wc
+              bitc mk_sr,#MK_NEG_BIT
+
+        _ret_  shr mk_memvalue,mk_shiftit
+
+mk_addsuba
+              setq mk_dreg_mask
+              muxq .adda_op,mk_opword
+              testb mk_opword,#8 wc ' long sized?
+        if_nc callpb mk_opword,#mk_setup_operand16_move
+        if_c  callpb mk_opword,#mk_setup_operand32_move
+              call mk_readf
+              'debug("in mk_adda: ",uhex_long(mk_memvalue))
+        if_nc signx mk_memvalue,#15
+              testb mk_opword,#14 wc ' C = ADDA,NC = SUBA ?
+.adda_op _ret_ sumnc mk_a0,mk_memvalue
+
+
+' Memory R/W primitives
+mk_setup_operand_auto ' with ea-supplying op in pb
+                 ' make sure size field is not %11 (will be treated as 16bit)
+              testb pb,#6 wc
+        if_c  jmp #mk_setup_operand16
+              testb pb,#7 wc
+        if_c  jmp #mk_setup_operand32
+              ' Fall through!
+mk_setup_operand8
+              'debug("in mk_setup_operand8 ",ubin(pb))
+              mov mk_shiftit,#24
+mk_setup_operand8_move
+              test pb,#%110_000 wz
+        if_z  jmp #mk_setup_reg8
+              and pb,#%00_111_111
+              cmp pb,#%00_111_100 wc
+        if_ae jmp #mk_setup_imm8
+              call #mk_compute_ea
+mk_setup_ea8
+              tjs mk_effaddr,#.rom
+.ram
+              mov mk_eacache,mk_effaddr
+              mov mk_readf,#mk_rd8_ram
+              mov mk_writef,#mk_wr8_ram
+              ret wcz
+.rom
+              mov  mk_readf,#mk_rd8_rom
+              mov  mk_writef,#mk_wrrom
+              mov mk_romio_length,#1
+              jmp #mk_setup_rom_common
+
+
+
+mk_setup_operand16
+              'debug("in mk_setup_operand16 ",ubin(pb))
+              mov mk_shiftit,#16
+mk_setup_operand16_move
+              test pb,#%110_000 wz
+        if_z  jmp #mk_setup_reg16
+              and pb,#%00_111_111
+              cmp pb,#%00_111_100 wc
+        if_ae jmp #mk_setup_imm16
+              or  pb,#%01_000_000
+              call #mk_compute_ea
+mk_setup_ea16
+              testb mk_effaddr,#0 wc
+        if_c  jmp #mk_address_error
+              tjs mk_effaddr,#.rom
+.ram
+              mov mk_eacache,mk_effaddr
+              mov mk_readf,#mk_rd16_ram
+              mov mk_writef,#mk_wr16_ram
+              ret wcz
+.rom
+              mov  mk_readf,#mk_rd16_rom
+              mov  mk_writef,#mk_wrrom
+              mov mk_romio_length,#2
+mk_setup_rom_common
+              mov  mk_romio_addr,mk_effaddr
+              setnib mk_romio_addr,#$B,#7 ' The B stands for Burst
+              mov  mk_eacache,mk_romio_area_ptr
+              'rczr mk_romio_addr wcz
+              'rczl mk_eacache
+              mov mk_romio_target,mk_romio_area_ptr
+              ret  wcz
+
+mk_setup_operand32
+              mov mk_shiftit,#0
+mk_setup_operand32_move
+              test pb,#%110_000 wz
+        if_z  jmp #mk_setup_reg32
+              and pb,#%00_111_111
+              cmp pb,#%00_111_100 wc
+        if_ae jmp #mk_setup_imm32
+              or  pb,#%10_000_000
+              call #mk_compute_ea
+mk_setup_ea32
+              testb mk_effaddr,#0 wc
+        if_c  jmp #mk_address_error
+              tjs mk_effaddr,#.rom
+.ram
+              mov mk_eacache,mk_effaddr
+              mov mk_readf,#mk_rd32_ram
+              mov mk_writef,#mk_wr32_ram
+              ret wcz
+.rom
+              mov  mk_readf,#mk_rd32_rom
+              mov  mk_writef,#mk_wrrom
+              mov mk_romio_length,#4
+              jmp #mk_setup_rom_common
+
+
+
+mk_ea_impl_tbl
+              long mk_ea_direct
+              long mk_ea_postinc
+              long mk_ea_predec
+              long mk_ea_displace
+              long mk_ea_index
+              long mk_ea_headache
+
+
+mk_multilogic
+              call #mk_get_second_reg
+              callpb mk_opword,#mk_setup_operand_auto
+              call mk_readf
+              push #mk_write_second_reg_or_ea
+mk_multilogic_common
+              shl mk_memvalue,mk_shiftit
+              shl mk_optmp1,mk_shiftit
+
+mk_thelogicop and mk_memvalue,mk_optmp1 wz
+
+              bitz mk_sr,#MK_ZERO_BIT
+              testb mk_memvalue,#31 wz
+              bitz mk_sr,#MK_NEG_BIT
+              andn mk_sr,#MK_CARRY_MASK|MK_OVER_MASK
+        _ret_ shr mk_memvalue,mk_shiftit
+
+
+mk_getop_ram
+              mov mk_memtmp0,mk_virtualpc
+              add mk_virtualpc,#2
+              'setword mk_memtmp0,#@main_ram>>16,#1
+              rdword mk_opword,mk_memtmp0
+        _ret_ movbyts mk_opword,#%%3201
+
+mk_getop_rom
+              'debug("in getop_rom with ",udec(mk_romque_left))
+              djf mk_romque_left,#mk_romque_refill
+              add mk_virtualpc,#2
+              rdword mk_opword,ptra++
+              movbyts mk_opword,#%%3201
+              ret wcz
+mk_romque_left    long 0
+
+
+
+mk_romio_area_ptr long @@@mk_romio_area
+mk_romque_area_ptr long @@@mk_romque_area
+mk_dreg_mask      long %111_000_000_000
+
+mk_bit31      long 1<<31
+mk_minus4     long -4
+
+mk_cogvar_start
+
+mk_debug_tripwire long $03c9da+2
+mk_debug_ctr  long 0
+
+mk_exmem_mailbox long 0
+
+
+mk_virtualpc  res 1 ' PC in virtual space
+mk_effaddr    res 1 ' calculated effective address
+mk_shiftit    res 1 ' operand MSB shift
+mk_branchdisplace res 1 ' branch target
+mk_opword     res 1 ' opcode
+
+mk_readf      res 1 ' operand read pointer
+mk_writef     res 1 ' operand write pointer
+mk_getopf     res 1 ' opword get pointer
+
+mk_optmp0     res 1
+mk_optmp1     res 1
+mk_optmp2     res 1
+
+mk_eatmp0     res 1
+mk_eatmp1     res 1
+
+mk_romio_addr   res 1
+mk_romio_target res 1
+mk_romio_length res 1
+
+mk_romqueio_addr res 1
+mk_romqueio_target res 1
+mk_romqueio_length res 1
+
+'mk_romque_base res 1
+'mk_romque_zerox res 1
+
+mk_romio_atnval res 1
+
+
+              fit $1F0
+              org $1F0
+
+mk_memtmp0    res 1
+mk_memtmp1    res 1
+mk_memtmp2    res 1
+mk_memtmp3    res 1
+mk_memvalue   res 1 ' memory read/write value
+mk_eacache    res 1 ' remapped EA
+              fit $1F6
+DAT ' MotoKore 68000 LUT resident code
+mk_lutbase
+              org 512
+
+mk_nibble_5_not_addsub
+              ' Check if DBCC
+              test mk_opword,#%110_000 wz
+              testb mk_opword,#3 andz
+        if_z  jmp #mk_dbcc
+              ' got SCC
+              callpb mk_opword,#mk_setup_operand8_move
+              call mk_readf ' <- yes, this is stupid but accurate
+              getnib pb,mk_opword,#2
+              shr pb,#1 wc
+              altd pb,#mk_condition_truth_table
+              testb 0-0,mk_sr xorc
+              muxc mk_memvalue,#255
+              jmp mk_writef
+
+
+mk_romque_refill
+              mov mk_romqueio_target,mk_romque_area_ptr
+              mov mk_romqueio_length,#MK_ROMQUE_SIZE*2
+              mov mk_romqueio_addr,mk_virtualpc
+        '      bitl mk_romqueio_addr,#1 wcz
+        'if_c  sub  mk_romqueio_target,#2
+        'if_c  add  mk_romqueio_length,#2
+              'zerox mk_romqueio_addr,mk_romque_zerox ' Limit to 1 MB range
+              'add mk_romqueio_addr,mk_romque_base
+              setnib mk_romqueio_addr,#$B,#7 ' The B stands for Burst
+              ' Handle not long-aligned access
+              'rczr mk_romqueio_addr wcz
+        'if_z  jmp #mk_address_error_debug ' TODO: maybe make AE function code read program in this case?
+        'if_c  sub  mk_romqueio_target,#2
+        'if_c  add  mk_romqueio_length,#1
+              setq #2
+              wrlong mk_romqueio_addr,mk_exmem_mailbox
+              'cogatn mk_romio_atnval
+              mov ptra,mk_romque_area_ptr
+              mov mk_romque_left,#MK_ROMQUE_SIZE
+              push #mk_getop_rom
+              'debug("here ",uhex_long(mk_exmem_mailbox,mk_romqueio_addr),dly(#1000))
+        _ret_ waitatn
+
+
+mk_compute_ea ' CAN AND WILL OVERWRITE FLAGS
+              'debug("In mk_compute_ea ",ubin(pb))
+              mov mk_eatmp1,pb
+              shr mk_eatmp1,#3 wcz '< just to drive the point home
+              and mk_eatmp1,#7
+              altd mk_eatmp1,#mk_ea_impl_tbl - 2 ' non-memory modes shouldn't appear here
+              jmp 0-0
+
+mk_ea_direct
+              and pb,#7
+              alts pb,#mk_a0
+        _ret_ mov mk_effaddr,0-0
+
+mk_nibble_E   ' shifts
+              andn mk_sr,#MK_OVER_MASK|MK_CARRY_MASK ' These are cleared by default
+              test mk_opword,#%11_000_000 wcz
+        if_00 jmp #.memshift
+              mov pb,mk_opword
+              andn pb,#%00_111_000
+              call #mk_setup_operand_auto
+              xor mk_shiftit,#31 ' <- change into MSB's index
+              ' get shift amount
+              call #mk_get_second_reg
+              testb mk_opword,#5 wc
+        if_nc mov mk_optmp1,pb wz
+  if_nc_and_z mov mk_optmp1,#8
+              and mk_optmp1,#63 wz
+              ' move shift mode bits into place
+              testb mk_opword,#8 wz
+              shr  mk_opword,#2
+              bitz mk_opword,#0
+.do_shift
+              call mk_readf
+              'debug("regshift amount is ",udec(mk_optmp1),"also, ",udec(mk_shiftit)," shift val is ",uhex_long(mk_memvalue))
+              and mk_opword,#7
+              altd mk_opword,#mk_shift_impl_tbl
+              call 0-0
+.done
+              zerox mk_memvalue,mk_shiftit wz
+              testb mk_memvalue,mk_shiftit wc
+              bitc mk_sr,#MK_NEG_BIT
+              bitz mk_sr,#MK_ZERO_BIT
+              'debug("shift result ",uhex_long(mk_memvalue))
+              jmp mk_writef
+
+.memshift
+              mov pb,mk_opword
+              call #mk_setup_operand16_move
+              mov mk_shiftit,#15
+              mov mk_optmp1,#1
+              shr mk_opword,#8 ' get shift mode bits into place
+              jmp #.do_shift
+
+mk_zeroroxx
+              testb mk_sr,#MK_EXT_BIT wc
+        _ret_ bitc mk_sr,#MK_CARRY_BIT
+mk_zeroshift
+        _ret_ bitl mk_sr,#MK_CARRY_BIT
+
+mk_do_asr
+              tjz mk_optmp1,#mk_zeroshift
+              rep @.loop,mk_optmp1
+              testb mk_memvalue,mk_shiftit wz
+              shr mk_memvalue,#1 wc
+              bitz mk_memvalue,mk_shiftit
+.loop
+        _ret_ muxc mk_sr,#MK_EXT_MASK|MK_CARRY_MASK
+
+mk_do_asl
+              tjz mk_optmp1,#mk_zeroshift
+              rep @.loop,mk_optmp1
+              testb mk_memvalue,mk_shiftit wc
+              shl mk_memvalue,#1
+              testb mk_memvalue,mk_shiftit wz
+        if_z_ne_c bith mk_sr,#MK_OVER_BIT
+.loop
+        _ret_ muxc mk_sr,#MK_EXT_MASK|MK_CARRY_MASK
+
+mk_do_lsr
+              tjz mk_optmp1,#mk_zeroshift
+              rep @.loop,mk_optmp1
+              shr mk_memvalue,#1 wc
+.loop
+        _ret_ muxc mk_sr,#MK_EXT_MASK|MK_CARRY_MASK
+
+mk_do_lsl
+              tjz mk_optmp1,#mk_zeroshift
+              rep @.loop,mk_optmp1
+              testb mk_memvalue,mk_shiftit wc
+              shl mk_memvalue,#1
+.loop
+        _ret_ muxc mk_sr,#MK_EXT_MASK|MK_CARRY_MASK
+
+mk_do_ror
+              tjz mk_optmp1,#mk_zeroshift
+              rep @.loop,mk_optmp1
+              shr mk_memvalue,#1 wc
+              bitc mk_memvalue,mk_shiftit
+.loop
+        _ret_ muxc mk_sr,#MK_CARRY_MASK
+
+mk_do_rol
+              tjz mk_optmp1,#mk_zeroshift
+              rep @.loop,mk_optmp1
+              testb mk_memvalue,mk_shiftit wc
+              rcl mk_memvalue,#1
+.loop
+        _ret_ muxc mk_sr,#MK_CARRY_MASK
+
+mk_do_roxr
+              tjz mk_optmp1,#mk_zeroroxx
+              rep @.loop,mk_optmp1
+              testb mk_sr,#MK_EXT_BIT wz
+              shr mk_memvalue,#1 wc
+              bitz mk_memvalue,mk_shiftit
+              muxc mk_sr,#MK_EXT_MASK|MK_CARRY_MASK
+.loop
+              ret
+mk_do_roxl
+              tjz mk_optmp1,#mk_zeroroxx
+              rep @.loop,mk_optmp1
+              testb mk_sr,#MK_EXT_BIT wc
+              testb mk_memvalue,mk_shiftit wz
+              rcl mk_memvalue,#1
+              muxz mk_sr,#MK_EXT_MASK|MK_CARRY_MASK
+.loop
+              ret
+
+
+mk_setup_reg8
+              ' Address register 8 bit ops are illegal, so don't care
+              and pb,#%1_111
+              sets mk_rd8_reg,pb
+              setd mk_wr8_reg,pb
+              mov  mk_readf,#mk_rd8_reg
+              mov  mk_writef,#mk_wr8_reg
+              ret wcz
+mk_setup_imm8
+              call #mk_setup_imm16
+              and mk_eacache,#255
+              ret wcz
+
+mk_setup_reg16
+              'debug("in mk_setup_reg16 ",ubin(pb))
+        'if_nz jmp #mk_setup_areg ' Address register is always 32 bit
+              and pb,#%1_111
+              sets mk_rd16_reg,pb
+              setd mk_wr16_reg,pb
+              mov  mk_readf,#mk_rd16_reg
+              mov mk_writef,#mk_wr16_reg
+              ret wcz
+mk_setup_imm16
+              mov mk_eatmp0,mk_opword
+              call mk_getopf
+              mov mk_eacache,mk_opword
+              mov mk_opword,mk_eatmp0
+              mov  mk_readf,#mk_rdimm
+              mov  mk_writef,#mk_illegal
+              ret wcz
+
+mk_setup_reg32
+              and pb,#%1_111
+              sets mk_rd32_reg,pb
+              setd mk_wr32_reg,pb
+              mov  mk_readf,#mk_rd32_reg
+              mov  mk_writef,#mk_wr32_reg
+              ret wcz
+mk_setup_imm32
+              call #mk_setup_imm16
+              mov mk_eatmp0,mk_opword
+              call mk_getopf
+              rolword mk_eacache,mk_opword,#0
+              mov mk_opword,mk_eatmp0
+              ret wcz
+
+
+mk_nibble_4   ' AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+              mov pb,mk_opword ' set this up
+              testb mk_opword,#8 wc
+        if_c  jmp #.lea_chk  ' got LEA or CHK
+              testb mk_opword,#11 wc
+        if_nc jmp #.negop_or_srmove ' got NEGX/CLR/NEG/NOT or SR move
+              testb mk_opword,#9 wc
+        if_c  jmp #.complex ' got one of.. those..
+              testb mk_opword,#7 wc
+        if_c  jmp #.movem_ext   ' got MOVEM/EXT
+              testb mk_opword,#6 wc
+        if_nc jmp #mk_hub_nbcd  ' got NBCD
+              ' must be SWAP/PEA
+              test mk_opword,#%110_000 wz
+        if_z  jmp #.swap
+              ' ok, PEA
+              call #mk_compute_ea ' mk_opword already in PB
+              mov mk_memvalue,mk_effaddr
+              sub mk_a7,#4
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea32
+              jmp mk_writef
+
+.complex
+              testb mk_opword,#10 wc
+        if_nc jmp #mk_hub_tst_tas
+              testb mk_opword,#7 wc
+        if_c  jmp #.jmp_jsr
+              testb mk_opword,#5 wc
+        if_nc jmp #mk_hub_link_trap
+              testb mk_opword,#4 wc
+        if_nc jmp #mk_hub_moveusp
+              mov mk_optmp0,mk_opword
+              and mk_optmp0,#7
+              altd mk_optmp0,#mk_flowop_impl_tbl
+              jmp 0-0
+
+
+.swap
+              and mk_opword,#15
+              altd mk_opword,#mk_d0
+              movbyts 0-0,#%%1032
+              altd mk_opword,#mk_d0
+              shl 0-0,#0 wcz
+              bitc mk_sr,#MK_NEG_BIT
+              bitz mk_sr,#MK_ZERO_BIT
+        _ret_ andn mk_sr,#MK_OVER_MASK|MK_CARRY_MASK
+
+
+.lea_chk
+              testb mk_opword,#6 wc
+        if_nc jmp #mk_hub_chk ' got CHK
+              ' do LEA
+              call #mk_compute_ea ' mk_opword already in PB
+              setnib mk_opword,#1,#3
+              alti mk_opword,#%000_100_000
+        _ret_ mov 0-0,mk_effaddr
+
+.movem_ext
+              ' An mode here is technically illegal. We just treat it as extend.
+              test mk_opword,#%110_000 wz
+        if_nz jmp #mk_hub_movem
+              testb mk_opword,#6 wc
+        if_nc call #mk_setup_operand16_move
+        if_c  call #mk_setup_operand32_move
+              call mk_readf
+        if_nc signx mk_memvalue,#7 wcz
+        if_c  signx mk_memvalue,#15 wcz
+              bitc mk_sr,#MK_NEG_BIT
+              bitz mk_sr,#MK_ZERO_BIT
+              andn mk_sr,#MK_OVER_MASK|MK_CARRY_MASK
+              jmp mk_writef
+
+.negop_or_srmove
+              test mk_opword,#%11_000_000 wcz
+        if_00 jmp #mk_hub_srmove ' is move from/to SR/CCR
+              call #mk_setup_operand_auto ' mk_opword already in PB
+              call mk_readf
+              shl mk_memvalue,mk_shiftit
+              testb mk_opword,#9 wz
+        if_z  jmp #.clr_not ' got CLR or NOT
+              ' ok, must be NEG/NEGX
+              testb mk_opword,#10 wc
+        if_nc jmp #mk_hub_negx
+              ' got NEG
+              neg mk_memvalue wcz
+              bitc mk_sr,#MK_NEG_BIT
+              bitz mk_sr,#MK_ZERO_BIT
+              muxnz mk_sr,#MK_EXT_MASK|MK_CARRY_MASK
+              cmp mk_memvalue,mk_bit31 wz
+              bitz mk_sr,#MK_OVER_BIT
+              sar mk_memvalue,mk_shiftit
+              jmp mk_writef
+
+.clr_not
+              testbn mk_opword,#10 wz ' Z set if CLR
+        if_z  mov mk_memvalue,#0 wc
+        if_nz not mk_memvalue wc
+              bitc mk_sr,#MK_NEG_BIT
+              andn mk_sr,#MK_CARRY_MASK|MK_OVER_MASK
+              shr mk_memvalue,mk_shiftit wz
+              bitz mk_sr,#MK_ZERO_BIT
+              jmp mk_writef
+
+
+.jmp_jsr
+              call #mk_compute_ea
+              mov mk_branchdisplace,mk_effaddr
+              sub mk_branchdisplace,mk_virtualpc
+              testb mk_opword,#6 wc ' if NC, got JSR
+        if_c  jmp #mk_dobranch
+              ' fall through
+mk_call
+              ' Push return address on stack
+              sub mk_a7,#4
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea32
+              mov mk_memvalue,mk_virtualpc
+              call mk_writef
+              'debug("SP after call: ",uhex_long(mk_a7),uhex_long(mk_virtualpc),shex_long(mk_branchdisplace))
+              jmp #mk_dobranch
+
+
+
+
+mk_nibble_C   ' MULx/AND/EXG/ABCD
+              test mk_opword,#%11_000_000 wcz
+        if_00 jmp #mk_hub_mul ' MULU/MULS
+              test mk_opword,#%110_000 wz
+              testb mk_opword,#8 andz
+        if_nz setr mk_thelogicop,#%0101000_01 ' P2 AND WZ opcode
+        if_nz jmp #mk_multilogic ' AND
+              test mk_opword,#%11_000_000 wz
+        if_z  jmp #mk_hub_abcd
+              jmp #mk_hub_exg
+
+mk_nibble_8   ' DIVx/OR/SBCD
+              test mk_opword,#%11_000_000 wcz
+        if_00 jmp #mk_hub_div ' DIVU/DIVS
+              test mk_opword,#%110_000 wz
+              testb mk_opword,#8 andz
+        if_nz setr mk_thelogicop,#%0101010_01 ' P2 OR WZ opcode
+        if_nz jmp #mk_multilogic ' OR
+              'test mk_opword,#%11_000_000 wz
+              jmp #mk_hub_sbcd
+
+mk_nibble_B   ' CMP (M/A)
+              ' check for CMPA
+              test mk_opword,#%11_000_000 wcz
+        if_00 jmp #mk_cmpa
+              ' check for CMP
+              testb mk_opword,#8 wc
+        if_nc jmp #mk_cmp
+              ' check for CMPM
+              test mk_opword,#%110_000 wz
+              testb mk_opword,#3 andz
+        if_z  jmp #mk_hub_cmpm
+              ' Ok, is EOR
+              setr mk_thelogicop,#%0101011_01 ' P2 XOR WZ opcode
+              jmp #mk_multilogic ' XOR
+
+
+mk_dbcc       ' DBcc
+              ' compute destination first...
+              call #mk_getopimm16
+              signx mk_optmp1,#15
+              sub mk_optmp1,#2
+              mov mk_branchdisplace,mk_optmp1
+              ' check condition
+              getnib pb,mk_opword,#2
+              shr pb,#1 wc
+              altd pb,#mk_condition_truth_table
+              testb 0-0,mk_sr xorc
+        if_c  ret ' terminated...
+              and mk_opword,#7
+              alts mk_opword,#mk_d0
+              getword mk_optmp0,0-0,#0
+              sub mk_optmp0,#1 wc
+              altd mk_opword,#mk_d0
+              setword 0-0,mk_optmp0,#0
+              cmp mk_branchdisplace,mk_minus4 wz
+        if_z  waitx #100 ' Slow down delay loops - fix Z80 race condition in pulstar/blazstar
+        _ret_ tjnf mk_optmp0,#mk_dobranch
+
+mk_get_second_reg
+              mov pb,mk_opword
+              shr pb,#9
+              and pb,#7
+              alts pb,#mk_d0
+        _ret_ mov mk_optmp1,0-0
+
+mk_getopimm_auto
+              testb pb,#6 wc
+        if_c  jmp #mk_getopimm16
+              testb pb,#7 wc
+        if_c  jmp #mk_getopimm32
+              ' fall through!
+mk_getopimm8
+              mov mk_optmp0,mk_opword
+              call mk_getopf
+              getbyte mk_optmp1,mk_opword,#0
+        _ret_ mov mk_opword,mk_optmp0
+mk_getopimm16
+              mov mk_optmp0,mk_opword
+              call mk_getopf
+              mov mk_optmp1,mk_opword
+        _ret_ mov mk_opword,mk_optmp0
+mk_getopimm32
+              mov mk_optmp0,mk_opword
+              call mk_getopf
+              mov mk_optmp1,mk_opword
+              call mk_getopf
+              rolword mk_optmp1,mk_opword,#0
+        _ret_ mov mk_opword,mk_optmp0
+
+
+
+mk_nibble_6   ' branches
+              ' compute destination
+              mov mk_optmp1,mk_opword
+              signx mk_optmp1,#7 wz
+        if_z  call #mk_getopimm16
+              signx mk_optmp1,#15
+        if_z  sub mk_optmp1,#2
+              mov mk_branchdisplace,mk_optmp1
+              ' check condition
+              getnib pb,mk_opword,#2
+              shr pb,#1 wcz
+        if_c_and_z jmp #mk_call
+              altd pb,#mk_condition_truth_table
+              testb 0-0,mk_sr xorc
+        if_nc ret
+              ' fall through
+mk_dobranch
+              'debug(uhex_long(mk_virtualpc),shex_long(mk_branchdisplace))
+              'mov mk_optmp0,mk_virtualpc '' <--- DELETE THIS WHEN DONE DEBUGGING
+              add mk_virtualpc,mk_branchdisplace
+              {
+              'cmp mk_virtualpc,##$2000 wz
+        'if_e   jmp #.sussy_wussy
+              cmp mk_virtualpc,##$03b18c wcz
+        if_nz cmp mk_virtualpc,##$03b186 wcz
+        if_nz cmp mk_virtualpc,##$03b5f6 wcz
+        if_e  jmp #.sussy_wussy
+              cmps mk_branchdisplace,##$FFFFFF wc
+        if_ae jmp #.sussy_wussy
+              cmps mk_branchdisplace,##-$FFFFFF wc
+        if_ae jmp #.not_a_sussy_baka
+.sussy_wussy
+              debug("Sussy branch from ",uhex_long_(mk_optmp0)," to ",uhex_long_(mk_virtualpc),uhex_word(mk_opword),uhex_long(mk_d0,mk_a0,mk_a1,mk_a2,mk_a6))
+              'jmp #$
+.not_a_sussy_baka '}
+              'debug("branching ",shex(mk_branchdisplace)," to ",uhex_long(mk_virtualpc))
+              sar mk_branchdisplace,#1 wc
+        if_c  jmp #mk_address_error_debug ' TODO: maybe make AE function code read program in this case?
+              tjz ptra,#.notfast ' if que not active, this isn't relevant
+              ' see if fast branch within que is ok
+              sub mk_romque_left,mk_branchdisplace
+              cmp mk_romque_left,#MK_ROMQUE_SIZE+1 wc ' see below
+              'debug("would be ",sdec(mk_romque_left))
+              ' C set means that (romque_left>=0 && romque_left <= MK_ROMQUE_SIZE). That is the valid range
+              ' (Yes, 0 is valid for our purposes, since that will just correctly refill the que on the next getop call)
+        if_nc jmp #.notfast
+              shl mk_branchdisplace,#1
+              add ptra,mk_branchdisplace
+              jmp #mk_nextop
+.notfast
+              mov mk_romque_left,#0
+              mov ptra,#0
+              'mov pb,mk_virtualpc
+              'zerox pb,#23
+              tjns mk_virtualpc,#.ramexec
+.romexec
+              'mov mk_romque_zerox,#30
+              'mov mk_romque_base,#0
+              mov mk_getopf,#mk_getop_rom
+              jmp #mk_nextop
+.ramexec
+              mov mk_getopf,#mk_getop_ram
+              jmp #mk_nextop
+
+
+mk_ea_predec
+              mov mk_eatmp0,pb
+              and mk_eatmp0,#7
+              shr pb,#6
+              decod pb ' is now step value
+              cmp mk_eatmp0,#7 wz ' A7 is a special snowflake...
+        if_z  fge pb,#2
+
+              altd mk_eatmp0,#mk_a0
+              sub 0-0,pb
+              alts mk_eatmp0,#mk_a0
+        _ret_ mov mk_effaddr,0-0
+
+mk_ea_postinc
+              mov mk_eatmp0,pb
+              and mk_eatmp0,#7
+              shr pb,#6
+              decod pb ' is now step value
+              cmp mk_eatmp0,#7 wz ' A7 is a special snowflake...
+        if_z  fge pb,#2
+
+              alts mk_eatmp0,#mk_a0
+              mov mk_effaddr,0-0
+              altd mk_eatmp0,#mk_a0
+        _ret_ add 0-0,pb
+
+mk_ea_displace
+              and pb,#7
+              alts pb,#mk_a0
+              mov mk_effaddr,0-0
+
+              mov mk_eatmp1,mk_opword ' backup
+              call mk_getopf
+              signx mk_opword,#15
+              add mk_effaddr,mk_opword
+        _ret_ mov mk_opword,mk_eatmp1 ' restore
+
+
+mk_ea_index
+              and pb,#7
+              alts pb,#mk_a0
+              mov mk_effaddr,0-0
+              'debug(if(mk_debug_ctr),"from address register: ",uhex_long_(mk_effaddr))
+
+              mov mk_eatmp1,mk_opword ' backup
+              call mk_getopf
+              ' handle index reg
+              getnib pb,mk_opword,#3
+              alts pb,#mk_d0
+              mov pb,0-0
+              testb mk_opword,#11 wc
+        if_nc signx pb,#15
+              'debug(if(mk_debug_ctr),"from index register: ",uhex_long_(pb))
+              add mk_effaddr,pb
+              ' handle displacement
+              signx mk_opword,#7
+              'debug(if(mk_debug_ctr),"from displacement: ",uhex_long_(mk_opword))
+               add mk_effaddr,mk_opword
+              'debug(if(mk_debug_ctr),"final: ",uhex_long_(mk_effaddr))
+        _ret_ mov mk_opword,mk_eatmp1 ' restore
+
+
+mk_ea_headache
+              mov mk_eatmp1,mk_opword ' backup
+              call mk_getopf
+              'debug("in mk_ea_headache ",uhex_word(mk_opword))
+              rczr pb wcz
+        if_01 jmp #.longabs
+        if_11 jmp #.index
+              signx mk_opword,#15 ' absolute short or PC displacement
+              mov mk_effaddr,mk_opword
+        if_1x add mk_effaddr,mk_virtualpc
+        if_1x sub mk_effaddr,#2
+        _ret_ mov mk_opword,mk_eatmp1 ' restore
+
+.longabs
+              mov  mk_effaddr,mk_opword
+              call mk_getopf
+              rolword mk_effaddr,mk_opword,#0
+        _ret_ mov mk_opword,mk_eatmp1 ' restore
+
+.index
+              mov mk_effaddr,mk_virtualpc
+              sub mk_effaddr,#2
+              ' handle index reg
+              getnib pb,mk_opword,#3
+              alts pb,#mk_d0
+              mov pb,0-0
+              testb mk_opword,#11 wc
+        if_nc signx pb,#15
+              add mk_effaddr,pb
+              ' handle displacement
+              signx mk_opword,#7
+              add mk_effaddr,mk_opword
+              'debug("computed address for (d8,PC,Dn) is ",uhex_long(mk_effaddr),uhex_long(mk_virtualpc))
+        _ret_ mov mk_opword,mk_eatmp1 ' restore
+
+
+              '' DEBUG NONSENSE: DELETE WHEN DONE
+              {
+mk_debug_wrchk8
+              cmp mk_eacache,##@main_ram+$1510 wz
+        if_ne cmp mk_eacache,##@main_ram+$1511 wz
+        if_ne cmp mk_eacache,##@main_ram+$1512 wz
+        if_ne cmp mk_eacache,##@main_ram+$1513 wz
+        if_ne ret wcz
+              debug("wrchk8: ",uhex_byte_(mk_memvalue),uhex_word_(mk_eacache),uhex_long_(mk_virtualpc))
+              ret wcz
+              '' DEBUG NONSENSE: DELETE WHEN DONE
+mk_debug_wrchk16
+              cmp mk_eacache,##@main_ram+$1510 wz
+        if_ne cmp mk_eacache,##@main_ram+$1512 wz
+        if_ne ret wcz
+              debug("wrchk16: ",uhex_word_(mk_memvalue),uhex_word_(mk_eacache),uhex_long_(mk_virtualpc))
+              ret wcz
+              '' DEBUG NONSENSE: DELETE WHEN DONE
+mk_debug_wrchk32
+              cmp mk_eacache,##@main_ram+$150C wz
+        if_ne cmp mk_eacache,##@main_ram+$1510 wz
+        'if_ne cmp mk_eacache,##@main_ram+$C642 wz
+        'if_ne cmp mk_memvalue,##$9BEA_3228    wz
+        if_ne ret wcz
+              debug("wrchk32: ",uhex_long_(mk_memvalue),uhex_word_(mk_eacache),uhex_long_(mk_virtualpc),uhex_long(mk_d0),uhex_long(mk_a0))
+              ret wcz
+'}
+              {
+mk_debug_wrchk8
+              getword mk_memtmp0,mk_a7,#0
+              getword mk_memtmp1,mk_eacache,#0
+              sub mk_memtmp1,mk_memtmp0
+              cmp mk_memtmp1,#16 wc
+        if_ae ret wcz
+              debug("wrchk8: ",uhex_byte_(mk_memvalue),uhex_word_(mk_a7,mk_eacache),uhex_long_(mk_virtualpc),uhex_long_(mk_a0))
+              ret wcz
+              '}
+
+              fit 1024
+
+
+DAT ' MotoKore 68000 hub resident code
+
+              orgh
+
+
+mk_hub_wr_sr
+              ' Status register write escalated
+              ' C is still super bit from SR
+        if_nc mov pb,#$20 ' privilege violation
+        if_nc jmp #mk_hub_trapit
+mk_hub_set_sr
+              'debug("in mk_hub_set_sr ",uhex_word(mk_sr,mk_memvalue),uhex_long(mk_virtualpc))
+              testb mk_sr,#MK_SUPER_BIT wc
+              testb mk_memvalue,#MK_SUPER_BIT xorc
+              ' switching supervisor/user: swap stack pointers
+        if_c  xor mk_a7,mk_othersp
+        if_c  xor mk_othersp,mk_a7
+        if_c  xor mk_a7,mk_othersp
+
+              ' configure hooks
+              and mk_memvalue,##%10100111_00011111
+              testb mk_memvalue,#MK_TRACE_BIT wc
+        if_c  mov mk_ihook1,##(%1111_1101100_0<<20) + @mk_hub_tracehook ' JMP #\mk_hub_tracehook
+        if_c  jmp #.no_irqhooks
+              ' check irq level
+              getnib pb,mk_memvalue,#2
+              cmp pb,#1 wc
+        if_ae mov mk_ihook1,#0 ' NOP
+        if_b  mov mk_ihook1,##(%1111_1011110_010_000000100<<9)+mk_irq1ptr ' JSE1 mk_irq1ptr
+.no_irqhooks
+
+              mov mk_sr,mk_memvalue
+              ret wcz
+
+
+mk_hub_irq1
+              ' make sure we actually ack it
+              pollse1 wc
+              mov pb,#1
+mk_hub_do_irq
+              'debug("running IRQ ",udec(pb))
+              'debug(uhex_word_array(#@vdp_ram+$FB60,#2))
+              'waitx ##10_000_000
+              ' get vector
+              mov mk_optmp0,pb
+              shl mk_optmp0,#2
+              'add mk_optmp0,mk_vectors_ptr
+              add mk_optmp0,#$60
+              rdlong mk_branchdisplace,mk_optmp0
+              movbyts mk_branchdisplace,#%%0123
+              'debug("IRQ! ",uhex_long(mk_branchdisplace,mk_virtualpc))
+              sub mk_branchdisplace,mk_virtualpc
+              ' set supervisor mode, unset trace mode and set interrupt priority
+              mov mk_optmp2,mk_sr
+              mov mk_memvalue,mk_sr
+              bith pb,#MK_SUPER_BIT-8
+              setbyte mk_memvalue,pb,#1
+              call #mk_hub_set_sr
+              ' push PC
+              sub mk_a7,#4
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea32
+              mov mk_memvalue,mk_virtualpc
+              call mk_writef
+              ' push SR
+              sub mk_a7,#2
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea16
+              mov mk_memvalue,mk_optmp2
+              call mk_writef
+              'waitx ##_CLKFREQ/120
+              jmp #mk_dobranch
+
+
+
+
+mk_hub_tracehook
+              getnib pb,mk_sr,#2
+              cmp pb,#1 wc
+        if_b  JSE1 mk_irq1ptr
+              mov pb,#$24
+              jmp #mk_hub_trapit
+
+
+'mk_nibble_A   ' Line A emulator
+'              mov pb,#$28
+'              jmp #mk_hub_trapit
+
+mk_nibble_F   ' Line F emulator
+              mov pb,#$2C
+              ' fall through
+mk_hub_trapit
+              debug("handling trap with vector ",uhex_(pb)," @ ",uhex_long(mk_virtualpc),dly(#1000))
+              ' get vector
+              'add pb,mk_vectors_ptr
+              rdlong mk_branchdisplace,pb
+              movbyts mk_branchdisplace,#%%0123
+              sub mk_branchdisplace,mk_virtualpc
+              ' set supervisor mode, unset trace mode
+              mov mk_optmp2,mk_sr
+              mov mk_memvalue,mk_sr
+              bith mk_memvalue,#MK_SUPER_BIT
+              bitl mk_memvalue,#MK_TRACE_BIT
+              call #mk_hub_set_sr
+              ' push PC
+              sub mk_a7,#4
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea32
+              mov mk_memvalue,mk_virtualpc
+              call mk_writef
+              ' push SR
+              sub mk_a7,#2
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea16
+              mov mk_memvalue,mk_optmp2
+              call mk_writef
+              jmp #mk_dobranch
+
+mk_address_error_debug
+              'drvh #38
+              debug("special edition spicy address error ")
+              'jmp #$
+mk_address_error ' can basically only happen due to misalignment?
+              debug("something something address error ",uhex_long(mk_effaddr),uhex_long(mk_virtualpc),uhex_long(mk_optmp0),uhex_word(mk_opword))
+              debug(uhex_reg_array(#mk_d0,#8))
+              debug(uhex_reg_array(#mk_a0,#8))
+              'wrlong ##$FF00FF_00,##palette32+4*16*256-4
+              jmp #$
+              ' get vector
+              rdlong mk_branchdisplace,#$0C ' Should this really?
+              movbyts mk_branchdisplace,#%%0123
+              mov mk_optmp1,mk_effaddr ' save for later
+              ' set supervisor mode, unset trace mode
+              mov mk_optmp2,mk_sr
+              mov mk_memvalue,mk_sr
+              bith mk_memvalue,#MK_SUPER_BIT
+              bitl mk_memvalue,#MK_TRACE_BIT
+              call #mk_hub_set_sr
+              ' push PC
+              sub mk_a7,#4
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea32
+              mov mk_memvalue,mk_virtualpc
+              call mk_writef
+              ' push SR
+              sub mk_a7,#2
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea16
+              mov mk_memvalue,mk_optmp2
+              call mk_writef
+              ' push instruction in progress (maybe)
+              sub mk_a7,#2
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea16
+              mov mk_memvalue,mk_opword
+              call mk_writef
+              ' push erroneous address
+              sub mk_a7,#4
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea32
+              mov mk_memvalue,mk_optmp1
+              call mk_writef
+              ' push flags
+              sub mk_a7,#2
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea16
+              ' slight problem: we don't know half this shit
+              mov mk_memvalue,#%10_001 ' assume it's a data read. It's probably a data read. Isn't it?
+              testb mk_optmp2,#MK_SUPER_BIT wc
+              bitc mk_memvalue,#2 ' we do know what mode we were in though
+              call mk_writef
+              mov ptra,#0 ' force reset ROM que
+              mov mk_virtualpc, #0 ' force reset PC to avoid double fault
+              jmp #mk_dobranch
+
+DAT ' MEMORY
+              orgh
+alignl
+mk_romio_area
+              byte 0[16]
+              byte 0[4] ' padding
+mk_romque_area
+              word 0[MK_ROMQUE_SIZE]
+              byte 0[4] ' padding
+
+
+
+
+
+
+mk_hub_stop
+              call #mk_getopimm16
+              debug("STOP instruction ",uhex_word(mk_opword),uhex_word(mk_optmp1)," encountered")
+              'debug(uhex_word_array(#vdp_ram+$C418,#16))
+               mov mk_memvalue,mk_optmp1
+               call #mk_wr_sr
+.waitloop
+              '' TODO: re-enable interrupt support
+              {
+              pollatn wc
+        if_c  rdbyte pb,#atn_command wc
+        if_c  jmp #mk_hub_hotreset
+              }
+              getnib pb,mk_sr,#2
+              cmp pb,#1 wc
+        if_b  JSE1 mk_irq1ptr
+              jmp #.waitloop
+              debug("jooo wtf")
+
+mk_hub_reset
+              debug("RESET instruction ",uhex_word(mk_opword)," encountered")
+              jmp #$
+
+mk_hub_nop
+              waitx #32 ' make NOP slow to fix Z80 race condition in some Data East games (magdrop2 etc)
+              cmp mk_opword,##$4E71 wz
+        if_z  ret
+              debug("weird NOP ? ",uhex_word(mk_opword),uhex_long(mk_virtualpc))
+              ret
+
+
+
+mk_hub_rte
+              testb mk_sr,#MK_SUPER_BIT wc
+        if_nc mov pb,#$20 ' privilege violation
+        if_nc jmp #mk_hub_trapit
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea16
+              call mk_readf
+              mov mk_optmp2,mk_memvalue ' only write SR after we're done popping
+              add mk_a7,#2
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea32
+              call mk_readf
+              mov mk_branchdisplace,mk_memvalue
+              sub mk_branchdisplace,mk_virtualpc
+              add mk_a7,#4
+              'debug("RTE from ",uhex_long_(mk_virtualpc)," to ",uhex_long(mk_memvalue))
+              mov mk_memvalue,mk_optmp2 ' only write SR after we're done popping
+              push ##mk_dobranch
+              jmp #mk_wr_sr
+
+mk_hub_rtr
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea16
+              call mk_readf
+              call #mk_wr_ccr
+              add mk_a7,#2
+              ' fall through
+mk_hub_rts
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea32
+              call mk_readf
+              'debug("SP before RTS: ",uhex_long(mk_a7),uhex_long(mk_memvalue),uhex_long(mk_virtualpc))
+              mov mk_branchdisplace,mk_memvalue
+              sub mk_branchdisplace,mk_virtualpc
+              add mk_a7,#4
+              jmp #mk_dobranch
+
+
+mk_hub_trapv
+              testb mk_sr,#MK_OVER_BIT wc
+        if_nc ret
+              mov pb,#$1C
+              jmp #mk_hub_trapit
+
+mk_hub_moveusp
+              testb mk_sr,#MK_SUPER_BIT wc
+        if_nc mov pb,#$20
+        if_nc jmp #mk_hub_trapit ' TODO: proper non-supervisor trap
+              mov pb,mk_opword
+              and pb,#7
+              testb mk_opword,#3 wc ' if C, read USP, if NC, write USP
+              'debug("in mk_hub_moveusp ",uhex_word(mk_opword),udec(pb),uhex_long(mk_othersp),uhex_long(mk_nibble_impl_tbl+3),uhex_long(inb))
+        if_c  altd pb,#mk_a0
+        if_c  mov 0-0,mk_othersp
+        if_nc alts pb,#mk_a0
+        if_nc mov mk_othersp,0-0
+              'debug("in mk_hub_moveusp again ",uhex_word(mk_opword),udec(pb),uhex_long(mk_othersp),uhex_long(mk_nibble_impl_tbl+3))
+              ret
+
+
+
+mk_hub_tst_tas
+              getbyte mk_optmp0,mk_opword,#0
+              cmp mk_optmp0,#%11_111_100 wz
+        if_z  jmp #mk_illegal
+              test mk_opword,#%11_000_000 wcz
+        if_00 andn pb,#%11_000_000 ' convert TAS to TST.B (Note: if_00 here really means ""if_11"" (not zero and even parity))
+              call #mk_setup_operand_auto
+              call mk_readf
+              'debug("in TST/TAS with ",uhex_long(mk_virtualpc),uhex_word(mk_opword),uhex(mk_memvalue),uhex(mk_shiftit),uhex(mk_d0))
+              shl mk_memvalue,mk_shiftit wz
+              testb mk_memvalue,#31 wc
+              bitc mk_sr,#MK_NEG_BIT
+              bitz mk_sr,#MK_ZERO_BIT
+              andn mk_sr,#MK_OVER_MASK|MK_CARRY_MASK
+              'debug("SR after",ubin_word(mk_sr))
+              test mk_opword,#%11_000_000 wcz
+        if_c_or_z ret ' not TAS
+              test mk_opword,#%00_111_000 wz
+        'if_nz ret ' not register TAS (memory TAS is broken due to buggy SEGA bus logic)
+              shr mk_memvalue,#24
+              or mk_memvalue,#$80
+              jmp mk_writef
+
+mk_hub_link_trap
+              testb mk_opword,#4 wc
+        if_nc jmp #.trap
+              testb mk_opword,#3 wc
+        if_c  jmp #.unlk
+              ' okay, LINK
+              sub mk_a7,#4
+              mov mk_effaddr,mk_a7
+              mov mk_optmp0,mk_opword
+              and mk_optmp0,#7
+              call #mk_setup_ea32
+              alts mk_optmp0,#mk_a0
+              mov mk_memvalue,0-0
+              call mk_writef
+              altd mk_optmp0,#mk_a0
+              mov 0-0,mk_a7
+              call #mk_getopimm16
+              signx mk_optmp1,#15
+        _ret_ add mk_a7,mk_optmp1
+
+
+.unlk         ' UNLK
+              mov mk_optmp0,mk_opword
+              and mk_optmp0,#7
+              alts mk_optmp0,#mk_a0
+              mov mk_a7,0-0
+              mov mk_effaddr,mk_a7
+              call #mk_setup_ea32
+              call mk_readf
+              altd mk_optmp0,#mk_a0
+              mov 0-0,mk_memvalue
+        _ret_ add mk_a7,#4
+
+
+.trap
+              getnib pb,mk_opword,#0
+              shl pb,#2
+              add pb,#$80
+              jmp #mk_hub_trapit
+
+
+mk_nibble_7 ' MOVEQ
+              mov pb,mk_opword
+              and pb,mk_dreg_mask
+              signx mk_opword,#7 wcz
+              bitc mk_sr,#MK_NEG_BIT
+              bitz mk_sr,#MK_ZERO_BIT
+              andn mk_sr,#MK_OVER_MASK|MK_CARRY_MASK
+              alti pb,#%000_100_000
+.moveop _ret_ mov mk_d0,mk_opword
+
+
+mk_hub_movem  ' MOVEM
+              'debug("in mk_hub_movem ",uhex_long(mk_a0))
+              call #mk_getopimm16
+              testb mk_opword,#10 wc
+        if_c  neg mk_optmp2,#1
+        if_c  jmp #.movem_do_read
+              'debug(ubin_word(mk_opword))
+              test mk_opword,#%011_000 wz
+        if_z  mov mk_optmp2,#mk_a7
+        if_z  jmp #.movem_do_predec_write
+              mov mk_optmp2,#0
+              call #mk_compute_ea
+              jmp #.movem_write
+
+              ' MOVEM normal write
+.writeloop
+              testb mk_opword,#6 wc ' long/word ?
+        if_c  call #mk_setup_ea32
+        if_nc call #mk_setup_ea16
+              call mk_writef
+        if_c  add mk_effaddr,#4
+        if_nc add mk_effaddr,#2
+.movem_write
+              'debug("at .movem_write ",uhex_long(mk_optmp2),uhex_long(mk_effaddr),ubin_word(mk_optmp1))
+              alti mk_optmp2,#%000_000_111 ' increment register ptr
+              mov mk_memvalue,0-0
+              'debug("got value ",uhex_long(mk_memvalue),uhex_long(mk_optmp2))
+              shr mk_optmp1,#1 wcz
+        if_c  jmp #.writeloop
+        if_nc_and_nz jmp #.movem_write
+              ret
+
+
+
+              ' MOVEM predec write
+.movem_do_predec_write
+              mov pb,mk_opword
+              and pb,#7
+              alts pb,#mk_a0
+              mov mk_effaddr,0-0
+              jmp #.movem_predec_write
+
+.predec_write_loop
+              testb mk_opword,#6 wc ' long/word ?
+        if_c  sub mk_effaddr,#4
+        if_nc sub mk_effaddr,#2
+        if_c  call #mk_setup_ea32
+        if_nc call #mk_setup_ea16
+              call mk_writef
+.movem_predec_write
+              'debug("at .movem_predec_write ",uhex_long(mk_optmp2),uhex_long(mk_effaddr),ubin_word(mk_optmp1),uhex_word(mk_opword))
+              alti mk_optmp2,#%000_000_110 ' decrement register ptr
+              mov mk_memvalue,0-0
+              shr mk_optmp1,#1 wcz
+        if_c  jmp #.predec_write_loop
+        if_nc_and_nz jmp #.movem_predec_write
+              ' done.
+              and mk_opword,#7
+              altd mk_opword,#mk_a0
+        _ret_ mov 0-0,mk_effaddr
+
+              ' MOVEM read
+.movem_do_read
+              call #mk_compute_ea
+              jmp #.movem_read
+
+.readloop
+
+              testb mk_opword,#6 wc ' long/word ?
+        if_c  call #mk_setup_ea32
+        if_nc call #mk_setup_ea16
+              call mk_readf
+        if_nc signx mk_memvalue,#15
+              altd mk_optmp2,#mk_d0
+              mov 0-0,mk_memvalue
+        if_c  add mk_effaddr,#4
+        if_nc add mk_effaddr,#2
+.movem_read
+              'debug("at .movem_read",uhex_long(mk_optmp2),uhex_long(mk_effaddr),ubin_word(mk_optmp1),uhex_word(mk_opword))
+              add mk_optmp2,#1
+              shr mk_optmp1,#1 wcz
+        if_c  jmp #.readloop
+        if_nc_and_nz jmp #.movem_read
+              ' if empty
+              mov pb,mk_opword
+              and pb,#%111_000
+              cmp pb,#%011_000 wz ' is postinc mode?
+        if_nz ret
+              and mk_opword,#7
+              altd mk_opword,#mk_a0
+        _ret_ mov 0-0,mk_effaddr
+
+
+
+
+mk_hub_movep  ' MOVEP
+              debug("in mk_hub_movep")
+              ' compute address
+              call #mk_getopimm16
+              signx mk_optmp1,#15
+              mov mk_effaddr,mk_optmp1
+              getnib pb,mk_opword,#0 ' will be %1xxx
+              alts pb,#mk_d0
+              add mk_effaddr,0-0
+
+              testb mk_opword,#7 wc
+        if_c  jmp #.movep_write
+
+              call #mk_setup_ea8
+              call mk_readf
+              rolbyte mk_optmp2,mk_memvalue,#0
+              add mk_effaddr,#2
+              call #mk_setup_ea8
+              call mk_readf
+              rolbyte mk_optmp2,mk_memvalue,#0
+              testb mk_opword,#6 wc
+        if_nc mov mk_shiftit,#16
+        if_nc jmp #.read_done
+              mov mk_shiftit,#0
+              add mk_effaddr,#2
+              call #mk_setup_ea8
+              call mk_readf
+              rolbyte mk_optmp2,mk_memvalue,#0
+              add mk_effaddr,#2
+              call #mk_setup_ea8
+              call mk_readf
+              rolbyte mk_optmp2,mk_memvalue,#0
+.read_done
+              mov mk_memvalue,mk_optmp2
+              jmp #mk_write_second_reg
+
+
+.movep_write
+              call #mk_get_second_reg
+              testb mk_opword,#6 wc
+        if_nc shl mk_optmp1,#16
+              call #mk_setup_ea8
+              getbyte mk_memvalue,mk_optmp1,#3
+              call mk_writef
+              add mk_effaddr,#2
+              call #mk_setup_ea8
+              getbyte mk_memvalue,mk_optmp1,#2
+              call mk_writef
+              testb mk_opword,#6 wc
+        if_nc ret
+              add mk_effaddr,#2
+              call #mk_setup_ea8
+              getbyte mk_memvalue,mk_optmp1,#1
+              call mk_writef
+              add mk_effaddr,#2
+              call #mk_setup_ea8
+              getbyte mk_memvalue,mk_optmp1,#0
+              jmp mk_writef
+
+
+
+mk_hub_mul    ' MULU/MULS
+              mov pb,mk_opword
+              call #mk_setup_operand16_move
+              call mk_readf
+              mov pb,mk_opword
+              and pb,mk_dreg_mask
+              testb mk_opword,#8 wc ' set c if signed
+        if_nc alti pb,#%000_100_000
+        if_nc mul 0-0,mk_memvalue wz
+        if_c  alti pb,#%000_100_000
+        if_c  muls 0-0,mk_memvalue wz
+              bitz mk_sr,#MK_ZERO_BIT
+              alti pb,#%000_100_000
+              testb 0-0,#31 wz
+              bitz mk_sr,#MK_NEG_BIT
+        _ret_ andn mk_sr,#MK_CARRY_MASK|MK_OVER_MASK
+
+mk_hub_div    ' DIVU/DIVS
+              mov pb,mk_opword
+              call #mk_setup_operand16_move
+              call mk_readf ' get divider
+              mov pb,mk_opword
+              shr pb,#9
+              and pb,#7
+              alts pb,#mk_d0
+              mov mk_optmp0,0-0 ' get divisor
+              tjz mk_memvalue,#.by_zero
+              testb mk_opword,#8 wz ' set z if signed
+        if_z  signx mk_memvalue,#15
+        if_z  abs mk_memvalue wc
+        if_z  wrc mk_optmp1 ' bit 0 holds appropriate result sign
+        if_z  abs mk_optmp0 wc
+              qdiv mk_optmp0,mk_memvalue
+        if_z_and_c bitnot mk_optmp1,#0
+              bitl mk_sr,#MK_CARRY_BIT
+              getqx mk_memvalue    ' quotient
+              getqy mk_optmp0      ' remainder
+              ' Apply sign
+        if_z  testb mk_optmp1,#0 wc
+        if_z  negc mk_memvalue
+        if_z  negc mk_optmp0
+              testb mk_memvalue,#15 wc
+              bitc mk_sr,#MK_NEG_BIT
+              ' Check overflow
+              mov mk_optmp1,mk_memvalue
+        if_z  signx mk_memvalue,#15
+        if_nz zerox mk_memvalue,#15
+              cmp mk_optmp1,mk_memvalue wz
+              bitnz mk_sr,#MK_OVER_BIT
+        if_nz bith mk_sr,#MK_NEG_BIT ' Undocumented flag
+        if_nz ret
+              ' set Z flag (not set on overflow?)
+              cmp mk_memvalue,#0 wz
+              bitz mk_sr,#MK_ZERO_BIT
+              ' write back
+              setword mk_memvalue,mk_optmp0,#1
+              altd pb,#mk_d0
+        _ret_ mov 0-0,mk_memvalue
+
+.by_zero
+              mov pb,#$14
+              ' Strange flags...
+              andn mk_sr,#MK_CARRY_MASK|MK_OVER_MASK|MK_NEG_MASK
+              testb mk_opword,#8 wc ' set c if signed
+        if_c  bith mk_sr,#MK_ZERO_BIT
+        if_c  jmp #mk_hub_trapit
+              shr mk_optmp0,#16
+              cmps mk_optmp0,#0 wcz
+              bitz mk_sr,#MK_ZERO_BIT
+              bitc mk_sr,#MK_NEG_BIT
+              jmp #mk_hub_trapit
+
+
+mk_hub_srmove
+              call #mk_setup_operand16_move
+              testb mk_opword,#10 wc ' FROM (NC) or TO (C) SR
+        if_nc push mk_writef
+        if_nc jmp #mk_rd_sr
+              testb mk_opword,#9 wz ' if to SR, to whole SR (Z) or CCR only (NZ)
+        if_z  push #mk_wr_sr
+        if_nz push #mk_wr_ccr
+              jmp mk_readf
+
+
+
+mk_hub_exg
+              ' okay got EXG
+              ' encoding is a bit stupid, see manual
+              mov pb,mk_opword
+              and pb,#7 ' register Y
+              mov pa,mk_opword
+              shr pa,#9
+              and pa,#7 ' register X
+              testb mk_opword,#3 wc
+              testb mk_opword,#7 wz
+        if_c  add pb,#8
+        if_c_and_nz add pa,#8
+              alts pb,#mk_d0
+              mov mk_optmp0,0-0
+              alts pa,#mk_d0
+              mov mk_optmp1,0-0
+              altd pb,#mk_d0
+              mov 0-0,mk_optmp1
+              altd pa,#mk_d0
+        _ret_ mov 0-0,mk_optmp0
+
+
+mk_hub_abcd   ' ABCD
+              ' isolate register nos
+              mov mk_optmp0,mk_opword
+              and mk_optmp0,#7 ' source
+              mov mk_optmp2,mk_opword
+              shr mk_optmp2,#9
+              and mk_optmp2,#7 ' destination
+              ' check for -(An),-(An) mode
+              testb mk_opword,#3 wc
+        if_c  jmp #.memmode
+              alts mk_optmp0,#mk_d0
+              getbyte mk_optmp1,0-0,#0
+              alts mk_optmp2,#mk_d0
+              getbyte mk_memvalue,0-0,#0
+.doit
+              ' See: https://github.com/flamewing/68k-bcd-verifier/blob/master/bcd-emul.cc#L52
+              ' compute ss
+              testb mk_sr,#MK_EXT_BIT wc
+              mov mk_optmp0,mk_memvalue
+              addx mk_optmp0,mk_optmp1
+              ' compute bc
+              mov mk_optmp2,mk_memvalue
+              and mk_optmp2,mk_optmp1
+              andn mk_memvalue,mk_optmp0 ' note: don't need the original operands anymore
+              or mk_optmp2,mk_memvalue
+              andn mk_optmp1,mk_optmp0 ' note: ^^
+              or mk_optmp2,mk_optmp1
+              and mk_optmp2,#$88
+              ' compute dc
+              mov mk_memvalue,mk_optmp0
+              add mk_memvalue,#$66
+              xor mk_memvalue,mk_optmp0
+              and mk_memvalue,#$110
+              shr mk_memvalue,#1
+              ' compute corf
+              or mk_memvalue,mk_optmp2
+              sca mk_memvalue,##$4000 ' equivalent to >> 2
+              sub mk_memvalue,0-0
+              ' compute result
+              add mk_memvalue,mk_optmp0
+              ' write to register if needed
+              testb mk_opword,#3 wc
+        if_nc and mk_opword,mk_dreg_mask ' don't need opword anymore
+        if_nc alti mk_opword,#%000_100_000
+        if_nc setbyte 0-0,mk_memvalue,#0
+              ' compute carry
+              testb mk_optmp0,#7 wc
+              testbn mk_memvalue,#7 andc
+              testb mk_optmp2,#7 orc
+              muxc mk_sr,#MK_CARRY_MASK|MK_EXT_MASK
+              ' compute overflow
+              testbn mk_optmp0,#7 wc
+              testb mk_memvalue,#7 andc
+              bitc mk_sr,#MK_OVER_BIT
+              ' compute zero flag
+              test mk_memvalue,#255 wz
+        if_nz bitl mk_sr,#MK_ZERO_BIT
+              ' compute neg flag
+              testb mk_memvalue,#7 wc
+        _ret_ bitc mk_sr,#MK_NEG_BIT
+              ' returns either to nextop or mk_writef
+.memmode
+              altd mk_optmp0,#mk_a0
+              sub  0-0,#1
+              alts mk_optmp0,#mk_a0
+              mov  mk_effaddr,0-0
+              call #mk_setup_ea8
+              call mk_readf
+              mov mk_optmp1,mk_memvalue
+              altd mk_optmp2,#mk_a0
+              sub  0-0,#1
+              alts mk_optmp2,#mk_a0
+              mov  mk_effaddr,0-0
+              call #mk_setup_ea8
+              ' - jmp into mk_readf
+              ' - returns into .doit
+              ' - returns into mk_writef
+              push mk_writef
+              loc pb,#.doit
+              push pb
+              jmp mk_readf
+
+
+mk_hub_sbcd
+              ' isolate register nos
+              mov mk_optmp0,mk_opword
+              and mk_optmp0,#7 ' source
+              mov mk_optmp2,mk_opword
+              shr mk_optmp2,#9
+              and mk_optmp2,#7 ' destination
+              ' check for -(An),-(An) mode
+              testb mk_opword,#3 wc
+        if_c  jmp #.memmode
+              alts mk_optmp0,#mk_d0
+              getbyte mk_optmp1,0-0,#0
+              alts mk_optmp2,#mk_d0
+              getbyte mk_memvalue,0-0,#0
+.doit
+              ' See: https://github.com/flamewing/68k-bcd-verifier/blob/master/bcd-emul.cc#L80
+              ' compute dd
+              testb mk_sr,#MK_EXT_BIT wc
+              mov mk_optmp0,mk_memvalue
+              subx mk_optmp0,mk_optmp1
+              ' compute bc
+              not mk_optmp2,mk_memvalue
+              and mk_optmp2,mk_optmp1
+              not  mk_memvalue ' note: don't need the original operands anymore
+              and mk_memvalue,mk_optmp0
+              or mk_optmp2,mk_memvalue
+              and mk_optmp1,mk_optmp0 ' note: ^^
+              or mk_optmp2,mk_optmp1
+              and mk_optmp2,#$88
+              ' compute corf
+              mov mk_memvalue,mk_optmp2
+              sca mk_memvalue,##$4000 ' equivalent to >> 2
+              sub mk_memvalue,0-0
+              ' compute result
+              subr mk_memvalue,mk_optmp0
+              ' write to register if needed
+              testb mk_opword,#3 wc
+        if_nc and mk_opword,mk_dreg_mask ' don't need opword anymore
+        if_nc alti mk_opword,#%000_100_000
+        if_nc setbyte 0-0,mk_memvalue,#0
+              ' compute carry
+              testbn mk_optmp0,#7 wc
+              testb mk_memvalue,#7 andc
+              testb mk_optmp2,#7 orc
+              muxc mk_sr,#MK_CARRY_MASK|MK_EXT_MASK
+              ' compute overflow
+              testb mk_optmp0,#7 wc
+              testbn mk_memvalue,#7 andc
+              bitc mk_sr,#MK_OVER_BIT
+              ' compute zero flag
+              test mk_memvalue,#255 wz
+        if_nz bitl mk_sr,#MK_ZERO_BIT
+              ' compute neg flag
+              testb mk_memvalue,#7 wc
+        _ret_ bitc mk_sr,#MK_NEG_BIT
+              ' returns either to nextop or mk_writef
+.memmode
+              altd mk_optmp0,#mk_a0
+              sub  0-0,#1
+              alts mk_optmp0,#mk_a0
+              mov  mk_effaddr,0-0
+              call #mk_setup_ea8
+              call mk_readf
+              mov mk_optmp1,mk_memvalue
+              altd mk_optmp2,#mk_a0
+              sub  0-0,#1
+              alts mk_optmp2,#mk_a0
+              mov  mk_effaddr,0-0
+              call #mk_setup_ea8
+              ' - jmp into mk_readf
+              ' - returns into .doit
+              ' - returns into mk_writef
+              push mk_writef
+              loc pb,#.doit
+              push pb
+              jmp mk_readf
+
+
+
+
+mk_hub_nbcd
+              'debug ("in NBCD with ",uhex(mk_opword))
+              call #mk_setup_operand8_move ' opword still in PB!
+              call mk_readf
+              ' See: https://github.com/flamewing/68k-bcd-verifier/blob/master/bcd-emul.cc#L104
+              ' compute dd
+              neg mk_optmp0,mk_memvalue
+              testb mk_sr,#MK_EXT_BIT wc
+        if_c  sub mk_optmp0,#1
+              ' compute bc
+              mov mk_optmp2,mk_memvalue
+              or mk_optmp2,mk_optmp0
+              and mk_optmp2,#$88
+              ' compute corf
+              mov mk_memvalue,mk_optmp2
+              sca mk_memvalue,##$4000 ' equivalent to >> 2
+              sub mk_memvalue,0-0
+              ' compute result
+              subr mk_memvalue,mk_optmp0
+              ' compute carry
+              testbn mk_optmp0,#7 wc
+              testb mk_memvalue,#7 andc
+              testb mk_optmp2,#7 orc
+              muxc mk_sr,#MK_CARRY_MASK|MK_EXT_MASK
+              ' compute overflow
+              testb mk_optmp0,#7 wc
+              testbn mk_memvalue,#7 andc
+              bitc mk_sr,#MK_OVER_BIT
+              ' compute zero flag
+              test mk_memvalue,#255 wz
+        if_nz bitl mk_sr,#MK_ZERO_BIT
+              ' compute neg flag
+              testb mk_memvalue,#7 wc
+              bitc mk_sr,#MK_NEG_BIT
+              jmp mk_writef
+
+
+
+mk_hub_addsubx
+              'debug("in mk_hub_addsubx")
+              ' isolate register nos
+              mov mk_optmp0,mk_opword
+              and mk_optmp0,#7 ' source
+              mov mk_optmp2,mk_opword
+              shr mk_optmp2,#9
+              and mk_optmp2,#7 ' destination
+              ' check for -(An),-(An) mode
+              testb mk_opword,#3 wc
+        if_c  jmp #.memmode
+              ' read source
+              mov pb,mk_opword ' operand is already register
+              call #mk_setup_operand_auto
+              call mk_readf
+              mov mk_optmp1,mk_memvalue
+              ' read destination
+              mov pb,mk_opword
+              getnib pb,mk_opword,#2
+              shr pb,#1
+              setq #%11_000_000
+              muxq pb,mk_opword
+              call #mk_setup_operand_auto
+              call mk_readf
+              testb mk_opword,#14 wc ' C = ADD,NC = SUB ?
+        if_nc jmp #.do_sub
+              ' fall  through
+.do_add
+              'debug("in .do_add with ",uhex(mk_memvalue),uhex(mk_optmp1),udec(mk_shiftit))
+              testb mk_sr,#MK_EXT_BIT wc
+              ' must be rcl for correct ripple carry
+              rcl mk_memvalue,mk_shiftit
+              shl mk_optmp1,mk_shiftit
+              ' generate stupid overflow flag
+              mov mk_optmp0,mk_optmp1
+              addsx mk_optmp0,mk_memvalue wc
+              testb mk_optmp0,#31 xorc
+              bitc mk_sr,#MK_OVER_BIT
+              ' do actual add
+              testb mk_sr,#MK_EXT_BIT wc
+              addx mk_memvalue,mk_optmp1 wcz
+              muxc mk_sr,#MK_CARRY_MASK|MK_EXT_MASK
+              testb mk_optmp0,#31 wc
+              bitc mk_sr,#MK_NEG_BIT
+              sar mk_memvalue,mk_shiftit wz
+        if_nz bitl mk_sr,#MK_ZERO_BIT
+              'debug("got result ",uhex(mk_memvalue))
+              jmp mk_writef
+
+.do_sub
+              shl mk_memvalue,mk_shiftit
+              shl mk_optmp1,mk_shiftit
+              ' generate stupid overflow flag
+              mov mk_optmp0,mk_memvalue
+              testb mk_sr,#MK_EXT_BIT wc
+              subsx mk_optmp0,mk_optmp1 wc
+              testb mk_optmp0,#31 xorc
+              bitc mk_sr,#MK_OVER_BIT
+              ' do actual sub
+              testb mk_sr,#MK_EXT_BIT wc
+              subx mk_memvalue,mk_optmp1 wcz
+              muxc mk_sr,#MK_CARRY_MASK|MK_EXT_MASK
+              testb mk_optmp0,#31 wc
+              bitc mk_sr,#MK_NEG_BIT
+              sar mk_memvalue,mk_shiftit wz
+        if_nz bitl mk_sr,#MK_ZERO_BIT
+              jmp mk_writef
+
+.memmode
+              ' read source
+              mov pb,mk_opword
+              xor pb,#%101_000 ' turn into -(An) (is %001_xxx to begin with)
+              call #mk_setup_operand_auto
+              call mk_readf
+              mov mk_optmp1,mk_memvalue
+              ' read destination
+              mov pb,mk_opword
+              getnib pb,mk_opword,#2
+              shr pb,#1
+              setq #%11_000_000
+              muxq pb,mk_opword
+              or pb,#%100_000 ' turn into -(An) (is %001_xxx to begin with)
+              call #mk_setup_operand_auto
+              testb mk_opword,#14 wc ' C = ADD,NC = SUB ?
+        if_c  loc pb,#.do_add
+        if_nc loc pb,#.do_sub
+              push pb
+              jmp mk_readf
+
+
+
+mk_hub_negx
+              '' NOTE: operand is already set up and shifted
+              mov mk_optmp1,mk_memvalue
+              mov mk_memvalue,#0
+              mov mk_optmp0,#0
+              testb mk_sr,#MK_EXT_BIT wc
+              subsx mk_optmp0,mk_optmp1 wc
+              testb mk_optmp0,#31 xorc
+              bitc mk_sr,#MK_OVER_BIT
+              ' do actual sub
+              testb mk_sr,#MK_EXT_BIT wc
+              subx mk_memvalue,mk_optmp1 wcz
+              muxc mk_sr,#MK_CARRY_MASK|MK_EXT_MASK
+              testb mk_optmp0,#31 wc
+              bitc mk_sr,#MK_NEG_BIT
+              'debug("negx result ",uhex_long(mk_memvalue),ubin(mk_shiftit))
+              sar mk_memvalue,mk_shiftit wz
+        if_nz bitl mk_sr,#MK_ZERO_BIT
+              jmp mk_writef
+
+
+mk_hub_cmpm
+              ' read destination
+              getnib pb,mk_opword,#2
+              shr pb,#1
+              setq #%11_000_000
+              muxq pb,mk_opword
+              or pb,#%011_000 ' turn into (An)+
+              call #mk_setup_operand_auto
+              call mk_readf
+              mov mk_optmp1,mk_memvalue
+              ' read source
+              mov pb,mk_opword
+              or pb,#%011_000 ' turn into (An)+
+              call #mk_setup_operand_auto
+              push #mk_cmp_common
+              jmp mk_readf
+
+mk_hub_chk
+              call #mk_setup_operand16_move ' pb already loaded
+              call mk_readf
+              call #mk_get_second_reg
+              andn mk_sr,#MK_OVER_MASK|MK_CARRY_MASK ' Undocumented flags
+              cmps mk_optmp1,#0 wcz
+              bitz mk_sr,#MK_ZERO_BIT ' Undocumented flag
+              mov pb,#$18
+        if_b  bith mk_sr,#MK_NEG_BIT
+        if_b  jmp #mk_hub_trapit
+              cmps mk_optmp1,mk_memvalue wcz
+        if_be ret
+              bitl mk_sr,#MK_NEG_BIT
+              jmp #mk_hub_trapit
+{
+mk_hub_cogatn
+              rdbyte pb,#atn_command wcz
+        if_z  jmp #mk_nextop
+        if_c  jmp #mk_hub_hotreset
+              jmp #mk_hub_cogatn
+}
+
+DAT ' MotoKore 68000 init code
+
+
+              orgh
+mk_init
+              setse1 ptra ' set IRQ trigger for Vblank
+
+              ' load code
+              loc pa,#@@@mk_cogbase
+              setq #495
+              rdlong 0,pa
+              loc pa,#@@@mk_lutbase
+              setq2 #511
+              rdlong 0,pa
+
+              cogid pa
+              mul pa,#12
+              add mk_exmem_mailbox,pa
+              debug("mk_init ",uhex_long(mk_exmem_mailbox,pa))
+
+
+mk_hub_hotreset
+              'wrbyte #0,#atn_command
+              mov mk_sr,##MK_SUPER_MASK + (7<<8)
+              'call #mk_check_core_integrity
+              ' initialize PC and SP
+              mov mk_virtualpc,#0
+              mov mk_branchdisplace,##$80000000 ' start executing ROM
+              ' stack is setup by program
+              'rdlong mk_a7,##mk_vectorcache_bios+$00
+              debug("inital pc and sp ",uhex_long(mk_branchdisplace),uhex_long(mk_a7))
+              mov ptra,#0
+              neg mk_romque_left,#1
+              '
+              {
+              setq #15
+              wrlong mk_d0,#FUNC_MAILBOX+8
+              wrlong mk_virtualpc,#FUNC_MAILBOX+4
+              mov pa,#1
+              and pa,#255
+              wrlong pa,#FUNC_MAILBOX
+.wait         rdlong pa,#FUNC_MAILBOX wz
+        if_nz jmp #.wait
+              jmp #$ ' TODO: actually run
+              }
+              jmp #mk_dobranch
+
+
+DAT ' LINE A SPECIAL INSTRUCTIONS
+    ' Instead of being a trap, opcodes $Axxx are bound to special functions
+              orgh
+mk_nibble_A
+              mov pa,mk_opword
+              and pa,#255
+              cmp pa,#MIKO68K_DUMPREGS & 255 wz
+        if_z  jmp #mk_func_dumpregs
+              cmp pa,#MIKO68K_GETINPUT & 255 wz
+        if_z  jmp #mk_func_getinput
+              cmp pa,#MIKO68K_BURSTCOPY & 255 wz
+        if_z  jmp #mk_func_burstcopy
+              cmp pa,#MIKO68K_WORDFILL & 255 wz
+        if_z  jmp #mk_func_wordfill
+              cmp pa,#MIKO68K_SAVEREAD & 255 wz
+        if_z  jmp #mk_func_saveread
+              cmp pa,#MIKO68K_SAVEWRITE & 255 wz
+        if_z  jmp #mk_func_savewrite
+              jmp #mk_nextop
+
+
+mk_func_getinput
+              wrlong mk_d0,#FUNC_MAILBOX+4
+              wrlong #2,#FUNC_MAILBOX
+.wait         rdlong pa,#FUNC_MAILBOX wz
+        if_nz jmp #.wait
+              rdlong mk_d0,#FUNC_MAILBOX+4
+              jmp #mk_nextop
+
+
+mk_func_saveread
+              wrlong mk_a0,#FUNC_MAILBOX+4
+              wrlong #16,#FUNC_MAILBOX
+.wait         rdlong pa,#FUNC_MAILBOX wz
+        if_nz jmp #.wait
+              jmp #mk_nextop
+
+mk_func_savewrite
+              wrlong mk_a0,#FUNC_MAILBOX+4
+              wrlong mk_d0,#FUNC_MAILBOX+8  ' safety interlock value
+              wrlong #17,#FUNC_MAILBOX
+.wait         rdlong pa,#FUNC_MAILBOX wz
+        if_nz jmp #.wait
+              jmp #mk_nextop
+
+
+mk_func_dumpregs
+              setq #15
+              wrlong mk_d0,#FUNC_MAILBOX+8
+              wrlong mk_virtualpc,#FUNC_MAILBOX+4
+              wrlong #1,#FUNC_MAILBOX
+              nop
+.wait         rdlong pa,#FUNC_MAILBOX wz
+        if_nz jmp #.wait
+              jmp #mk_nextop
+
+mk_func_burstcopy
+              ' Turbo copy of d0 bytes from a0 to a1
+              testb mk_a0,#31 wc
+              testb mk_a1,#31 wz
+        if_00 jmp #.hub2hub
+        if_11 jmp #.psram2psram
+
+              ' Hub/psram cross operation can be a single driver command
+              mov mk_romio_length,mk_d0
+        if_c  mov mk_romio_addr,mk_a0
+        if_nc mov mk_romio_addr,mk_a1
+        if_c  mov mk_romio_target,mk_a1
+        if_nc mov mk_romio_target,mk_a0
+        if_c  setnib mk_romio_addr,#$B,#7 ' read burst
+        if_nc setnib mk_romio_addr,#$F,#7 ' write burst
+              setq #2
+              wrlong mk_romio_addr,mk_exmem_mailbox
+              waitatn
+              jmp #mk_nextop
+
+.hub2hub
+              mov mk_optmp0,mk_a0
+              mov mk_optmp1,mk_a1
+              ' Ironically quite slow
+              rep @.hloop,mk_d0
+              rdbyte pa,mk_optmp0
+              wrbyte pa,mk_optmp1
+              add mk_optmp0,#1
+              add mk_optmp1,#1
+.hloop        
+              jmp #mk_nextop
+
+
+.psram2psram
+              mov mk_optmp0,mk_a0
+              mov mk_optmp1,mk_a1
+              mov mk_optmp2,mk_d0
+              loc pa,#@@@copybuffer
+              mov mk_romio_target,pa
+.psloop
+              mov mk_romio_length,mk_optmp2
+              fle mk_romio_length,#256
+              mov mk_romio_addr,mk_optmp0
+              setnib mk_romio_addr,#$B,#7 ' read burst
+              setq #2
+              wrlong mk_romio_addr,mk_exmem_mailbox
+              waitatn
+              mov mk_romio_addr,mk_optmp1
+              setnib mk_romio_addr,#$F,#7 ' write burst
+              setq #2
+              wrlong mk_romio_addr,mk_exmem_mailbox
+              waitatn
+              add mk_optmp0,mk_romio_length
+              add mk_optmp1,mk_romio_length
+              sub mk_optmp2,mk_romio_length wz
+        if_nz jmp #.psloop
+
+              jmp #mk_nextop
+
+
+mk_func_wordfill
+              mov mk_memtmp0,mk_a0
+              movbyts mk_memtmp0,#%%2301
+              tjns mk_a1,#.hub
+              mov mk_romio_length,mk_d0
+              mov mk_romio_addr,mk_a1
+              mov mk_romio_target,mk_memtmp0
+              setnib mk_romio_addr,#$D,#7 ' word fill
+              setq #2
+              wrlong mk_romio_addr,mk_exmem_mailbox
+              waitatn
+              jmp #mk_nextop
+
+.hub
+              mov ptrb,mk_a1
+              rep #1,mk_d0
+              wrword mk_memtmp0,ptrb++
+              jmp #mk_nextop
+
+DAT
+alignl
+copybuffer byte 0[256]

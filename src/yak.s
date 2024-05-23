@@ -1,11 +1,25 @@
-  .include	'jaguar.inc'
+  
+  
+.if ^^defined PROPELLER  
+	.include	'p2defs.inc'
+	; some helpful definitions
+WID320          EQU     $00004200       ; 1.01 X 2^8  (33<<9)
+WID384          EQU     $00004400       ; 1.10 X 2^8  (34<<9)
+PIXEL16         EQU     $00000020       ; n = 4
+PITCH1          EQU     $00000000       ; 0 phrase gap
+XADDPHR         EQU     $00000000       ; 00 - add phrase width and truncate
+.else
+    .include	'jaguar.inc'
 	.extern	VideoIni
+	JAGUAR = 0
+.endif
 
 ;	.extern GPUSTART	;From the ALLSYNT object code
 ;	.extern GPUEND
 ;	.extern DSPORG
 
-
+;ALWAYS_CHEAT equ 1
+FIX_FLIPPER_LOD_COLOR equ 1
 
 ;	.globl ENABLETIMER
 ;	.globl DISABLETIMER
@@ -16,17 +30,17 @@
 	.extern PT_MOD_INIT	
 	.extern START_MOD	
 	.extern STOP_MOD	
-	.extern PLAYFX2		
-	.extern CHANGE_VOLUME
-	.extern SET_VOLUME	
+	;.extern PLAYFX2		
+	;.extern CHANGE_VOLUME
+	;.extern SET_VOLUME	
 	.extern NOFADE		
-	.extern FADEUP		
+	;.extern FADEUP		
 	.extern FADEDOWN	
 	.extern ENABLE_FX	
 	.extern DISABLE_FX	
-	.extern CHANGEFX	
-	.extern HALT_DSP	
-	.extern RESUME_DSP	
+	;.extern CHANGEFX	
+	;.extern HALT_DSP	
+	;.extern RESUME_DSP	
 	.extern intmask		
 .else
 	INIT_SOUND	EQU	$4040	;jump table for the SFX/Tunes module
@@ -50,26 +64,12 @@
 
 	.extern pal		;set =1 by VIDINIT if pal is detected
 
-	.extern	gpuload		;from my GPU stuff
-	.extern	gpurun
-	.extern	gpuwait
-	.extern	fastvector
-	.extern xvector
-	.extern demons
-	.extern parrot
-	.extern xparrot
-	.extern	texter
-	.extern bovine
-	.extern equine
-	.extern equine2
-
 	.extern n_vde
 	.extern n_vdb
 
 	xcent	EQU (G_RAM+$efc)
 	ycent	EQU (G_RAM+$ef8)
 
-	screensize EQU $34800		;was $2d000 for old 240-pixel-high screens
 	TIMERINTBIT equ 3
 	;samtab	EQU $9ac800
 	.extern samtab
@@ -77,7 +77,6 @@
 	.extern modbase
 ;	tune1	EQU $8e6900
 ;	eeprom EQU $980000 
-	allbutts EQU $22002000
 	allkeys EQU $000f00ff
 	acheat EQU $000a000a
 	a147 EQU $200e0000
@@ -93,7 +92,6 @@
 	allpad EQU $00f00000
 	somepad EQU $00300000
 	bigreset EQU $00010001
-	page2 EQU $100000	;position of ram page 2
 	videomode equ $6c1
 	width EQU 384
 	height EQU 240
@@ -114,29 +112,68 @@
 	.extern digits
 	vpang	equ G_RAM+$f00	; viewpoint angles
 
-	p_sines equ $30000
-	field1 equ $31000	;space for the starfield
-	gpu_sem EQU $30100
 	gpu_mode EQU G_RAM+$ffc
 	gpu_screen EQU G_RAM+$ff8
 	scaler EQU G_RAM+$fd4	; Scale of XY 2-D point
+
+.if ^^defined JAGUAR
+	.extern	gpuload		;from my GPU stuff
+	.extern	gpurun
+	.extern	gpuwait
+	.extern	fastvector
+	.extern xvector
+	.extern demons
+	.extern parrot
+	.extern xparrot
+	.extern	texter
+	.extern bovine
+	.extern equine
+	.extern equine2
+
+	screensize EQU $34800		;was $2d000 for old 240-pixel-high screens
+	page2 EQU $100000	;position of ram page 2
+	p_sines equ $30000 ; 256 bytes ?
+	field1 equ $31000	;space for the starfield (5124 bytes???)
+	gpu_sem EQU $30100 ; not actually used
 	screen1 equ page2	;a 16bit screen 384x200 at start of DRAM bank 1
 	screen2 equ screen1+screensize	;same again
 	screen3 equ $50000
-	screen4 equ screen1+$16800	;a 256-colour screensworth
+	;screen4 equ screen1+$16800	;a 256-colour screensworth
 	rmwcursor equ screen2+screensize	;to make a RMW object, size is 48x30 16-bit pixels,
 	scoreimj equ rmwcursor+$b40
 	livesimj equ scoreimj+4608
-	screen5 equ livesimj+$100
-	xsample equ screen5+screensize
+	trailbuf equ livesimj+$100 ; should have 512 bytes
+	;xsample equ screen5+screensize
+	TOP equ 60		;top of screen in halflines  (60=NTSC)
+	SIDE equ -8
+	NUM_FIRES equ 3
+	allbutts EQU $22002000
+.endif
+.if ^^defined PROPELLER
+	screensize EQU 384*240*2
+	;p_sines equ $1FF00 ; 256 bytes ?
+	field1 equ $15000	;space for the starfield (8192 bytes???)
+	gpu_sem EQU $1FEFE ; not actually used
+	ps_screen1 equ $80400000	;a 16bit screen 384x200 at start of DRAM bank 1
+	ps_screen2 equ $80430000	;same again
+	ps_screen3 equ $80460000
+	ps_tmpscreen equ $80490000 ; used for certain stupid purposes
+	screen3 equ ps_screen3
+	scoreimj equ ps_screen3+$b40 ; P2 TODO I think this needs to be in RAM
+	trailbuf equ $17C00 ; should have 512 bytes
+	;screen4 equ $804C0000	;a 256-colour screensworth
+	;rmwcursor equ ps_screen3
+	TOP equ 16
+	SIDE equ 0
+	NUM_FIRES equ 4
+	allbutts EQU $22003000
+.endif
 	z_max EQU (G_RAM+$fd8)	; Distance along Z-axis at which depth cue intensity is zero
 	z_top EQU (G_RAM+$fdc)	; Intensity value at z=1
 	webz EQU 110
 	in_buf equ G_RAM+$f60
 	INTPOS equ (260*2)+11
 ;	INTPOS equ 1
-	TOP equ 60		;top of screen in halflines  (60=NTSC)
-	SIDE equ -8
 	source_flags	EQU (G_RAM+$ff4)
 	dest_flags EQU (G_RAM+$ff0)	; Blitter flags 4 source+dest
 	backg	EQU (G_RAM+$fec)
@@ -145,30 +182,34 @@
 
 .text
 
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-
+.if ^^defined JAGUAR
 	move.l #$70007,G_END	;NEW mode
 	move.l #$70007,D_END	;NEW mode
 	move #$100,$f14000	;audio on
 	move #1,INT1
+.endif
 	move.l #dumint,$100
+.if ^^defined PROPELLER
+	move.l #crashedit,$010
+.endif
 	move.l #stack,a7
+.if ^^defined JAGUAR
 	jsr VideoIni
+.endif
+.if ^^defined PROPELLER
+	clr pal ; make extra sure
+.endif
 	jsr InitLists
 	move.l ddlist,d0		;put a list on the OLP
+.if ^^defined JAGUAR
 	move.w #0,ODP
 	swap d0
 	move.l d0,OLP
+.else
+	; P2 TODO
+	move.l d0,OBJLIST
+.endif
+
 
 	lea romstart,a0		; clear RAM; initialise RAM-based variables
 	lea copstart,a1
@@ -202,13 +243,14 @@ cram:	clr.l (a0)+
 	clr modnum		;set no tune pending
 	clr lastmod	
 	clr screen_ready
-	move.l #-1,gpu_sem	;GPU idle semaphore
+	;move.l #-1,gpu_sem	;GPU idle semaphore
 	move.l #$03e70213,pit0
 	move.l #rrts,routine
 	move.l #rrts,fx
 
 
 ;*****int setup
+.if ^^defined JAGUAR
 	jsr scint		;set intmask according to controller prefs
 	move.l #Frame,$100
 	move.w n_vde,d0
@@ -218,6 +260,11 @@ cram:	clr.l (a0)+
 	clr d0
 	move.b intmask,d0
 	move.w	d0,INT1		;enable frame int
+.endif
+.if ^^defined PROPELLER
+	move.l #Frame,$064
+	;dc.w MIKO68K_DUMPREGS
+.endif
 	move.w	sr,d0
 	and.w	#$f8ff,d0
 	move.w	d0,sr		;interrupts on
@@ -255,14 +302,13 @@ mu_on:	jsr initobjects
 
 	move #$88ff,CLUT+2
 
+.if ^^defined JAGUAR
 	move.w	#videomode,VMODE		; Turn on the display
+.else
+	; P2 TODO
+.endif
 
-	move.l #screen1,a0
-	jsr clrscreen
-	move.l #screen2,a0
-	jsr clrscreen
-	move.l #screen3,a0
-	jsr clrscreen
+	jsr clrscreen_all
 
 ;	move.l #$7f,d0
 ;	clr d1
@@ -276,8 +322,13 @@ mu_on:	jsr initobjects
 	move #1,sf_on
 	move #1,wave_speed
 
-	move.l #screen1,gscreen
-	move.l #0,gpu_sem
+.if ^^defined JAGUAR
+	;move.l #screen1,gscreen
+.endif
+.if ^^defined PROPELLER
+	; P2 TODO I don't think gscreen is used?
+.endif
+	;move.l #0,gpu_sem
 	move.l #it,_demo
 	clr cweb
 	clr cwave
@@ -304,12 +355,7 @@ nrstlvl: move.b vols+1,d0
 	jsr SET_VOLUME		;set current FX volume
 	jsr spall
 	move.l #$f80000,delta_i
-	move.l #screen1,a0
-	jsr clrscreen
-	move.l #screen2,a0
-	jsr clrscreen		;clear off gunj
-	move.l #screen3,a0
-	jsr clrscreen
+	jsr clrscreen_all
 	move #1,modnum		;request theme tune
 brdb:	move.l pad_now,d0
 	or.l pad_now+4,d0
@@ -391,6 +437,13 @@ ego:	move.l _demo,a0
 	bne treset
 	bra dloop
 
+.if ^^defined PROPELLER
+crashedit:
+	move.l 2(a7),a6
+	dc.w MIKO68K_DUMPREGS
+	bra *
+.endif
+
 spall:	btst.b #6,sysflags
 	beq slopt
 	move.l #o2s3,option2+16
@@ -417,12 +470,7 @@ h2hover: move.l #screen3,a0
 	move #0,d4
 	move #0,d5
  	jsr pmfade
-	move.l #screen1,a0
-	jsr clrscreen
-	move.l #screen2,a0
-	jsr clrscreen
-	move.l #screen3,a0
-	jsr clrscreen
+	jsr clrscreen_all
 	tst practise
 	bne rreset
 	tst rounds
@@ -494,9 +542,24 @@ z2:	clr z
 	move.l #gamefx,fx
 	bra ego
 
-dobeastly: move.l #screen3,a0
+dobeastly: 
+.if ^^defined JAGUAR
+	move.l #screen3,a0
 	move.l a0,gpu_screen
 	jsr clrscreen
+.endif
+.if ^^defined PROPELLER
+	; upload temp screen
+	move.l #hub_screen,a0
+	move.l a0,gpu_screen
+	move.l #ps_tmpscreen,a1
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+	move.l #MIKOGPU_CLEAR,GPU_MAILBOX
+.clrwait:
+	tst.l GPU_MAILBOX
+	bne .clrwait
+.endif	
 	lea conm1,a0
 	lea cfont,a1
 	move #20,d0
@@ -509,6 +572,19 @@ stvpa:	move #40,d0
 	move #40,d1
 	jsr pager
 	jsr premess
+.if ^^defined PROPELLER
+	; upload screen3
+	move.l #hub_screen,a0
+	move.l #ps_screen3,a1
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+	; restore temp screen
+	move.l #ps_tmpscreen,a0
+	move.l #hub_screen,a1
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+.endif
+
 	jsr settrue3
 	move.l #$ff0000,delta_i
 	move.l #glocube,demo_routine
@@ -541,7 +617,15 @@ glocube: move #7000,attime
 	move.l d0,source_flags
 	move.l d0,dest_flags
 	lea in_buf,a0
-	move.l cscreen,(a0)		;source screen is already-displayed screen
+.if ^^defined JAGUAR
+ 	move.l cscreen,(a0)
+.endif
+.if ^^defined PROPELLER
+	; Source screen is temp buffer from last frame
+	; and we draw directly into our external buffer
+	move.l dscreen,gpu_screen
+	move.l #hub_screen,(a0)
+.endif
 	move.l #384,4(a0)
 	move.l #240,d0
 	add palfix1,d0
@@ -556,9 +640,24 @@ glocube: move #7000,attime
 	move.l #$0,32(a0)		;offset of dest rectangle
 	move.l delta_i,36(a0)		;change of i per increment
 	move.l #2,gpu_mode		;op 2 of this module is Scale and Rotate
+.if ^^defined JAGUAR
 	move.l #demons,a0
 	jsr gpurun			;do it
-	jsr gpuwait		
+	jsr gpuwait
+	jsr WaitBlit
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_SCAR,GPU_MAILBOX
+.scarwait:
+	tst.l GPU_MAILBOX
+	bne .scarwait
+	; need to download rendered screen
+	move.l dscreen,a0
+	move.l #hub_screen,a1
+	move.l a1,gpu_screen
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+.endif
 	move frames,d0
 	lea sines,a0
 	lsr #2,d0
@@ -569,8 +668,12 @@ glocube: move #7000,attime
 	move d0,polspd2
 	jmp ppolydemo2
 
-dumint: move #$0101,INT1
+dumint:
+; Dummy ISR?
+.if ^^defined JAGUAR
+	move #$0101,INT1
 	move #$0101,INT2
+.endif
 	rte
 
 glopyr:	lea sines,a0
@@ -585,7 +688,15 @@ glopyr:	lea sines,a0
 	move.l d0,source_flags
 	move.l d0,dest_flags
 	lea in_buf,a0
-	move.l cscreen,(a0)		;source screen is already-displayed screen
+.if ^^defined JAGUAR
+ 	move.l cscreen,(a0)
+.endif
+.if ^^defined PROPELLER
+	; Source screen is temp buffer from last frame
+	; and we draw directly into our external buffer
+	move.l dscreen,gpu_screen
+	move.l #hub_screen,(a0)
+.endif
 	move.l #384,4(a0)
 	move.l #240,d0
 	add palfix1,d0
@@ -600,9 +711,24 @@ glopyr:	lea sines,a0
 	move.l #$0,32(a0)		;offset of dest rectangle
 	move.l delta_i,36(a0)		;change of i per increment
 	move.l #2,gpu_mode		;op 2 of this module is Scale and Rotate
+.if ^^defined JAGUAR
 	move.l #demons,a0
 	jsr gpurun			;do it
 	jsr gpuwait
+	jsr WaitBlit
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_SCAR,GPU_MAILBOX
+.scarwait:
+	tst.l GPU_MAILBOX
+	bne .scarwait
+	; need to download rendered screen
+	move.l dscreen,a0
+	move.l #hub_screen,a1
+	move.l a1,gpu_screen
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+.endif
 
 	lea sines,a0
 	move frames,d0
@@ -704,8 +830,9 @@ atra2:  clr z
 ;	bne rrrts
 ;	clr z
 stropt:
-	jsr DISABLE_FX		;any SFX to off
-	jsr ENABLE_FX
+	;jsr DISABLE_FX		;any SFX to off
+	;jsr ENABLE_FX
+	jsr kill_all_sfx
 
 	bsr optionscreen	; screen with game start options
 	clr auto
@@ -805,7 +932,12 @@ not2k:  move d0,cwave
  	move #$24,d4
 	jsr makeit_trans
 
+.if ^^defined JAGUAR
 	move.l #screen3,gpu_screen
+.endif
+.if ^^defined PROPELLER
+	move.l #hub_screen,gpu_screen
+.endif
 	jsr clearscreen
 
 	tst h2h
@@ -820,6 +952,14 @@ nbmsg:	lea cfont,a1
 	lea csmsg2,a0	
 	move #36,d0
 	jsr centext
+
+.if ^^defined PROPELLER
+	; upload screen3
+	move.l gpu_screen,a0
+	move.l #ps_screen3,a1
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+.endif
 
  	lea beasties+64,a0
 	move.l #screen3,d2
@@ -905,6 +1045,8 @@ do_1:
 do_2:	jsr draw_objects
 	tst.l csmsg
 	beq rrrts
+
+.if ^^defined JAGUAR
 	move.l #screen3,gpu_screen
 
 	move #0,d0
@@ -916,7 +1058,11 @@ do_2:	jsr draw_objects
 	move.l #screen3,a0
 	move.l #screen3,a1
 	jsr ecopy		;just blit a clear bit
-
+.endif
+.if ^^defined PROPELLER
+	move.l #hub_screen,gpu_screen
+	jsr clearscreen
+.endif
 
 	lea afont,a1
 	move.l csmsg,a0	
@@ -924,7 +1070,17 @@ do_2:	jsr draw_objects
 	tst h2h
 	bne rrrts
 	move #20,d0
-	jmp centext
+	jsr centext
+
+.if ^^defined PROPELLER
+	; upload screen3 partial
+	move.l #hub_screen + (0*384*2),a0
+	move.l #ps_screen3 + (0*384*2),a1
+	move.l #(384*32*2),d0
+	dc.w MIKO68K_BURSTCOPY
+	jsr clearscreen ; avoids glitches
+.endif
+	rts
 
 setcsmsg: lea csmsg1,a0
 	move.l score,a1
@@ -1094,7 +1250,12 @@ zshow:
 	rts
 
 dowf:
+.if ^^defined JAGUAR
 	move.l warp_flash,BG
+.endif
+.if ^^defined PROPELLER
+	move.w warp_flash,BG
+.endif
 	tst.l warp_flash
 	beq zsho1
 	sub.l #$11111111,warp_flash
@@ -1148,8 +1309,14 @@ settrue33: lea beasties+64,a0
 	rts
 
 settrue: lea beasties,a0		;set main screen to 16-bit
+.if ^^defined JAGUAR
 	move.l #screen2,d2
-	move.l d2,gpu_screen
+.endif
+.if ^^defined PROPELLER
+	move.l #ps_screen2,d2
+.endif
+
+	;move.l d2,gpu_screen
 strue:
 	move #TOP,d1
 stru:	move #SIDE,d0
@@ -1165,208 +1332,208 @@ stru:	move #SIDE,d0
 	move.l #rrts,fx
 	rts
 
-sthang:
-;	lea parrot,a0
-;	jsr gpuload
-	bsr settrue
-	clr pongx
-	move #60,pongxv
-	move #10,pongyv
-	move #$0404,pongzv
-	move.l #sthiing,demo_routine
-	bra mp_demorun
-
-sthiing: move.l #0,gpu_mode
-	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
-	move.l #$0,backg
-	lea fastvector,a0
-	jsr gpurun			;do clear screen
-	jsr gpuwait
-
-	lea chev,a1
-	lea p_sines,a4
-	clr.l d2
-	clr.l d3
-	move #63,d7
-	move pongx,d4
-sthng: move d7,-(a7)
- 	and #$ff,d4
- 	move.b 0(a4,d4.w),d1
-	and.l #$ff,d1
-	move d1,d7
-	add #48,d1
-	swap d1
-	lsr.l #4,d1
-	bsr pulser
-	move d6,8(a1)
-	move (a7)+,d7
-	move d7,d0
-	lsl #2,d0
-	and.l #$ff,d0
-	move d4,-(a7)
-	bsr drawsolid
-	move (a7)+,d4
-	move pongxv,d5
-	add d5,d4
-	dbra d7,sthng
-	move pongyv,d0
-	add d0,pongx
-	sub.b #1,pongzv
-	bpl rrrts
-	move.b pongzv+1,pongzv
-
-	lea ainc,a0
-	lea adec,a1
-	lea binc,a2
-	lea bdec,a3
-	bra gjoy
-
-
-stunnel:
-; lea parrot,a0
-;	jsr gpuload	
-	bsr settrue
-	clr pongx
-	clr pongy
-	clr pongz
-	move.l #stunl,demo_routine
-	move ranptr,rpcopy
-	bra mp_demorun
-
-stunl: 	move.l #0,gpu_mode
-	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
-	move.l #$0,backg
-	lea fastvector,a0
-	jsr gpurun			;do clear screen
-	jsr gpuwait
-
-	move pongz,d1
-	and.l #$0f,d1
-	bsr xork
-
-	add #1,pongx
-	move pongz,d1
-	and.l #$0f,d1
-	bne zkit
-	sub #1,rpcopy
-zkit:	sub #1,pongz
-	rts
-
-xork:	move rpcopy,ranptr
-	add.l #$60,d1		;dist of first ring
-	swap d1
-	clr d1
-	move #7,d7
-tunn:	move d7,-(a7)
-	lea chevron,a1
-	move.l d1,d7
-	swap d7
-	bsr pulser
-	move d6,8(a1)
-	eor #$ff,d6
-	move d6,24(a1)
-	jsr rannum
-	and #$03,d0
-	add #2,d0
-	move.l #$100,d6
-	divu d0,d6
-	sub #1,d0
-	move d0,d7
-	move.l d1,d4
-	swap d4
-	add frames,d4
-	lea sines,a0
-	and #$ff,d4
-	move.b 0(a0,d4.w),d3
-	ext d3
-	swap d3
-	clr d3
-	asr.l #4,d3
-	clr.l d2
-;	clr.l d3
-	move.l #$680000,d0
-	sub.l d1,d0
-	swap d0
-	move d0,d4
-	mulu d4,d0
-	lsr.l #5,d0
-	and.l #$ff,d0
-	move.l d1,-(a7)
-	asr.l #2,d1
-	cmp.l #$10000,d1
-	blt notar
-	move.l #9,d4
-	move.l #9,d5
-	bsr s_multi
-notar:	move.l (a7)+,d1
-	move (a7)+,d7
-	sub.l #$100000,d1
-;	add.b #$08,d0
-	dbra d7,tunn
-	rts
-
-
-sflipper:
-; lea parrot,a0
-;	jsr gpuload		;load the GPU code for the demos
-
-	lea beasties,a0		;set main screen to 16-bit
-	move.l #screen2,d2
-	move.l d2,gpu_screen
-	move #SIDE,d0
-	sub palside,d0
-	move #TOP,d1
-	swap d0
-	add paltop,d1
-	swap d1
-	move #0,d5
-	move #$24,d3
- 	move #$24,d4
-	jsr makeit
-	move.l #rrts,fx
-	move.l #sflip,demo_routine
-	clr pongx
-	move #9,pongz
-	bra mp_demorun
-
-
-sflip: 	move.l #0,gpu_mode
-	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
+;sthang:
+;;	lea parrot,a0
+;;	jsr gpuload
+;	bsr settrue
+;	clr pongx
+;	move #60,pongxv
+;	move #10,pongyv
+;	move #$0404,pongzv
+;	move.l #sthiing,demo_routine
+;	bra mp_demorun
+;
+;sthiing: move.l #0,gpu_mode
+;	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
 ;	move.l #$0,backg
-	lea fastvector,a0
-	jsr gpurun			;do clear screen
-	jsr gpuwait
+;	lea fastvector,a0
+;	jsr gpurun			;do clear screen
+;	jsr gpuwait
+;
+;	lea chev,a1
+;	lea p_sines,a4
+;	clr.l d2
+;	clr.l d3
+;	move #63,d7
+;	move pongx,d4
+;sthng: move d7,-(a7)
+; 	and #$ff,d4
+; 	move.b 0(a4,d4.w),d1
+;	and.l #$ff,d1
+;	move d1,d7
+;	add #48,d1
+;	swap d1
+;	lsr.l #4,d1
+;	bsr pulser
+;	move d6,8(a1)
+;	move (a7)+,d7
+;	move d7,d0
+;	lsl #2,d0
+;	and.l #$ff,d0
+;	move d4,-(a7)
+;	bsr drawsolid
+;	move (a7)+,d4
+;	move pongxv,d5
+;	add d5,d4
+;	dbra d7,sthng
+;	move pongyv,d0
+;	add d0,pongx
+;	sub.b #1,pongzv
+;	bpl rrrts
+;	move.b pongzv+1,pongzv
+;
+;	lea ainc,a0
+;	lea adec,a1
+;	lea binc,a2
+;	lea bdec,a3
+;	bra gjoy
 
-	lea prevshape,a0
-	lea nextshape,a1
-	lea away,a2
-	lea towards,a3
-	bsr gjoy
 
-	move frames,d0
-	and.l #$ff,d0
-	move pongz,d1
-	and #$1ff,d1
-	swap d1
-	clr d1
-	lsr.l #1,d1
-	add.l #$10000,d1 
-	move frames,pucnt		;simulate pucnt in game
+;stunnel:
+;; lea parrot,a0
+;;	jsr gpuload	
+;	bsr settrue
+;	clr pongx
+;	clr pongy
+;	clr pongz
+;	move.l #stunl,demo_routine
+;	move ranptr,rpcopy
+;	bra mp_demorun
+;
+;stunl: 	move.l #0,gpu_mode
+;	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
+;	move.l #$0,backg
+;	lea fastvector,a0
+;	jsr gpurun			;do clear screen
+;	jsr gpuwait
+;
+;	move pongz,d1
+;	and.l #$0f,d1
+;	bsr xork
+;
+;	add #1,pongx
+;	move pongz,d1
+;	and.l #$0f,d1
+;	bne zkit
+;	sub #1,rpcopy
+;zkit:	sub #1,pongz
+;	rts
+;
+;xork:	move rpcopy,ranptr
+;	add.l #$60,d1		;dist of first ring
+;	swap d1
+;	clr d1
+;	move #7,d7
+;tunn:	move d7,-(a7)
+;	lea chevron,a1
+;	move.l d1,d7
+;	swap d7
+;	bsr pulser
+;	move d6,8(a1)
+;	eor #$ff,d6
+;	move d6,24(a1)
+;	jsr rannum
+;	and #$03,d0
+;	add #2,d0
+;	move.l #$100,d6
+;	divu d0,d6
+;	sub #1,d0
+;	move d0,d7
+;	move.l d1,d4
+;	swap d4
+;	add frames,d4
+;	lea sines,a0
+;	and #$ff,d4
+;	move.b 0(a0,d4.w),d3
+;	ext d3
+;	swap d3
+;	clr d3
+;	asr.l #4,d3
+;	clr.l d2
+;;	clr.l d3
+;	move.l #$680000,d0
+;	sub.l d1,d0
+;	swap d0
+;	move d0,d4
+;	mulu d4,d0
+;	lsr.l #5,d0
+;	and.l #$ff,d0
+;	move.l d1,-(a7)
+;	asr.l #2,d1
+;	cmp.l #$10000,d1
+;	blt notar
+;	move.l #9,d4
+;	move.l #9,d5
+;	bsr s_multi
+;notar:	move.l (a7)+,d1
+;	move (a7)+,d7
+;	sub.l #$100000,d1
+;;	add.b #$08,d0
+;	dbra d7,tunn
+;	rts
 
-	move pongx,d2
-	lsr #2,d2
-	and #$fc,d2
-	lea shapes,a2
-	move.l 0(a2,d2.w),d2
-	bpl shok
-	clr pongx
-	move.l #draw_sflipper,d2
-shok:	move.l d2,a2
-	clr.l d2
-	clr.l d3
-	move.l #9,d4
-	move.l #9,d5
-	jmp (a2)
+
+;sflipper:
+;; lea parrot,a0
+;;	jsr gpuload		;load the GPU code for the demos
+;
+;	lea beasties,a0		;set main screen to 16-bit
+;	move.l #screen2,d2
+;	move.l d2,gpu_screen
+;	move #SIDE,d0
+;	sub palside,d0
+;	move #TOP,d1
+;	swap d0
+;	add paltop,d1
+;	swap d1
+;	move #0,d5
+;	move #$24,d3
+; 	move #$24,d4
+;	jsr makeit
+;	move.l #rrts,fx
+;	move.l #sflip,demo_routine
+;	clr pongx
+;	move #9,pongz
+;	bra mp_demorun
+
+
+;sflip: 	move.l #0,gpu_mode
+;	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
+;;	move.l #$0,backg
+;	lea fastvector,a0
+;	jsr gpurun			;do clear screen
+;	jsr gpuwait
+;
+;	lea prevshape,a0
+;	lea nextshape,a1
+;	lea away,a2
+;	lea towards,a3
+;	bsr gjoy
+;
+;	move frames,d0
+;	and.l #$ff,d0
+;	move pongz,d1
+;	and #$1ff,d1
+;	swap d1
+;	clr d1
+;	lsr.l #1,d1
+;	add.l #$10000,d1 
+;	move frames,pucnt		;simulate pucnt in game
+;
+;	move pongx,d2
+;	lsr #2,d2
+;	and #$fc,d2
+;	lea shapes,a2
+;	move.l 0(a2,d2.w),d2
+;	bpl shok
+;	clr pongx
+;	move.l #draw_sflipper,d2
+;shok:	move.l d2,a2
+;	clr.l d2
+;	clr.l d3
+;	move.l #9,d4
+;	move.l #9,d5
+;	jmp (a2)
 
 shapes: dc.l draw_sflipper,draw_sfliptank,draw_sfuseball,draw_spulsar,draw_sfusetank,draw_spulstank,s_shot,draw_spshot,s_sattest
 	dc.l -1
@@ -1443,9 +1610,16 @@ draw_adroid: cmp #2,20(a6)	;check for are we zapping someone
 	or #$01,d0
 	move.l d0,(a0)+		;rnd seed
 	move.l #0,gpu_mode
+.if ^^defined JAGUAR
 	move.l #bovine,a0
 	jsr gpurun		;do it
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_FLINE,GPU_MAILBOX
+.wait:	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	jsr WaitBlit
 	movem.l (a7)+,d0-d5
 dadr: lea adroid,a1
@@ -1676,11 +1850,19 @@ drawsolidxy: lea in_buf,a0
 	move.l d5,(a0)+
 	move.l d0,(a0)
 
+.if ^^defined JAGUAR
 	move.l #0,gpu_mode
 	lea equine,a0
 	jsr gpurun			;do clear screen
-	jsr gpuwait
+	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_POLYO2D,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
 	rts
+.endif
 
 gameover: move.l #rrts,routine
 	clr _pauen
@@ -1723,7 +1905,15 @@ gofeed:
 	move pongz,d0
 	and.l #$0f,d0
 	sub.l #$07,d0
-	move.l cscreen,(a0)		;source screen is already-displayed screen
+.if ^^defined JAGUAR
+ 	move.l cscreen,(a0)
+.endif
+.if ^^defined PROPELLER
+	; Source screen is temp buffer from last frame
+	; and we draw directly into our external buffer
+	move.l dscreen,gpu_screen
+	move.l #hub_screen,(a0)
+.endif
 	move.l #384,4(a0)
 	move.l #240,d1
 	add palfix1,d1
@@ -1738,10 +1928,24 @@ gofeed:
 	move.l #$0,32(a0)		;offset of dest rectangle
 	move.l delta_i,36(a0)		;change of i per increment
 	move.l #2,gpu_mode		;op 2 of this module is Scale and Rotate
+.if ^^defined JAGUAR
 	move.l #demons,a0
 	jsr gpurun			;do it
 	jsr gpuwait
-
+	jsr WaitBlit
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_SCAR,GPU_MAILBOX
+.scarwait:
+	tst.l GPU_MAILBOX
+	bne .scarwait
+	; need to download rendered screen
+	move.l dscreen,a0
+	move.l #hub_screen,a1
+	move.l a1,gpu_screen
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+.endif
 
 
  	move.l #4,gpu_mode	;Multiple images stretching towards you in Z
@@ -1776,9 +1980,17 @@ gofeed:
 	move.l d0,(a0)+
 	move.l #$600000,d0
 	move.l d0,(a0)+	;Dest x,y,z
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_REX,GPU_MAILBOX
+.rexwait:
+	tst.l GPU_MAILBOX
+	bne .rexwait
+.endif
 
 	tst timer
 	bmi babb
@@ -1796,7 +2008,15 @@ clearfeed: move.l #(PITCH1|PIXEL16|WID384),d0
 	move.l d0,source_flags
 	move.l d0,dest_flags
 	lea in_buf,a0
-	move.l cscreen,(a0)		;source screen is already-displayed screen
+.if ^^defined JAGUAR
+ 	move.l cscreen,(a0)
+.endif
+.if ^^defined PROPELLER
+	; Source screen is temp buffer from last frame
+	; and we draw directly into our external buffer
+	move.l dscreen,gpu_screen
+	move.l #hub_screen,(a0)
+.endif
 	move.l #384,4(a0)
 	move.l #240,d0
 	add palfix1,d0
@@ -1812,9 +2032,24 @@ clearfeed: move.l #(PITCH1|PIXEL16|WID384),d0
 	move.l #$0,32(a0)		;offset of dest rectangle
 	move.l delta_i,36(a0)
 	move.l #2,gpu_mode		;op 2 of this module is Scale and Rotate
+.if ^^defined JAGUAR
 	move.l #demons,a0
 	jsr gpurun			;do it
 	jsr gpuwait
+	jsr WaitBlit
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_SCAR,GPU_MAILBOX
+.scarwait:
+	tst.l GPU_MAILBOX
+	bne .scarwait
+	; need to download rendered screen
+	move.l dscreen,a0
+	move.l #hub_screen,a1
+	move.l a1,gpu_screen
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+.endif
 
 	move #10,d1
 	jsr rand
@@ -1841,12 +2076,22 @@ versionscreen: move.l #rrts,routine
 ;	move #-1,db_on
 	jsr InitBeasties
  	lea beasties,a0		;set main screen to 16-bit
+.if ^^defined JAGUAR	
 	move.l #screen2,d2
-	move.l d2,gpu_screen
+.endif
+.if ^^defined PROPELLER
+	move.l #ps_screen2,d2
+.endif
+	;move.l d2,gpu_screen
 	move #TOP-16,d1
 	bsr stru
 
+.if ^^defined JAGUAR
 	move.l #screen3,gpu_screen
+.endif
+.if ^^defined PROPELLER
+	move.l #hub_screen,gpu_screen
+.endif
 	jsr clearscreen	
 
 
@@ -1860,7 +2105,7 @@ versionscreen: move.l #rrts,routine
 	beq mypal
 	add #10,d5
 mypal:	move.l #pic5,a0
-	move.l #screen3,a1
+	move.l gpu_screen,a1
 	jsr CopyBlock	
 
 	lea afont,a1
@@ -1879,6 +2124,23 @@ mypal:	move.l #pic5,a0
 	move #40-10,d0
 	jsr centext
 
+	lea cfont,a1
+	lea irqsoftcop,a0	
+	move #50-10,d0
+	jsr centext
+
+.if ^^defined PROPELLER
+	; upload screen3
+	move.l gpu_screen,a0
+	move.l #ps_screen3,a1
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+	; clear hub screen in anticipation of feedback effect
+	move.l #MIKOGPU_CLEAR,GPU_MAILBOX
+.clrwait:
+	tst.l GPU_MAILBOX
+	bne .clrwait
+.endif
 
 	move #TOP-16,d1
 	jsr settrue33
@@ -1909,10 +2171,18 @@ v_ersion:
 	asr.l #5,d7
 ;	clr.l d7
 versiondraw:
+.if ^^defined JAGUAR
  	move.l cscreen,a5
  	move.l #(PITCH1|PIXEL16|WID384),d0		;Feedback
 	move.l d0,source_flags
 	move.l d0,dest_flags
+.endif
+.if ^^defined PROPELLER
+	; Source screen is temp buffer from last frame
+	; and we draw directly into our external buffer
+	move.l dscreen,gpu_screen
+	move.l #hub_screen,a5
+.endif
 	lea in_buf,a0
 	move.l a5,(a0)		;source screen is already-displayed screen
 	move.l #384,4(a0)
@@ -1947,10 +2217,24 @@ versiondraw:
 	move.l #$0,32(a0)		;offset of dest rectangle
 	move.l delta_i,36(a0)
 	move.l #2,gpu_mode		;op 2 of this module is Scale and Rotate
+.if ^^defined JAGUAR
 	move.l #demons,a0
 	jsr gpurun			;do it
 	jsr gpuwait
 	jsr WaitBlit
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_SCAR,GPU_MAILBOX
+.scarwait:
+	tst.l GPU_MAILBOX
+	bne .scarwait
+	; need to download rendered screen
+	move.l dscreen,a0
+	move.l #hub_screen,a1
+	move.l a1,gpu_screen
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+.endif
 
 	tst v_on
 	beq dopyr			;allows Excellent voctory thang to get @ it
@@ -1970,17 +2254,39 @@ dop:	add.l #$40000,pc_1
 
 ppyr:	move.l #2,gpu_mode
  	move.l #pypoly1,in_buf
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PRETTYPOLY,GPU_MAILBOX
+.wait1:	tst.l GPU_MAILBOX
+	bne .wait1
+.endif
  	move.l #pypoly2,in_buf
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PRETTYPOLY,GPU_MAILBOX
+.wait2:	tst.l GPU_MAILBOX
+	bne .wait2
+.endif
  	move.l #pypoly3,in_buf
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PRETTYPOLY,GPU_MAILBOX
+.wait3:	tst.l GPU_MAILBOX
+	bne .wait3
+	rts
+.endif
 
 
 centext: move.l a0,d2
@@ -2001,19 +2307,31 @@ centext: move.l a0,d2
 	swap d0
 	move d7,d0
 	move.l d0,32(a0)		;set text origin
+.if ^^defined JAGUAR
  	lea texter,a0
 	jsr gpurun
 	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_TEXTER,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+	rts
+.endif
 
 setfires: lea fire_2,a0
 	lea firea,a1
 	lea fires,a2
 	lea o4s1,a3		;option select messages here
+	lea fire_names,a4
 	move #2,d0
 sfres:  move (a1)+,d1
 	move d1,d2
-	add #65,d2		;is ASCII of button choice
-	move.b d2,12(a3)	;put it in message
+	;add #65,d2		;is ASCII of button choice
+	;move.b d2,12(a3)	;put it in message
+	lsl.w #2,d2
+	move.l (a4,d2.w),12(a3)
 	asl #2,d1
 	move.l 0(a2,d1.w),(a0)+
 	lea 16(a3),a3
@@ -2036,7 +2354,7 @@ whb:	move.l (a0)+,d1		;button mask
 	and.l d0,d1		;check button
 	bne bpressed		;got one
 	addq #1,d7
-	cmp #3,d7		;if not matched by here...
+	cmp #NUM_FIRES,d7		;if not matched by here...
 	blt whb
 	bra fslp		;..must be illegal (should never occur)
 bpressed: lea firea,a0		;now <selected> is func #, d7 is what button
@@ -2103,14 +2421,18 @@ scint:
 ;	move.b #3,intmask		;enable rocon interrupt
 	move pit1,d0
 	lsr #3,d0
+.if ^^defined JAGUAR
 	move d0,PIT1
 	move d0,ppit1
+.endif
 	move #1,roconon
 	rts
 sintoff:
 ; move.b #1,intmask
+.if ^^defined JAGUAR
 	move pit1,PIT1
 	move pit1,ppit1
+.endif
 	clr roconon
 	rts
 			
@@ -2426,13 +2748,22 @@ optiondraw: move.l #1,gpu_mode
 	move.l #$4000,16(a0)		;R Amp
 	move.l #$10000,20(a0)		;L step
 	move.l #$10000,24(a0)		;R step
-	move.l #pic3+(640*11),(a0)		;Input from pic buffer 3
+	;move.l #pic3+(640*11),(a0)		;Input from pic buffer 3
+	move.l #pic3+(640*0),(a0)		; Why was it 11 lines offset?
 	add.l #$10000,pongx
 	add.l #$12000,pongy
+.if ^^defined JAGUAR
 	jsr WaitBlit
 	lea demons,a0
 	jsr gpurun			;do horizontal ripple warp
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_RIPPLEWARP,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 
 opts:	cmp.l #option1,the_option	;see if other options are available
 	bne ntarnt			;no they arent
@@ -2472,9 +2803,17 @@ dropts: move.l (a4)+,d6
 	move d5,d0
 	swap d0
 	move.l d0,32(a0)
+.if ^^defined JAGUAR
  	lea texter,a0
 	jsr gpurun
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_TEXTER,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	lea in_buf,a0
 nxopts:	add #20,d5
 	dbra d7,dropts
@@ -2491,9 +2830,17 @@ dropts2: move.l (a4)+,d6
 	swap d0
 	move #$60,d0
 	move.l d0,32(a0)
-	lea texter,a0
+.if ^^defined JAGUAR
+ 	lea texter,a0
 	jsr gpurun
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_TEXTER,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	lea in_buf,a0
 	add #30,d5
 	dbra d7,dropts2
@@ -2538,7 +2885,7 @@ init_tbb:
 ;
 ; init 16-position circular trailback buffer. Store x.l, y.l, z.l, ang.l.
 
-	lea screen5,a0		;use it, spare ram is all
+	lea trailbuf,a0		;use it, spare ram is all
 	move #31,d0
 itbb:	clr.l (a0)+		;Z FIRST (zero Z means no data!)
 	clr.l (a0)+
@@ -2561,7 +2908,7 @@ run_tbb: tst pawsed
 
 get_tbb: and #$1f,d0
 	asl #4,d0
-	lea screen5,a3
+	lea trailbuf,a3
 	lea 0(a3,d0.w),a3
 	rts
 
@@ -2714,11 +3061,19 @@ nbnc2:	move d0,4(a0)
 
 
 tundraw: move.l #0,gpu_mode
+.if ^^defined JAGUAR
 	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
 	move.l #$0,backg
 	lea fastvector,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_CLEAR,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 
 	lea in_buf,a0			;This is Starplane code
 	move.l #32,(a0)			;no. of stars
@@ -2755,9 +3110,17 @@ stalp:	move d7,d0
 	movem.l (a7)+,d4-d7
 	add #$08,d4
 	move.l a0,-(a7)
+.if ^^defined JAGUAR
 	lea equine2,a0
 	jsr gpurun			;do starplane
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_STARPLANE,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	move.l (a7)+,a0
 	dbra d6,stalp
 
@@ -2831,19 +3194,50 @@ dingy: add #$10,d0
 	add #4,cwave
 	add #4,cweb			;Warp 4 levels
 	movem.l d0-d7/a0-a6,-(a7)
-	move.l gpu_screen,d0
-	move.l d0,-(a7)
+	move.l gpu_screen,-(a7)
 	move.l #screen3,a0
+	clr d0
 	move #64,d1
 	move #384,d2
 	move #48,d3
 	move #$000,d4
 	jsr BlitBlock		;clear the crosshair that was already there
+
+.if ^^defined JAGUAR
 	move.l #screen3,gpu_screen
 	lea warpytxt,a0
 	lea afont,a1
 	move #75,d0
 	jsr centext		;display msg 'Warp 5 Levels'
+.endif
+.if ^^defined PROPELLER
+	; copy part of current GPU screen to tmp screen because ughhhh
+	move.l #hub_screen,a0
+	move.l #ps_tmpscreen,a1
+	move.l #384*2*24,d0
+	dc.w MIKO68K_BURSTCOPY
+	; now clear it
+	move.l a0,a1
+	move #0,a0
+	move.l #384*24,d0
+	dc.w MIKO68K_WORDFILL
+	; draw the thing
+	move.l a1,gpu_screen
+	lea warpytxt,a0
+	lea afont,a1
+	move #12,d0
+	jsr centext		;display msg 'Warp 5 Levels'
+	; upload to screen3
+	move.l gpu_screen,a0
+	move.l #ps_screen3+(384*2*68),a1
+	move.l #384*2*24,d0
+	dc.w MIKO68K_BURSTCOPY
+	; get the other thing back
+	move.l a0,a1
+	move.l #ps_tmpscreen,a0
+	dc.w MIKO68K_BURSTCOPY
+.endif
+
  	lea beasties+128,a0
 	move.l #screen3+(768*64),d2
 	move #SIDE,d0
@@ -2856,8 +3250,7 @@ dingy: add #$10,d0
 	move #$24,d3
  	move #$24,d4
 	jsr makeit_trans
-	move.l (a7)+,d0
-	move.l d0,gpu_screen
+	move.l (a7)+,gpu_screen
 	movem.l (a7)+,d0-d7/a0-a6
 
 
@@ -2890,7 +3283,10 @@ xono:
 	sub d1,d2
 	move d2,d1
 xono2:  cmp #$20,d1
-	bgt notover	
+.if ^^defined ALWAYS_CHEAT
+	bra.s over 
+.endif
+	bgt.s notover	
 
 	move.b #0,2(a1)			;change colour of track
 	move #$dc20,(a1)
@@ -2931,9 +3327,17 @@ nomo:	lea in_buf,a0
 	move.l vp_y,16(a0)
 	move.l #2,gpu_mode
 	jsr ssys
+.if ^^defined JAGUAR
 	lea bovine,a0
 	jsr gpurun			;do star tunnel
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_STARSEG,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 
 	tst pawsed
 	bne restuff
@@ -3050,9 +3454,18 @@ xxxooo:	move.l #3,16(a0)	;XYZ scales
 	move.l d0,32(a0)
 	move.l #$88,28(a0)	
 	move d2,d0
-snoxy:	lea bovine,a0
+snoxy:	
+.if ^^defined JAGUAR
+	lea bovine,a0
 	jsr gpurun
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_VOO,GPU_MAILBOX ; NYI
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	move.l (a7)+,a0
 nxtox:	addq #1,d4
 	sub.l #$10000,d1
@@ -3121,54 +3534,70 @@ text_o_run: move.l grndvel,d0
 
 
 
-text_o_draw: move.l #0,gpu_mode
-	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
-	move.l #$0,backg
-	lea fastvector,a0
-	jsr gpurun			;do clear screen
-	jsr gpuwait
-
-	move m7y,d1
-	and #$1ff,d1
-	sub #$ff,d1
-	bpl todr1
-	neg d1
-todr1:	sub #$7f,d1
-	add #$a0,d1
-	swap d1
-	clr d1
-	
-
- 	move.l #1,gpu_mode
-	lea in_buf,a0
-	move.l #pic4,(a0)+
-	move.l m7z,(a0)+
-	move grnd,d0
-	and.l #$1ff,d0
-	swap d0
-	move.l d0,(a0)+
-	move.l m7x,d0
-	move.l d0,(a0)+
-	move.l #0,(a0)+
-	move.l d1,(a0)+
-	move frames,d0
-	and.l #$ff,d0
-	move.l d0,(a0)+
-	lea bovine,a0
-	jsr gpurun			;do mode7 screen
-	jsr gpuwait
-
-	lea in_buf,a0
-	move.l m7x,d0
-	neg.l d0
-	move.l d0,12(a0)
-	lea bovine,a0
-	jsr gpurun			;do mode7 screen
-	jsr gpuwait
-
-	add #1,m7y
-
-	rts
+;text_o_draw: move.l #0,gpu_mode
+;	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
+;	move.l #$0,backg
+;	lea fastvector,a0
+;	jsr gpurun			;do clear screen
+;	jsr gpuwait
+;
+;	move m7y,d1
+;	and #$1ff,d1
+;	sub #$ff,d1
+;	bpl todr1
+;	neg d1
+;todr1:	sub #$7f,d1
+;	add #$a0,d1
+;	swap d1
+;	clr d1
+;	
+;
+; 	move.l #1,gpu_mode
+;	lea in_buf,a0
+;	move.l #pic4,(a0)+
+;	move.l m7z,(a0)+
+;	move grnd,d0
+;	and.l #$1ff,d0
+;	swap d0
+;	move.l d0,(a0)+
+;	move.l m7x,d0
+;	move.l d0,(a0)+
+;	move.l #0,(a0)+
+;	move.l d1,(a0)+
+;	move frames,d0
+;	and.l #$ff,d0
+;	move.l d0,(a0)+
+;.if ^^defined JAGUAR
+;	lea bovine,a0
+;	jsr gpurun			;do mode7 screen
+;	jsr gpuwait
+;.endif
+;.if ^^defined PROPELLER
+;	move.l #MIKOGPU_MODE7,GPU_MAILBOX
+;.wait:
+;	tst.l GPU_MAILBOX
+;	bne .wait
+;.endif
+;
+;	lea in_buf,a0
+;	move.l m7x,d0
+;	neg.l d0
+;	move.l d0,12(a0)
+;.if ^^defined JAGUAR
+;	lea bovine,a0
+;	jsr gpurun			;do mode7 screen
+;	jsr gpuwait
+;.endif
+;.if ^^defined PROPELLER
+;	move.l #MIKOGPU_MODE7,GPU_MAILBOX
+;.wait2:
+;	tst.l GPU_MAILBOX
+;	bne .wait2
+;.endif
+;
+;	add #1,m7y
+;
+;	rts
 
 m7test2: move #1,psycho
 	move.l #$ff0000,delta_i
@@ -3280,6 +3709,7 @@ nopalll: swap d0
 	bmi rrrts		;return -1 means we failed
 
 	move.l #screen3,a0
+	clr d0
 	move #64,d1
 	move #384,d2
 	move #48,d3
@@ -3288,11 +3718,43 @@ nopalll: swap d0
 	
 	jsr sayex		;say Excellent
 
+	move.l gpu_screen,-(a7)
+.if ^^defined JAGUAR
 	move.l #screen3,gpu_screen
 	lea warpytxt,a0
 	lea afont,a1
 	move #75,d0
 	jsr centext		;display msg 'Warp 5 Levels'
+.endif
+.if ^^defined PROPELLER
+	; copy part of current GPU screen to tmp screen because ughhhh
+	move.l #hub_screen,a0
+	move.l #ps_tmpscreen,a1
+	move.l #384*2*24,d0
+	dc.w MIKO68K_BURSTCOPY
+	; now clear it
+	move.l a0,a1
+	move #0,a0
+	move.l #384*24,d0
+	dc.w MIKO68K_WORDFILL
+	; draw the thing
+	move.l a1,gpu_screen
+	lea warpytxt,a0
+	lea afont,a1
+	move #12,d0
+	jsr centext		;display msg 'Warp 5 Levels'
+	; upload to screen3
+	move.l gpu_screen,a0
+	move.l #ps_screen3+(384*2*68),a1
+	move.l #384*2*24,d0
+	dc.w MIKO68K_BURSTCOPY
+	; get the other thing back
+	move.l a0,a1
+	move.l #ps_tmpscreen,a0
+	dc.w MIKO68K_BURSTCOPY
+.endif
+	move.l (a7)+,gpu_screen
+
 	cmp #90,cwave
 	bge sttoat2			;Warp not after l90
 	add #4,cwave
@@ -3590,7 +4052,9 @@ llaleg:	neg d0
 	move.l (A7)+,a6
 	bra ennd
 mist:
-;	bra ennd
+.if ^^defined ALWAYS_CHEAT
+	;bra ennd
+.endif
 	clr _pauen
 	move.l #failfade,demo_routine
 	move.l #failcount,routine
@@ -3764,9 +4228,18 @@ noicon: tst psycho
 	clr d0
 	swap d0
 	move.l d0,(a0)+		;phase
+.if ^^defined JAGUAR
 	lea xparrot,a0
 	jsr gpurun			;do clear screen
 	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PRING,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+	rts
+.endif
 
 polygate: move.l #18,d4
 	move.l #9,d5
@@ -3808,7 +4281,13 @@ failfade: move.l #(PITCH1|PIXEL16|WID384),d0
 	lea in_buf,a0
 	move pongz,d0
 	and.l #$ff,d0
+.if ^^defined JAGUAR
 	move.l cscreen,(a0)		;source screen is already-displayed screen
+.endif
+.if ^^defined PROPELLER
+	move.l #hub_screen,(a0)
+	move.l dscreen,gpu_screen
+.endif
 	move.l #384,4(a0)
 	move.l #240,d1
 	add palfix1,d1
@@ -3822,10 +4301,26 @@ failfade: move.l #(PITCH1|PIXEL16|WID384),d0
 	move.l d0,28(a0)		;y centre the same
 	move.l #$0,32(a0)		;offset of dest rectangle
 	move.l delta_i,36(a0)		;change of i per increment
+.if ^^defined JAGUAR
 	move.l #2,gpu_mode		;op 2 of this module is Scale and Rotate
 	move.l #demons,a0
 	jsr gpurun			;do it
 	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_SCAR,GPU_MAILBOX
+.scarwait:
+	tst.l GPU_MAILBOX
+	bne .scarwait
+	move.w #1,screen_uploaded
+	; need to download rendered screen
+	move.l dscreen,a0
+	move.l #hub_screen,a1
+	move.l a1,gpu_screen
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+	rts
+.endif
 
 
 
@@ -3839,7 +4334,13 @@ m7test: tst psycho
 	lea in_buf,a0
 	move pongz,d0
 	and.l #$ff,d0
+.if ^^defined JAGUAR
 	move.l cscreen,(a0)		;source screen is already-displayed screen
+.endif
+.if ^^defined PROPELLER
+	move.l #hub_screen,(a0)
+	move.l dscreen,gpu_screen
+.endif
 	move.l #384,4(a0)
 	move.l #240,d1
 	add palfix1,d1
@@ -3853,10 +4354,25 @@ m7test: tst psycho
 	move.l d0,28(a0)		;y centre the same
 	move.l #$0,32(a0)		;offset of dest rectangle
 	move.l delta_i,36(a0)		;change of i per increment
+.if ^^defined JAGUAR
 	move.l #2,gpu_mode		;op 2 of this module is Scale and Rotate
 	move.l #demons,a0
 	jsr gpurun			;do it
-	jsr gpuwait
+	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_SCAR,GPU_MAILBOX
+.scarwait:
+	tst.l GPU_MAILBOX
+	bne .scarwait
+	move.w #1,screen_uploaded
+	; need to download rendered screen
+	move.l dscreen,a0
+	move.l #hub_screen,a1
+	move.l a1,gpu_screen
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+.endif
 
 
 	lea in_buf,a0
@@ -3892,18 +4408,34 @@ haha1:	add #4,d7
 wwear:	and.l #$ff,d0
 	move.l d0,44(a0)
 	move.l #4,gpu_mode
+.if ^^defined JAGUAR
 	lea bovine,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PSPHERE,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	jmp dob
 	
 	
 npsu1: 	move.l #0,gpu_mode
+.if ^^defined JAGUAR
 	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
 	move.l #$0,backg
 	lea fastvector,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_CLEAR,GPU_MAILBOX
+.waitclr:
+	tst.l GPU_MAILBOX
+	bne .waitclr
+.endif
 
 
 	move.l #3,gpu_mode	;mode 3 is starfield1
@@ -3918,9 +4450,17 @@ npsu1: 	move.l #0,gpu_mode
 	move.l d0,in_buf+16	;address off the starfield data structure
 	move.l warp_count,in_buf+20
 	move.l warp_add,in_buf+24
+.if ^^defined JAGUAR
 	lea fastvector,a0
 	jsr gpurun		;do gpu routine
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_STARFIELD,GPU_MAILBOX
+.waitstarf:
+	tst.l GPU_MAILBOX
+	bne .waitstarf
+.endif
 
 
 
@@ -3939,9 +4479,17 @@ npsu1: 	move.l #0,gpu_mode
 	move frames,d0
 	and.l #$ff,d0
 	move.l d0,(a0)+
+.if ^^defined JAGUAR
 	lea bovine,a0
 	jsr gpurun			;do mode7 screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_MODE7,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 
 	jmp dob			;draw objects
 
@@ -3965,24 +4513,24 @@ npsu1: 	move.l #0,gpu_mode
 
 
 ;	bra joyz
-	rts
-
-	lea in_buf,a0
-	move.l #pic3,(a0)+
-	move.l #$d0000,(a0)+
-	move frames,d0
-	and.l #$ff,d0
-	swap d0
-	move.l d0,(a0)+
-	move.l #$770000,d1
-	sub.l m7x,d1
-	neg.l d1
-	move.l d1,(a0)+
-	move.l #0,(a0)+
-	move.l m7y,(a0)+
-	lea bovine,a0
-	jsr gpurun			;do mode7 screen
-	jsr gpuwait
+;	rts
+;
+;	lea in_buf,a0
+;	move.l #pic3,(a0)+
+;	move.l #$d0000,(a0)+
+;	move frames,d0
+;	and.l #$ff,d0
+;	swap d0
+;	move.l d0,(a0)+
+;	move.l #$770000,d1
+;	sub.l m7x,d1
+;	neg.l d1
+;	move.l d1,(a0)+
+;	move.l #0,(a0)+
+;	move.l m7y,(a0)+
+;	lea bovine,a0
+;	jsr gpurun			;do mode7 screen
+;	jsr gpuwait
 
 joyz:	btst.b #5,pad_now
 	beq skankzz
@@ -4038,32 +4586,32 @@ m7zdec:
 	sub #4,m7z
 	rts
 
-rndbox: move #300,d1
-	jsr rand
-	move d0,d2
-	move #200,d1
-	jsr rand
-	move d0,d3
-	move #319,d1
-	sub d2,d1
-	jsr rand
-	add #1,d0
-	move d0,d4
-	move #255,d1
-	sub d3,d1
-	jsr rand
-	add #1,d0
-	move d0,d5
-	movem d2-d5,-(a7)
-	jsr rannum
-	move #$44,d4
-	lsl #8,d4
-	move frames,d5
-	and #$ff,d5
-	or d5,d4
-	movem (a7)+,d0-d3
-	move.l #screen5,a0
-	jmp fxBlock
+;rndbox: move #300,d1
+;	jsr rand
+;	move d0,d2
+;	move #200,d1
+;	jsr rand
+;	move d0,d3
+;	move #319,d1
+;	sub d2,d1
+;	jsr rand
+;	add #1,d0
+;	move d0,d4
+;	move #255,d1
+;	sub d3,d1
+;	jsr rand
+;	add #1,d0
+;	move d0,d5
+;	movem d2-d5,-(a7)
+;	jsr rannum
+;	move #$44,d4
+;	lsl #8,d4
+;	move frames,d5
+;	and #$ff,d5
+;	or d5,d4
+;	movem (a7)+,d0-d3
+;	move.l #screen5,a0
+;	jmp fxBlock
 
 
 
@@ -4272,7 +4820,12 @@ clent:	move.b #'.',(a0)+
 	move.b #0,(a0)
 	clr.l pongx		;use as offset into legal text $
 
+.if ^^defined JAGUAR
 	move.l #screen3,gpu_screen
+.endif
+.if ^^defined PROPELLER
+	move.l #hub_screen,gpu_screen
+.endif
 	jsr clearscreen	
 
 	lea afont,a1
@@ -4299,6 +4852,14 @@ clent:	move.b #'.',(a0)+
 	move.l #enlm3,a0	
 	move #200,d0
 	jsr centext
+
+.if ^^defined PROPELLER
+	; upload screen3
+	move.l gpu_screen,a0
+	move.l #ps_screen3,a1
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+.endif
 
 	lea fw_test,a0
 	jsr init_fw
@@ -4398,10 +4959,18 @@ tgoto:	jsr fw_run
 txendraw: move.l #0,gpu_mode
 	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
 	move.l #$0,backg
+.if ^^defined JAGUAR
 	lea fastvector,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
 	bsr WaitBlit
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_CLEAR,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 
 	jsr dob			;draw Objects
 
@@ -4451,9 +5020,17 @@ slet01: swap d3
 	add.l #10,d0
 hnotpal: move.l d0,36(a0)	;y
 	move.l #4,gpu_mode
+.if ^^defined JAGUAR
 	lea xparrot,a0		;xparrot is REX w/o 3D
 	jsr gpurun		;do pixex draw
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_REX2D,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 sletooo: add.l #$40,d7
 	add #1,d5
 	and #$1f,d5
@@ -4484,8 +5061,13 @@ clvpx: 	clr.l vp_x
 	rts
 
 hisettrue: lea beasties,a0		;set main screen to 16-bit
+.if ^^defined JAGUAR
 	move.l #screen2,d2
-	move.l d2,gpu_screen
+.endif
+.if ^^defined PROPELLER
+	move.l #ps_screen2,d2
+.endif
+	;move.l d2,gpu_screen
 	move #TOP-16,d1
 	bsr stru
 
@@ -4497,11 +5079,16 @@ showscores: move.l #rrts,routine
 	clr sync
 	bsr InitBeasties
 	bsr hisettrue
+.if ^^defined JAGUAR
 	move.l #screen3,gpu_screen
+.endif
+.if ^^defined PROPELLER
+	move.l #hub_screen,gpu_screen
+.endif
 	jsr clearscreen			;clear screen to be overlaid
 	clr mfudj
 	move.l #pic5,a0
-	move.l #screen3,a1
+	move.l gpu_screen,a1
 	move #1,d0
 	move #1,d1
 	move #223,d2
@@ -4539,6 +5126,14 @@ ctl:	movem.l d0/a0,-(a7)
 	dbra d3,ctl
 	bsr clvp
 
+	
+.if ^^defined PROPELLER
+	move.l gpu_screen,a0
+	move.l #ps_screen3,a1
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+.endif
+
 
 	move #$0f,weband
 	clr webbase
@@ -4567,10 +5162,18 @@ ctl:	movem.l d0/a0,-(a7)
 swebby: move.l #0,gpu_mode
 	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
 	move.l #$0,backg
+.if ^^defined JAGUAR
 	lea fastvector,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
 	bsr WaitBlit
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_CLEAR,GPU_MAILBOX
+.clrwait:
+	tst.l GPU_MAILBOX
+	bne .clrwait
+.endif
 
  	lea _web,a0
 	add #3,28(a0)
@@ -4606,9 +5209,17 @@ stlp:	move d7,d0
 	movem.l (a7)+,d4-d7
 	add #$08,d4
 	move.l a0,-(a7)
+.if ^^defined JAGUAR
 	lea equine2,a0
 	jsr gpurun			;do starplane
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_STARPLANE,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	move.l (a7)+,a0
 	dbra d6,stlp
 	rts	
@@ -4632,7 +5243,12 @@ yakscreen: move.l #rrts,routine
 	clr.l pongyv
 	jsr ringstars			;init ring SF
 
+.if ^^defined JAGUAR
 	move.l #screen3,gpu_screen
+.endif
+.if ^^defined PROPELLER
+	move.l #hub_screen,gpu_screen
+.endif
 	jsr clearscreen
 	move.l #dudes,a0
 	move.l #cfont,a1
@@ -4649,6 +5265,13 @@ snopal:	jsr centext
 	add palfix2,d1
 snopal2: jsr pager
 	move d7,-(a7)
+.if ^^defined PROPELLER
+	; upload screen3
+	move.l gpu_screen,a0
+	move.l #ps_screen3,a1
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+.endif
 	jsr hisettrue3
 ;	move #$7fff,attime
 	bsr attract
@@ -4679,12 +5302,20 @@ yakhead3: add.b #2,pongxv
 
 
 yhead: 	move.l #0,gpu_mode
+.if ^^defined JAGUAR
 	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
 	move.l #$0,backg
 	lea fastvector,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
 	bsr WaitBlit
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_CLEAR,GPU_MAILBOX
+.waitclr:
+	tst.l GPU_MAILBOX
+	bne .waitclr
+.endif
 
 	add.l #$8000,warp_add
 	add.l #$18000,pongyv
@@ -4710,9 +5341,17 @@ yhead: 	move.l #0,gpu_mode
 	move.l d0,in_buf+16	;address off the starfield data structure
 	move.l warp_count,in_buf+20
 	move.l warp_add,in_buf+24
+.if ^^defined JAGUAR
 	lea fastvector,a0
 	jsr gpurun		;do gpu routine
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_STARFIELD,GPU_MAILBOX
+.waitstarf:
+	tst.l GPU_MAILBOX
+	bne .waitstarf
+.endif
 
 
 	lea pic2,a2
@@ -4780,9 +5419,19 @@ dyakhead: lea in_buf,a0
 	bmi xane			;no point in drawing -ves
 ;	sub.l vp_z,d0
 	move.l d0,(a0)+	;Dest x,y,z
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_REX,GPU_MAILBOX
+	move.l gpu_screen,a0
+	;dc.w MIKO68K_DUMPREGS
+.waitrex:
+	tst.l GPU_MAILBOX
+	bne .waitrex
+.endif
 xane:	movem.l (a7)+,d0-d1
 	dbra d7,dyakhead
 
@@ -4803,29 +5452,39 @@ yh: 	move.l #4,gpu_mode	;Multiple images stretching towards you in Z
 	move.l #0,(a0)+
 	move.l #0,(a0)+
 	move.l d6,(a0)+	;Dest x,y,z
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_REX,GPU_MAILBOX
+	move.l gpu_screen,a0
+	;dc.w MIKO68K_DUMPREGS
+.waitrex:
+	tst.l GPU_MAILBOX
+	bne .waitrex
+	rts
+.endif
 
-
-rexdemo:
-	bsr settrue
-	move.l #rxdemo,demo_routine
-;	move.l #rrts,fx
-	move ranptr,rpcopy
-	clr pongx
-
-
-	bra mp_demorun	
-
-rxdemo:
- 	move.l #0,gpu_mode
-	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
-	move.l #$0,backg
-	lea fastvector,a0
-	jsr gpurun			;do clear screen
-	jsr gpuwait
-	bsr WaitBlit
+;rexdemo:
+;	bsr settrue
+;	move.l #rxdemo,demo_routine
+;;	move.l #rrts,fx
+;	move ranptr,rpcopy
+;	clr pongx
+;
+;
+;	bra mp_demorun	
+;
+;rxdemo:
+; 	move.l #0,gpu_mode
+;	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
+;	move.l #$0,backg
+;	lea fastvector,a0
+;	jsr gpurun			;do clear screen
+;	jsr gpuwait
+;	bsr WaitBlit
 
 
 rexfb:
@@ -4885,9 +5544,19 @@ rexfb:
 	move.l #-$8c0000,d0
 nopaldude: move.l d0,(a0)+
 	move.l #$1100000,(a0)+
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_REX,GPU_MAILBOX
+	move.l gpu_screen,a0
+	;dc.w MIKO68K_DUMPREGS
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	add.l #$40000,pongx
 	add.l #$31230,pongy
 	add.l #$8415,pongz
@@ -4922,9 +5591,17 @@ doneup:	lea in_buf,a0
 	move.l d6,d0
 	sub.l vp_z,d0
 	move.l d0,(a0)+	;Dest x,y,z
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_REX,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	sub.l d5,d6
 	bmi rrts			;no point in drawing -ves
 	dbra d7,doneup
@@ -4952,9 +5629,17 @@ doneup2: lea in_buf,a0
 	move.l d6,d0
 	sub.l vp_z,d0
 	move.l d0,(a0)+	;Dest x,y,z
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_REX,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	sub.l d5,d6
 	bmi rrts			;no point in drawing -ves
 	dbra d7,doneup2
@@ -5002,9 +5687,18 @@ drawsphere:
 	add.l #$ff,d2		;calculate i decreasing
 	move.l d2,44(a0)
 	move.l #4,gpu_mode
+.if ^^defined JAGUAR
 	lea bovine,a0
 	jsr gpurun			;do clear screen
 	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PSPHERE,GPU_MAILBOX ; NYI
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+	rts
+.endif
 
 sphertypes: dc.l $40,$10,4,8
 	dc.l $20,$08,8,16
@@ -5034,9 +5728,18 @@ draw_pixex:
 	move.l 12(a6),d0
 	sub.l vp_z,d0
 	move.l d0,(a0)+	;Dest x,y,z
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_REX,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+	rts
+.endif
 
 dxshot: move 30(a6),d4
 	and.l #$ff,d4
@@ -5072,9 +5775,18 @@ dprdpr:	bsr pulser
 	move.l d4,(a0)+	;radius 16:16
 	and.l #$ff,d0
 	move.l d0,(a0)+		;phase
+.if ^^defined JAGUAR
 	lea xparrot,a0
 	jsr gpurun			;do clear screen
 	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PRING,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+	rts
+.endif
 
 
 
@@ -5097,9 +5809,17 @@ prloo:	lea in_buf,a0
 	move frames,d0
 	and.l #$ff,d0
 	move.l d0,(a0)+		;phase
+.if ^^defined JAGUAR
 	lea xparrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PRING,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	sub.l #$80000,d1
 	dbra d4,prloo
 	rts
@@ -5122,9 +5842,17 @@ opupring: movem.l d0-d3,-(a7)
 	move frames,d0
 	and.l #$ff,d0
 	move.l d0,(a0)+		;phase
+.if ^^defined JAGUAR
 	lea xparrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PRING,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	movem.l (a7)+,d0-d3
 	move #3,d4
 	move 48(a6),d7
@@ -5148,9 +5876,17 @@ prloo4:	lea in_buf,a0
 	move.l d0,(a0)+	;radius 16:16
 ;	jsr gpuwait
 	move.l #0,(a0)+		;phase
+.if ^^defined JAGUAR
 	lea xparrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PRING,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	dbra d4,prloo4
 	rts
 	
@@ -5190,9 +5926,17 @@ prexloop: movem.l d0-d5,-(a7)
 ;	clr.l d0
 	move.l d0,(a0)+		;phase
 ;	jsr gpuwait
+.if ^^defined JAGUAR
 	lea xparrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PRING,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	movem.l (a7)+,d0-d5
 	sub.l #$40000,d2
 	asl.l #1,d3
@@ -5226,9 +5970,19 @@ pprexloop: movem.l d0-d5,-(a7)
 	move frames,d0
 	and.l #$ff,d0
 	move.l d0,(a0)+		;phase
+.if ^^defined JAGUAR
 	lea equine,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	; P2 DONE This is supposed to be the horse.gas version whereas mikogpu_pring is xcamel.gas' version
+	; Also note that we want pring2 (small pixels) here
+	move.l #MIKOGPU_CPRING,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	movem.l (a7)+,d0-d5
 	sub.l #$40000,d1
 	asl.l #1,d0
@@ -5266,9 +6020,17 @@ dmup:	lea in_buf,a0
 	move.l d6,d0
 	sub.l vp_z,d0
 	move.l d0,(a0)+	;Dest x,y,z
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_REX,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	sub.l d5,d6
 	bmi rrts			;no point in drawing -ves
 	dbra d7,dmup
@@ -5298,9 +6060,17 @@ mpixex:	lea in_buf,a0
 	move.l d6,d0
 	sub.l vp_z,d0
 	move.l d0,(a0)+	;Dest x,y,z
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_REX,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 
 	sub.l #$100000,d6
 	bmi rrts			;no point in drawing -ves
@@ -5330,149 +6100,164 @@ ringa2:	move.l #$0f000f,(a0)+	;srce size
 	move.l d2,(a0)+
 	move.l d3,(a0)+
 	move.l d1,(a0)+	;Dest x,y,z
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jmp gpuwait
-
-polyr: move.l #testpoly,in_buf
-	bsr itpoly
-;	lea parrot,a0
-;	jsr gpuload		;load the GPU code for the demos
-
-	lea beasties,a0		;set main screen to 16-bit
-	move.l #screen2,d2
-	move.l d2,gpu_screen
-	move #SIDE,d0
-	sub palside,d0
-	move #TOP,d1
-	add paltop,d1
-	swap d0
-	swap d1
-	move #0,d5
-	move #$24,d3
- 	move #$24,d4
-	bsr makeit
-
-	move.l #polydemo,demo_routine
-	move.l #rrts,fx
-	bra mp_demorun	
-
-
-polydemo: move.l #0,gpu_mode
-	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
-;	clr.l backg
-	lea fastvector,a0
-	jsr gpurun			;do clear screen
-	jsr gpuwait
-	move.l #1,gpu_mode		;mode to draw poly
- 	move rpcopy,ranptr		;reset RNG to known value
- 	move #19,d0
-pollies: move d0,-(a7)
- 	bsr rtpoly
-	lea xparrot,a0
-	jsr gpurun			;do horizontal ripple warp
-	jsr gpuwait
-	move (a7)+,d0
-	dbra d0,pollies
+.endif
+.if ^^defined PROPELLER
+	; P2 TODO there's some other modes here
+	cmp.l #3,gpu_mode
+	beq.s .crex
+	move.l #MIKOGPU_REX,GPU_MAILBOX
+	bra.s .wait
+.crex:
+	move.l #MIKOGPU_CREX,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
 	rts
+.endif
 
-ppolyr: move.l #testppoly,in_buf
-	bsr itppoly
-;	lea parrot,a0
-;	jsr gpuload		;load the GPU code for the demos
+;polyr: move.l #testpoly,in_buf
+;	bsr itpoly
+;;	lea parrot,a0
+;;	jsr gpuload		;load the GPU code for the demos
+;
+;	lea beasties,a0		;set main screen to 16-bit
+;	move.l #screen2,d2
+;	move.l d2,gpu_screen
+;	move #SIDE,d0
+;	sub palside,d0
+;	move #TOP,d1
+;	add paltop,d1
+;	swap d0
+;	swap d1
+;	move #0,d5
+;	move #$24,d3
+; 	move #$24,d4
+;	bsr makeit
+;
+;	move.l #polydemo,demo_routine
+;	move.l #rrts,fx
+;	bra mp_demorun	
 
-	lea beasties,a0		;set main screen to 16-bit
-	move.l #screen2,d2
-	move.l d2,gpu_screen
-	move #SIDE,d0
-	sub palside,d0
-	move #TOP,d1
-	add paltop,d1
-	swap d0
-	swap d1
-	move #0,d5
-	move #$24,d3
- 	move #$24,d4
-	bsr makeit
+
+;polydemo: move.l #0,gpu_mode
+;	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
+;;	clr.l backg
+;	lea fastvector,a0
+;	jsr gpurun			;do clear screen
+;	jsr gpuwait
+;	move.l #1,gpu_mode		;mode to draw poly
+; 	move rpcopy,ranptr		;reset RNG to known value
+; 	move #19,d0
+;pollies: move d0,-(a7)
+; 	bsr rtpoly
+;	lea xparrot,a0
+;	jsr gpurun			;do horizontal ripple warp
+;	jsr gpuwait
+;	move (a7)+,d0
+;	dbra d0,pollies
+;	rts
+
+;ppolyr: move.l #testppoly,in_buf
+;	bsr itppoly
+;;	lea parrot,a0
+;;	jsr gpuload		;load the GPU code for the demos
+;
+;	lea beasties,a0		;set main screen to 16-bit
+;	move.l #screen2,d2
+;	move.l d2,gpu_screen
+;	move #SIDE,d0
+;	sub palside,d0
+;	move #TOP,d1
+;	add paltop,d1
+;	swap d0
+;	swap d1
+;	move #0,d5
+;	move #$24,d3
+; 	move #$24,d4
+;	bsr makeit
+;
+;
+;	move.l #ppolydemo,demo_routine
+;	move.l #rrts,fx
+;	bra mp_demorun	
 
 
-	move.l #ppolydemo,demo_routine
-	move.l #rrts,fx
-	bra mp_demorun	
+;ppolyr2:
+;; lea parrot,a0
+;;	jsr gpuload		;load the GPU code for the demos
+;
+;	lea beasties,a0		;set main screen to 16-bit
+;	move.l #screen2,d2
+;	move.l d2,gpu_screen
+;	move #SIDE,d0
+;	sub palside,d0
+;	move #TOP,d1
+;	add paltop,d1
+;	swap d0
+;	swap d1
+;	move #0,d5
+;	move #$24,d3
+; 	move #$24,d4
+;	bsr makeit
+;	move.l #2,gpu_mode	;mode 2 is pretty poly
+;	move #1,dotile
+;	move.l #ppolydemo2,demo_routine
+;	move.l #rrts,fx
+;	move #$10,pongxv
+;	move #$20,pongyv
+;	move #0,pongphase
+;	move #0,pongphase2
+;	move #0,pongscale
+;	move #0,pongzv
+;;	move #192,pongx
+;;	move #119,pongy
+;;	move #383,d0
+;;	move #239,d1
+;	move #63,d0
+;	move #63,d1
+;	move #2,polspd1
+;	move #3,polspd2
+;	bsr ppolysize
+;	bra mp_demorun	
 
 
-ppolyr2:
-; lea parrot,a0
-;	jsr gpuload		;load the GPU code for the demos
 
-	lea beasties,a0		;set main screen to 16-bit
-	move.l #screen2,d2
-	move.l d2,gpu_screen
-	move #SIDE,d0
-	sub palside,d0
-	move #TOP,d1
-	add paltop,d1
-	swap d0
-	swap d1
-	move #0,d5
-	move #$24,d3
- 	move #$24,d4
-	bsr makeit
-	move.l #2,gpu_mode	;mode 2 is pretty poly
-	move #1,dotile
-	move.l #ppolydemo2,demo_routine
-	move.l #rrts,fx
-	move #$10,pongxv
-	move #$20,pongyv
-	move #0,pongphase
-	move #0,pongphase2
-	move #0,pongscale
-	move #0,pongzv
-;	move #192,pongx
-;	move #119,pongy
+;polyr2:
+;; lea parrot,a0
+;;	jsr gpuload		;load the GPU code for the demos
+;
+;	lea beasties,a0		;set main screen to 16-bit
+;	move.l #screen2,d2
+;	move.l d2,gpu_screen
+;	move #SIDE,d0
+;	sub palside,d0
+;	move #TOP,d1
+;	add paltop,d1
+;	swap d0
+;	swap d1
+;	move #0,d5
+;	move #$24,d3
+; 	move #$24,d4
+;	bsr makeit
+;	move.l #1,gpu_mode	;mode 2 is pretty poly
+;	move.l #polydemo2,demo_routine
+;	move.l #rrts,fx
+;	move #$20,pongxv
+;	move #$30,pongyv
+;
+;	move #0,pongphase
+;	move #0,pongphase2
+;	move #0,pongscale
+;;	move #192,pongx
+;;	move #119,pongy
 ;	move #383,d0
 ;	move #239,d1
-	move #63,d0
-	move #63,d1
-	move #2,polspd1
-	move #3,polspd2
-	bsr ppolysize
-	bra mp_demorun	
-
-
-
-polyr2:
-; lea parrot,a0
-;	jsr gpuload		;load the GPU code for the demos
-
-	lea beasties,a0		;set main screen to 16-bit
-	move.l #screen2,d2
-	move.l d2,gpu_screen
-	move #SIDE,d0
-	sub palside,d0
-	move #TOP,d1
-	add paltop,d1
-	swap d0
-	swap d1
-	move #0,d5
-	move #$24,d3
- 	move #$24,d4
-	bsr makeit
-	move.l #1,gpu_mode	;mode 2 is pretty poly
-	move.l #polydemo2,demo_routine
-	move.l #rrts,fx
-	move #$20,pongxv
-	move #$30,pongyv
-
-	move #0,pongphase
-	move #0,pongphase2
-	move #0,pongscale
-;	move #192,pongx
-;	move #119,pongy
-	move #383,d0
-	move #239,d1
-	bsr polysize
-	bra mp_demorun	
+;	bsr polysize
+;	bra mp_demorun	
 
 polysize: move d0,d2
 	lsr #1,d2
@@ -5609,21 +6394,49 @@ makepyr: movem d6-d7,-(a7)
 
 ppolydemo2: move.l #2,gpu_mode
  	move.l #ppoly1,in_buf
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PRETTYPOLY,GPU_MAILBOX
+.wait1:	tst.l GPU_MAILBOX
+	bne .wait1
+.endif
  	move.l #ppoly2,in_buf
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PRETTYPOLY,GPU_MAILBOX
+.wait2:	tst.l GPU_MAILBOX
+	bne .wait2
+.endif
  	move.l #ppoly3,in_buf
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PRETTYPOLY,GPU_MAILBOX
+.wait3:	tst.l GPU_MAILBOX
+	bne .wait3
+.endif
  	move.l #ppoly4,in_buf
+.if ^^defined JAGUAR
 	lea parrot,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PRETTYPOLY,GPU_MAILBOX
+.wait4:	tst.l GPU_MAILBOX
+	bne .wait4
+.endif
 
 	move polspd1,d0
 	asr #4,d0
@@ -5686,81 +6499,81 @@ sintens: move.b 0(a0,d0.w),d1
 	bra jj
 
 
-polydemo2: move.l #poly1,in_buf
-	lea xparrot,a0
-	jsr gpurun			;do clear screen
-	jsr gpuwait
- 	move.l #poly2,in_buf
-	lea xparrot,a0
-	jsr gpurun			;do clear screen
-	jsr gpuwait
- 	move.l #poly3,in_buf
-	lea xparrot,a0
-	jsr gpurun			;do clear screen
-	jsr gpuwait
- 	move.l #poly4,in_buf
-	lea xparrot,a0
-	jsr gpurun			;do clear screen
-	jsr gpuwait
-
-	add #1,pongphase
-	move pongxv,d0
-	asr #4,d0
-	add d0,pongscale
-	move pongyv,d0
-	asr #4,d0
-	add d0,pongphase2
- 	move pongphase,d0			;get pulse colour
-	and #$ff,d0
-	lea sines,a0
-	move.b 0(a0,d0.w),d1
-	ext d1
-	add.b #$40,d0
-	move.b 0(a0,d0.w),d0
-	ext d0
-	add #$80,d0
-	add #$80,d1
-	and #$f0,d0
-	lsr #4,d1
-	and #$0f,d1
-	or d0,d1			;d1 is pulse colour
-	move d1,poly1+18
-	move d1,poly2+18
-	move d1,poly3+18
-	move d1,poly4+18		;set colour in the polly definitions
-	move pongx,d0
-	move d0,poly1+12
-	move d0,poly2+12
-	move d0,poly3+12
-	move d0,poly4+12
-	move pongy,d0
-	move d0,poly1+14
-	move d0,poly2+14
-	move d0,poly3+14
-	move d0,poly4+14
-	move pongphase2,d0
-	and #$ff,d0
-	lea p_sines,a0
-	lea poly1,a1
-	move #3,d7
-sintens2: move.b 0(a0,d0.w),d1
-	lsl #8,d1
-	move d1,4(a1)
-	add.b #$40,d0
-	move.b 0(a0,d0.w),d1
-	lsl #8,d1
-	move d1,10(a1)
-	lea 20(a1),a1
-	dbra d7,sintens2
-	move pongscale,d0
-	and #$ff,d0
-	move.b 0(a0,d0.w),d1
-	lsl #8,d1
-	move d1,poly1+16
-	move d1,poly2+16
-	move d1,poly3+16
-	move d1,poly4+16
-
+;polydemo2: move.l #poly1,in_buf
+;	lea xparrot,a0
+;	jsr gpurun			;do clear screen
+;	jsr gpuwait
+; 	move.l #poly2,in_buf
+;	lea xparrot,a0
+;	jsr gpurun			;do clear screen
+;	jsr gpuwait
+; 	move.l #poly3,in_buf
+;	lea xparrot,a0
+;	jsr gpurun			;do clear screen
+;	jsr gpuwait
+; 	move.l #poly4,in_buf
+;	lea xparrot,a0
+;	jsr gpurun			;do clear screen
+;	jsr gpuwait
+;
+;	add #1,pongphase
+;	move pongxv,d0
+;	asr #4,d0
+;	add d0,pongscale
+;	move pongyv,d0
+;	asr #4,d0
+;	add d0,pongphase2
+; 	move pongphase,d0			;get pulse colour
+;	and #$ff,d0
+;	lea sines,a0
+;	move.b 0(a0,d0.w),d1
+;	ext d1
+;	add.b #$40,d0
+;	move.b 0(a0,d0.w),d0
+;	ext d0
+;	add #$80,d0
+;	add #$80,d1
+;	and #$f0,d0
+;	lsr #4,d1
+;	and #$0f,d1
+;	or d0,d1			;d1 is pulse colour
+;	move d1,poly1+18
+;	move d1,poly2+18
+;	move d1,poly3+18
+;	move d1,poly4+18		;set colour in the polly definitions
+;	move pongx,d0
+;	move d0,poly1+12
+;	move d0,poly2+12
+;	move d0,poly3+12
+;	move d0,poly4+12
+;	move pongy,d0
+;	move d0,poly1+14
+;	move d0,poly2+14
+;	move d0,poly3+14
+;	move d0,poly4+14
+;	move pongphase2,d0
+;	and #$ff,d0
+;	lea p_sines,a0
+;	lea poly1,a1
+;	move #3,d7
+;sintens2: move.b 0(a0,d0.w),d1
+;	lsl #8,d1
+;	move d1,4(a1)
+;	add.b #$40,d0
+;	move.b 0(a0,d0.w),d1
+;	lsl #8,d1
+;	move d1,10(a1)
+;	lea 20(a1),a1
+;	dbra d7,sintens2
+;	move pongscale,d0
+;	and #$ff,d0
+;	move.b 0(a0,d0.w),d1
+;	lsl #8,d1
+;	move d1,poly1+16
+;	move d1,poly2+16
+;	move d1,poly3+16
+;	move d1,poly4+16
+;
 jj:	move.l pad_now,d0
 	and.l #allbutts,d0
 	beq nobuts
@@ -5810,25 +6623,25 @@ xinc:	add #4,polsizx
 	move #383,polsizx
 	rts
 
-ppolydemo: move.l #0,gpu_mode
-	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
-;	clr.l backg
-	lea fastvector,a0
-	jsr gpurun			;do clear screen
-	jsr gpuwait
-ppolyfb:
- 	move.l #testppoly,in_buf
-	move.l #2,gpu_mode		;mode to draw pretty poly
- 	move rpcopy,ranptr		;reset RNG to known value
- 	move npolys,d0
-ppollies: move d0,-(a7)
- 	bsr rtppoly
-	lea parrot,a0
-	jsr gpurun			;do horizontal ripple warp
-	jsr gpuwait
-	move (a7)+,d0
-	dbra d0,ppollies
-	rts
+;ppolydemo: move.l #0,gpu_mode
+;	move.l #(PITCH1|PIXEL16|WID384|XADDPHR),dest_flags	;screen details for CLS
+;;	clr.l backg
+;	lea fastvector,a0
+;	jsr gpurun			;do clear screen
+;	jsr gpuwait
+;ppolyfb:
+; 	move.l #testppoly,in_buf
+;	move.l #2,gpu_mode		;mode to draw pretty poly
+; 	move rpcopy,ranptr		;reset RNG to known value
+; 	move npolys,d0
+;ppollies: move d0,-(a7)
+; 	bsr rtppoly
+;	lea parrot,a0
+;	jsr gpurun			;do horizontal ripple warp
+;	jsr gpuwait
+;	move (a7)+,d0
+;	dbra d0,ppollies
+;	rts
 
 itppoly: move ranptr,rpcopy		;so sequence is always the same
 rtppoly: move frames,d6
@@ -5920,178 +6733,178 @@ rtp:	jsr rannum
 
 
 
-feedme3: move.l #testppoly,in_buf
-	bsr itppoly
-	move.l #ppolyfb,feedline
-	move #1,npolys
-	bra feed
+;feedme3: move.l #testppoly,in_buf
+;	bsr itppoly
+;	move.l #ppolyfb,feedline
+;	move #1,npolys
+;	bra feed
+;
+;feedme2: move.l #rexfb,feedline
+;	clr pongx
+;	bra feed
+;feedme4: move.l #pyrfb,feedline
+;	clr pongx
+;	bra feed
+;feedme5:
+;	move.l #rrts,fx
+;	move #$20,polspd1
+;	move #$30,polspd2
+;	move #0,pongphase
+;	move #0,pongphase2
+;	move #0,pongscale
+;;	move #0,pongzv
+;	move #160,d4
+;	move #88,d5
+;	move #63,d0
+;	move #63,d1
+;	bsr ppolysi
+; 	move.l #tilfb,feedline
+;	clr pongx
+;	clr dotile
+;	bra feed
 
-feedme2: move.l #rexfb,feedline
-	clr pongx
-	bra feed
-feedme4: move.l #pyrfb,feedline
-	clr pongx
-	bra feed
-feedme5:
-	move.l #rrts,fx
-	move #$20,polspd1
-	move #$30,polspd2
-	move #0,pongphase
-	move #0,pongphase2
-	move #0,pongscale
-;	move #0,pongzv
-	move #160,d4
-	move #88,d5
-	move #63,d0
-	move #63,d1
-	bsr ppolysi
- 	move.l #tilfb,feedline
-	clr pongx
-	clr dotile
-	bra feed
-
-tilfb: bra ppolydemo2
-
-
+;tilfb: bra ppolydemo2
 
 
-pyrfb:
-	move.l #0,gpu_mode
-	move.l #192,xcent
-	move.l #120,d6
-	add palfix2,d6
-	move.l d6,ycent
-
-	lea in_buf,a0			;set up func/linedraw
-	move.l #$800000,(a0)+
-	move.l #$800000,(a0)+
-	move.l #$a20000,(a0)+	;XYZ source
-	move.l #$0,(a0)+
-	move.l #$0,(a0)+
-	move.l #$200000,(a0)+	;XYZ dest
-	move popo1,d0
-	and.l #$ff,d0
-	move.l d0,(a0)+	;colour
-	move.l #32,(a0)+	;# segs
-	move frames,d0
-	and.l #$ff,d0
-	or #$01,d0
-	move.l d0,(a0)+
-	move.l #bovine,a0
-	jsr gpurun		;do it
-	jsr gpuwait
-	jsr WaitBlit
-	
-
-	lea in_buf,a0			;set up func/linedraw
-	move.l #-$800000,(a0)+
-	move.l #$800000,(a0)+
-	move.l #$a20000,(a0)+	;XYZ source
-	move.l #$0,(a0)+
-	move.l #$0,(a0)+
-	move.l #$200000,(a0)+	;XYZ dest
-	move popo1,d0
-	and.l #$ff,d0
-	move.l d0,(a0)+	;colour
-	move.l #32,(a0)+	;# segs
-	move frames,d0
-	and.l #$ff,d0
-	or #$01,d0
-	move.l d0,(a0)+
-	move.l #bovine,a0
-	jsr gpurun		;do it
-	jsr gpuwait
-	jsr WaitBlit
-
-	lea in_buf,a0			;set up func/linedraw
-	move.l #00000,(a0)+
-	move.l #-$800000,(a0)+
-	move.l #$a20000,(a0)+	;XYZ source
-	move.l #$0,(a0)+
-	move.l #$0,(a0)+
-	move.l #$200000,(a0)+	;XYZ dest
-	move popo2,d0
-	and.l #$ff,d0
-	move.l d0,(a0)+	;colour
-	move.l #32,(a0)+	;# segs
-	move frames,d0
-	and.l #$ff,d0
-	or #$01,d0
-	move.l d0,(a0)+
-	move.l #bovine,a0
-	jsr gpurun		;do it
-	jsr gpuwait
-	jsr WaitBlit
-
-	move pongx,d0
-	move frames,d1
-	and #$7f,d0
-	and #$7f,d1
-	sub #$3f,d0
-	bpl doofb
-	neg d0
-doofb:	sub #$3f,d1
-	bpl doofb1
-	neg d1
-doofb1:	add #32,d0
-	add #48,d1
-	move #192,d6
-	move #130,d7
-	bra dop
 
 
-feedme:	move.l #polyfb,feedline
-	clr pongx
-feed:	bsr settrue
-	move.l #feedback,demo_routine
-	move.l #rrts,fx
-	move.l #$1f001f0,pongy
-	move #9,pongz
-	move.l #0,pongxv
-	move #192,pongyv
-	move #120,pongzv
-	bra mp_demorun
+;pyrfb:
+;	move.l #0,gpu_mode
+;	move.l #192,xcent
+;	move.l #120,d6
+;	add palfix2,d6
+;	move.l d6,ycent
+;
+;	lea in_buf,a0			;set up func/linedraw
+;	move.l #$800000,(a0)+
+;	move.l #$800000,(a0)+
+;	move.l #$a20000,(a0)+	;XYZ source
+;	move.l #$0,(a0)+
+;	move.l #$0,(a0)+
+;	move.l #$200000,(a0)+	;XYZ dest
+;	move popo1,d0
+;	and.l #$ff,d0
+;	move.l d0,(a0)+	;colour
+;	move.l #32,(a0)+	;# segs
+;	move frames,d0
+;	and.l #$ff,d0
+;	or #$01,d0
+;	move.l d0,(a0)+
+;	move.l #bovine,a0
+;	jsr gpurun		;do it
+;	jsr gpuwait
+;	jsr WaitBlit
+;	
+;
+;	lea in_buf,a0			;set up func/linedraw
+;	move.l #-$800000,(a0)+
+;	move.l #$800000,(a0)+
+;	move.l #$a20000,(a0)+	;XYZ source
+;	move.l #$0,(a0)+
+;	move.l #$0,(a0)+
+;	move.l #$200000,(a0)+	;XYZ dest
+;	move popo1,d0
+;	and.l #$ff,d0
+;	move.l d0,(a0)+	;colour
+;	move.l #32,(a0)+	;# segs
+;	move frames,d0
+;	and.l #$ff,d0
+;	or #$01,d0
+;	move.l d0,(a0)+
+;	move.l #bovine,a0
+;	jsr gpurun		;do it
+;	jsr gpuwait
+;	jsr WaitBlit
+;
+;	lea in_buf,a0			;set up func/linedraw
+;	move.l #00000,(a0)+
+;	move.l #-$800000,(a0)+
+;	move.l #$a20000,(a0)+	;XYZ source
+;	move.l #$0,(a0)+
+;	move.l #$0,(a0)+
+;	move.l #$200000,(a0)+	;XYZ dest
+;	move popo2,d0
+;	and.l #$ff,d0
+;	move.l d0,(a0)+	;colour
+;	move.l #32,(a0)+	;# segs
+;	move frames,d0
+;	and.l #$ff,d0
+;	or #$01,d0
+;	move.l d0,(a0)+
+;	move.l #bovine,a0
+;	jsr gpurun		;do it
+;	jsr gpuwait
+;	jsr WaitBlit
+;
+;	move pongx,d0
+;	move frames,d1
+;	and #$7f,d0
+;	and #$7f,d1
+;	sub #$3f,d0
+;	bpl doofb
+;	neg d0
+;doofb:	sub #$3f,d1
+;	bpl doofb1
+;	neg d1
+;doofb1:	add #32,d0
+;	add #48,d1
+;	move #192,d6
+;	move #130,d7
+;	bra dop
 
-feedback: move.l #(PITCH1|PIXEL16|WID384),d0
-	move.l d0,source_flags
-	move.l d0,dest_flags
-	lea in_buf,a0
-	move.l cscreen,(a0)		;source screen is already-displayed screen
-	move.l #384,4(a0)
-	move.l #240,d0
-	add palfix1,d0
-	move.l d0,8(a0)		;X and Y dest rectangle size
-	clr.l d0
-	move pongy,d0
-;	lsr.l #4,d0
-	move.l d0,12(a0)
-	move pongy+2,d0
-;	lsr.l #4,d0
-	move.l d0,16(a0)		;X and Y scale as 8:8 fractions
-	move pongxv,d0
-	and.l #$ff,d0
-	move.l d0,20(a0)			;initial angle in brads
-	move pongyv,d0
-	swap d0
-	clr d0	
-	move.l d0,24(a0)		;source x centre in 16:16
-	move pongzv,d0
-	add palfix2,d0
-	swap d0
-	clr d0
-	move.l d0,28(a0)		;y centre the same
-	move.l #$0,32(a0)		;offset of dest rectangle
-	move.l delta_i,36(a0)
-	move.l #2,gpu_mode		;op 2 of this module is Scale and Rotate
-	move.l #demons,a0
-	jsr gpurun			;do it
-	jsr gpuwait
 
-	move.b pad_now,d0
-	and #$22,d0			;check 2 buttons down (set delta i to 0)
-	cmp #$22,d0
-	bne nrseti
-	clr.l delta_i
+;feedme:	move.l #polyfb,feedline
+;	clr pongx
+;feed:	bsr settrue
+;	move.l #feedback,demo_routine
+;	move.l #rrts,fx
+;	move.l #$1f001f0,pongy
+;	move #9,pongz
+;	move.l #0,pongxv
+;	move #192,pongyv
+;	move #120,pongzv
+;	bra mp_demorun
+;
+;feedback: move.l #(PITCH1|PIXEL16|WID384),d0
+;	move.l d0,source_flags
+;	move.l d0,dest_flags
+;	lea in_buf,a0
+;	move.l cscreen,(a0)		;source screen is already-displayed screen
+;	move.l #384,4(a0)
+;	move.l #240,d0
+;	add palfix1,d0
+;	move.l d0,8(a0)		;X and Y dest rectangle size
+;	clr.l d0
+;	move pongy,d0
+;;	lsr.l #4,d0
+;	move.l d0,12(a0)
+;	move pongy+2,d0
+;;	lsr.l #4,d0
+;	move.l d0,16(a0)		;X and Y scale as 8:8 fractions
+;	move pongxv,d0
+;	and.l #$ff,d0
+;	move.l d0,20(a0)			;initial angle in brads
+;	move pongyv,d0
+;	swap d0
+;	clr d0	
+;	move.l d0,24(a0)		;source x centre in 16:16
+;	move pongzv,d0
+;	add palfix2,d0
+;	swap d0
+;	clr d0
+;	move.l d0,28(a0)		;y centre the same
+;	move.l #$0,32(a0)		;offset of dest rectangle
+;	move.l delta_i,36(a0)
+;	move.l #2,gpu_mode		;op 2 of this module is Scale and Rotate
+;	move.l #demons,a0
+;	jsr gpurun			;do it
+;	jsr gpuwait
+;
+;	move.b pad_now,d0
+;	and #$22,d0			;check 2 buttons down (set delta i to 0)
+;	cmp #$22,d0
+;	bne nrseti
+;	clr.l delta_i
 
 nrseti:	move.l pad_now,d0
 	and.l #allbutts,d0
@@ -6214,78 +7027,86 @@ scarp0:	move.l pongz,in_buf+32
 	rts
 
 
-siner: 	move.l #screen3,gpu_screen
-sner:	bsr rannum
-	swap d0
-	asr.l #8,d0
-	move.l d0,in_buf
-	bsr rannum
-	swap d0
-	asr.l #8,d0
-	move.l d0,in_buf+4
-	bsr rannum
-	swap d0
-	move.l d0,in_buf+8
-	bsr rannum
-	swap d0
-	move.l d0,in_buf+12
-	bsr rannum
-	and.l #$ff,d0
-	asl.l #3,d0
-	move.l d0,in_buf+16
-	bsr rannum
-	and.l #$ff,d0
-	asl.l #3,d0
-	move.l d0,in_buf+20
-
-	bsr rannum
-	swap d0
-	lsr.l #6,d0
-	move.l d0,palad0
-	bsr rannum
-	move d0,palad2
-	bsr rannum
-	swap d0
-	lsr.l #6,d0
-	move.l d0,palad3		;Randomise pal generator
-
-
-	move.l #5,gpu_mode		;To make sine pattern screen
-	lea demons,a0
-	jsr gpurun			;do it
-	jmp gpuwait	
-
-voxel: 	rts
-
-
+;siner: 	move.l #screen3,gpu_screen
+;sner:	bsr rannum
+;	swap d0
+;	asr.l #8,d0
+;	move.l d0,in_buf
+;	bsr rannum
+;	swap d0
+;	asr.l #8,d0
+;	move.l d0,in_buf+4
+;	bsr rannum
+;	swap d0
+;	move.l d0,in_buf+8
+;	bsr rannum
+;	swap d0
+;	move.l d0,in_buf+12
+;	bsr rannum
+;	and.l #$ff,d0
+;	asl.l #3,d0
+;	move.l d0,in_buf+16
+;	bsr rannum
+;	and.l #$ff,d0
+;	asl.l #3,d0
+;	move.l d0,in_buf+20
+;
+;	bsr rannum
+;	swap d0
+;	lsr.l #6,d0
+;	move.l d0,palad0
+;	bsr rannum
+;	move d0,palad2
+;	bsr rannum
+;	swap d0
+;	lsr.l #6,d0
+;	move.l d0,palad3		;Randomise pal generator
+;
+;
+;	move.l #5,gpu_mode		;To make sine pattern screen
+;	lea demons,a0
+;	jsr gpurun			;do it
+;	jmp gpuwait	
+;
+;voxel: 	rts
 
 
-demorun: move.l #demons,demobank
-drun: 	move #1,screen_ready		;tell DB to start up sync with foreground
-	clr db_on			;enable doublebuffer
-scapa:	movem.l d0-d4,-(a7)
-	bsr db				;sync with frame int, receive new drawscreen base
-	bsr WaitBlit
-	move.l demobank,a0
-	jsr gpurun			;do it
-	jsr gpuwait
-	move #1,screen_ready
-	movem.l (a7)+,d0-d4
-	move.l demo_routine,a0
-	jsr (a0)
-	btst.b #0,pad_now+1
-;	bne fxsel			;go select a new effect if player hits option
-	bne mandy
-	bra scapa		
 
-mp_demorun: move #1,screen_ready		;as above, but a multi-pass-capable version that lets you start
+
+;demorun: move.l #demons,demobank
+;drun: 	
+;.if ^^defined PROPELLER
+;	;jsr p2scrupload
+;.endif
+;	move #1,screen_ready		;tell DB to start up sync with foreground
+;	clr db_on			;enable doublebuffer
+;scapa:	movem.l d0-d4,-(a7)
+;	bsr db				;sync with frame int, receive new drawscreen base
+;	bsr WaitBlit
+;	move.l demobank,a0
+;	jsr gpurun			;do it
+;	jsr gpuwait
+;	;move #1,screen_ready
+;	movem.l (a7)+,d0-d4
+;	move.l demo_routine,a0
+;	jsr (a0)
+;	btst.b #0,pad_now+1
+;;	bne fxsel			;go select a new effect if player hits option
+;	bne mandy
+;	bra scapa		
+
+mp_demorun: 
+.if ^^defined PROPELLER
+	;jsr p2scrupload
+.endif
+	move #1,screen_ready		;as above, but a multi-pass-capable version that lets you start
 	clr db_on				;the gpu in demo_routine
 mp_scapa: movem.l d0-d4,-(a7)
 	bsr db				;sync with frame int, receive new drawscreen base
 	movem.l (a7)+,d0-d4
 	move.l demo_routine,a0
 	jsr (a0)
-	move #1,screen_ready
+	;move #1,screen_ready
 	btst.b #0,pad_now+1
 ;	bne fxsel			;go select a new effect if player hits option
 	bne mandy
@@ -6294,6 +7115,9 @@ mp_scapa: movem.l d0-d4,-(a7)
 
 attract: move #500,attime
 attr:	clr ud_score
+.if ^^defined PROPELLER
+	;jsr p2scrupload
+.endif
  	move #1,screen_ready		;as above, attract mode version
 	clr db_on		
 	clr e_attract
@@ -6335,7 +7159,11 @@ mooocow: tst unpaused
 	beq nunpa
 	jsr eepromsave
 	clr unpaused	
-nunpa: 	move #1,screen_ready
+nunpa: 	
+.if ^^defined PROPELLER
+	;jsr p2scrupload
+.endif
+	move #1,screen_ready
 	rts
 
 
@@ -6556,11 +7384,23 @@ h2hin:	bsr h2hclaws
  	move #$24,d4
 	jsr makeit_trans		;put up some TC screen for status display
 
+.if ^^defined PROPELLER
+	move.l #hub_screen+screensize,a1 ; render into buffer area after screen
+	move.l a1,gpu_screen
+	move.w #0,a0
+	move.l #384*32,d0
+	dc.w MIKO68K_WORDFILL
+.endif
 
 	move #19,d0		
 	move #20,d1	
 	move #16,d6
+.if ^^defined JAGUAR
 	move #52,d7
+.endif
+.if ^^defined PROPELLER
+	move #52-32,d7
+.endif
 	move.l #$40000,pc_1
 	move.l #$560100,pc_2
 	bsr makepyr			;make a pyramid for hit points display
@@ -6569,7 +7409,12 @@ h2hin:	bsr h2hclaws
 	move #19,d0		
 	move #20,d1	
 	move #48,d6
+.if ^^defined JAGUAR
 	move #52,d7
+.endif
+.if ^^defined PROPELLER
+	move #52-32,d7
+.endif
 	move.l #$840000,pc_1
 	move.l #$d60100,pc_2
 	bsr makepyr			;make a pyramid for hit points display
@@ -6902,12 +7747,18 @@ sfc_routine:	move d0,4(a0)
 	rts
 
 bonies: dc.l m7scr,_tunn,m7test2,_tunn
+;bonies: dc.l _tunn,_tunn,_tunn,_tunn
+;bonies: dc.l m7test2,m7test2,m7test2,m7test2
 
 sweb0:	move.l #rrts,routine
 ;	move #-1,db_on
 	tst t2k
 	beq swip1
+.if ^^defined ALWAYS_CHEAT
+	cmp #10,cwave
+.else
 	cmp #99,cwave
+.endif	
 	blt wwoo
 	clr _pauen
 	clr pauen
@@ -10485,6 +11336,9 @@ moveclaw:
 	tst h2h
 	bne h2hrun
 	bsr run_wave			;run the wave generator
+.if ^^defined ALWAYS_CHEAT
+	move #1,chenable
+.endif
 	tst chenable
 	beq nofire
 	cmp #-2,wave_tim
@@ -11166,8 +12020,9 @@ zoomoff:  movem.l d0-d3,-(a7)
 	jsr CHANGEFX
 	tst modstop
 	beq modzon
-	jsr DISABLE_FX		;any SFX to off
-	jsr ENABLE_FX		;any SFX to off
+	;jsr DISABLE_FX		;any SFX to off
+	;jsr ENABLE_FX		;any SFX to off
+	jsr kill_all_sfx
 modzon:	movem.l (a7)+,d0-d3
 	rts
 
@@ -11259,9 +12114,9 @@ zipp0:	move.l freeobjects,a6
 	bra iclaw			;and go set it to rez
 
 
-camel: add #1,d0
- 	move d0,BORD1
-	bra camel
+;camel: add #1,d0
+; 	move d0,BORD1
+;	bra camel
 
 nothing: move #1,screen_ready
  rts
@@ -11273,11 +12128,32 @@ wsnc: 	cmp frames,d7
 	beq wsnc
 	rts
 
-
+clrscreen_all:
+.if ^^defined JAGUAR
+	move.l #screen1,a0
+	jsr clrscreen
+	move.l #screen2,a0
+	jsr clrscreen
+	move.l #screen3,a0
+.endif
+.if ^^defined PROPELLER
+	move.l #ps_screen1,a0
+	jsr clrscreen
+	move.l #ps_screen2,a0
+	jsr clrscreen
+	move.l #ps_screen3,a0
+	jsr clrscreen
+	move.l #hub_screen,a0
+.endif
+	; fall through
 clrscreen: clr d0			;Clear screen a0
 	clr d1	
 	move #384,d2
+.if ^^defined PROPELLER
+	move #240,d3
+.else
 	move #280,d3
+.endif
 	move #$000,d4
 	bra BlitBlock
 	
@@ -11324,13 +12200,23 @@ mainloop:
 ;	bsr gpuload	
 ;	bsr WaitBlit
 
-	move #1,sync
+.if ^^defined PROPELLER
+	; upload screen
+	jsr p2scrupload
+.endif
 	move #1,screen_ready
+	move #1,sync
 	move pauen,_pauen
 main: 	tst sync
 	bne main
 	move #1,sync
+
+.if ^^defined JAGUAR
 	move.l dscreen,gpu_screen
+.endif
+.if ^^defined PROPELLER
+	move.l #hub_screen,gpu_screen
+.endif
 
 
 	move.l mainloop_routine,a0
@@ -11360,6 +12246,9 @@ mlooo: tst unpaused
 	clr unpaused	
 nunpa2:
 	move #1,screen_ready
+.if ^^defined PROPELLER
+	jsr p2scrupload
+.endif
 	tst term
 	beq main
 rax:	clr _pauen
@@ -11370,21 +12259,51 @@ rax:	clr _pauen
 ;	bra fade
 
 
-db:	move #1,sync			;request sync
+.if ^^defined JAGUAR
+db:	
+		move #1,screen_ready
+		move #1,sync			;request sync
 dboo:	tst sync
 	bne dboo
 	move.l dscreen,gpu_screen	;current DB thang
 	rts
+.endif
 
+.if ^^defined PROPELLER
+db:	
+	; upload screen
+	; P2 TODO should really be a GPU command so irq can hit during this
+	bsr p2scrupload
+	move #1,sync			;request sync
+dboo:	tst sync
+	bne dboo
+	move.l #hub_screen,gpu_screen
+	rts
 
-IServ:  btst.b #2,INT1+1
-	beq Frame		;if not stopobj must be Frame
+p2scrupload:
+	tst.w screen_uploaded ; don't do it if screen already uploaded
+	bne.s .nope
+	movem.l a0/a1/d0,-(a7)
+	move.l dscreen,a1
+	move.l #hub_screen,a0
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+	movem.l (a7)+,a0/a1/d0
+.nope:
+	clr.w screen_uploaded
+	move #1,screen_ready
+	rts
+
+.endif
+
+;IServ:  btst.b #2,INT1+1
+;	beq Frame		;if not stopobj must be Frame
 
 ; stop object code can go here
 
-	move #$405,INT1
-	clr INT2
-	rte
+;	move #$405,INT1
+;	clr INT2
+;	rte
 
 
 Frame:
@@ -11397,10 +12316,18 @@ Frame:
 
 
 
-fr:	move INT1,d0
+fr:	
+.if ^^defined JAGUAR
+	move INT1,d0
 	move d0,-(a7)
 	btst #0,d0
 	beq CheckTimer		;go do Music thang
+.endif
+.if ^^defined PROPELLER
+	; P2 TODO
+	move #0,-(a7)
+	bsr dopad
+.endif
 
 
 	movem.l d6-d7/a3-a6,-(a7)
@@ -11439,6 +12366,7 @@ no_new_screen:
 
 
 stdb:	move.l cscreen,d6	;get address of current displayed screen
+.if ^^defined JAGUAR
 	and.l #$fffffff8,d6	;lose three LSB's
 	lsl.l #8,d6		;move to correct bit position
 	move.l (a0),d1		;get first word of the BMO
@@ -11446,6 +12374,11 @@ stdb:	move.l cscreen,d6	;get address of current displayed screen
 	or.l d6,d1		;mask in new pointer
 	move.l d1,(a0)		;replace in OL
 	lea 32(a0),a0		;skip to nxt object
+.endif
+.if ^^defined PROPELLER
+	move.l d6,4(a0)
+	lea 16(a0),a0
+.endif
 ;	dbra d7,stdb		;loop for all DB backgrounds
 
 
@@ -11514,8 +12447,10 @@ rotonly: add #1,pitcount
 exxit:	move (a7)+,d0
 	lsl #8,d0
 	move.b intmask,d0
+.if ^^defined JAGUAR
 	move d0,INT1
 	move d0,INT2 
+.endif
 	movem.l (a7)+,d0-d5/a0-a2
 ;	move.l #0,BORD1
 ;	move.w #$101,INT1	;do interrupt stuff
@@ -11526,7 +12461,7 @@ readrotary:
 ;
 ; read a Rotary Controller
 
-
+.if ^^defined JAGUAR
 	btst.b #3,sysflags
 	beq op2
 	move.l	#$f0fffffc,d1		; d1 = Joypad data mask   (Player 1)
@@ -11562,6 +12497,8 @@ op2: btst.b #4,sysflags
 	lea roconsens+4,a2
 	bsr rroco
 	add.l d0,rot_cum+4
+.endif
+	; P2 TODO
 	rts
 
 
@@ -11730,10 +12667,18 @@ mpo1:	sub #$3f,d0
 	neg.l d0
 	asr.l #1,d0
 	move.l d0,28(a0)
+.if ^^defined JAGUAR
 	bsr WaitBlit
  	lea texter,a0
 	jsr gpurun
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_TEXTER,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	cmp.l #wmes2,msg		;is it Superzapper?
 	beq xtra1
 	cmp.l #zmes1,msg
@@ -11752,42 +12697,51 @@ xtra2:	move.l a3,(a0)
 	move #100,d0
 	swap d0
 	move.l d0,32(a0)
+.if ^^defined JAGUAR
 	bsr WaitBlit
  	lea texter,a0
 	jsr gpurun
 	jmp gpuwait	
-
-
-mandfx:	move palphase1,d0		;put funky colours in the whole CLUT
-	and #$ff,d0
-	move palphase2,d5
-	and #$ff,d5
-	lea CLUT,a1
-	lea p_sines,a0
-	move #254,d7
-	move palad2,d3
-	move.l palad3,d4
-	add.l d4,palad2
-	move.l palad0,d1
-	add.l d1,palphase1
-	move.l palad1,d1
-	add.l d1,palad2
-
-mclut:	move.b 0(a0,d0.w),d1
-	add.b d3,d0
-	move.b 0(a0,d0.w),d2
-	sub.b d3,d0
-	add.b #1,d0
-	and #$f0,d2
-	lsr #4,d1
-	and #$0f,d1
-	or d2,d1
-	lsl #8,d1
-	or #$ff,d1
-	move d1,(a1)+
-	dbra d7,mclut
-	clr (a1)+
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_TEXTER,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
 	rts
+.endif
+
+
+;mandfx:	move palphase1,d0		;put funky colours in the whole CLUT
+;	and #$ff,d0
+;	move palphase2,d5
+;	and #$ff,d5
+;	lea CLUT,a1
+;	lea p_sines,a0
+;	move #254,d7
+;	move palad2,d3
+;	move.l palad3,d4
+;	add.l d4,palad2
+;	move.l palad0,d1
+;	add.l d1,palphase1
+;	move.l palad1,d1
+;	add.l d1,palad2
+;
+;mclut:	move.b 0(a0,d0.w),d1
+;	add.b d3,d0
+;	move.b 0(a0,d0.w),d2
+;	sub.b d3,d0
+;	add.b #1,d0
+;	and #$f0,d2
+;	lsr #4,d1
+;	and #$0f,d1
+;	or d2,d1
+;	lsl #8,d1
+;	or #$ff,d1
+;	move d1,(a1)+
+;	dbra d7,mclut
+;	clr (a1)+
+;	rts
 
 
 checkpause: move.l pad_now,d0
@@ -11855,9 +12809,17 @@ paustuff: jsr text2_setup
 	lea in_buf,a0
 	move.l #$490074,32(a0)		;was 35
 	move.l #pautext,(a0) 
+.if ^^defined JAGUAR
  	lea texter,a0
 	jsr gpurun
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_TEXTER,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 
 npspri:	tst vadj
 	bmi rrts
@@ -12085,33 +13047,33 @@ nomergem: and.l #pausebutton,d0
 ;	bsr beastiesoff
 	rts
 
-gpu_run_b: move.l dscreen,gpu_screen
-	bra rgpu 
-
-
-gpu_run: move.l gscreen,gpu_screen
-rgpu: 	move.l #-1,gpu_sem	;flag GPU running
-	move.l #$f03000,d0	;start address of GPU program
-	move.l d0,G_PC	;set GPU's PC
-	move.l #$11,G_CTRL	;fire up GPU	
-still_running: tst.l gpu_sem
-	bmi still_running	;wait for GPU stop
-	bsr WaitBlit		;wait for Blitter stop
-	move #1,screen_ready	;tell int routine the screen is ready				;for display
- 	rts 
-
-gpu: 	move.l dscreen,gpu_screen
- 	move.l #-1,gpu_sem	;flag GPU running
-	move.l #$f03000,d0	;start address of GPU program
-	move.l d0,G_PC	;set GPU's PC
-	move.l #$11,G_CTRL	;fire up GPU	
-	lea	G_CTRL,a0
-still_r: move.l	(a0),d0		;ataris way of stopping
-	btst #0,d0
-	bne	still_r
-	bsr WaitBlit		;wait for Blitter stop
- 	rts 
-
+;gpu_run_b: move.l dscreen,gpu_screen
+;	bra rgpu 
+;
+;
+;gpu_run: move.l gscreen,gpu_screen
+;rgpu: 	move.l #-1,gpu_sem	;flag GPU running
+;	move.l #$f03000,d0	;start address of GPU program
+;	move.l d0,G_PC	;set GPU's PC
+;	move.l #$11,G_CTRL	;fire up GPU	
+;still_running: tst.l gpu_sem
+;	bmi still_running	;wait for GPU stop
+;	bsr WaitBlit		;wait for Blitter stop
+;	move #1,screen_ready	;tell int routine the screen is ready				;for display
+; 	rts 
+;
+;gpu: 	move.l dscreen,gpu_screen
+; 	move.l #-1,gpu_sem	;flag GPU running
+;	move.l #$f03000,d0	;start address of GPU program
+;	move.l d0,G_PC	;set GPU's PC
+;	move.l #$11,G_CTRL	;fire up GPU	
+;	lea	G_CTRL,a0
+;still_r: move.l	(a0),d0		;ataris way of stopping
+;	btst #0,d0
+;	bne	still_r
+;	bsr WaitBlit		;wait for Blitter stop
+; 	rts 
+;
 
 
 InitBeasties: lea beasties,a0
@@ -12174,16 +13136,19 @@ make_rmw:
 ;
 ; set RMW on the sprite just defined
 
+.if ^^defined JAGUAR
 	lea -32(a0),a3		;point to start of object
 	bset.b #6,10(a3)	;set the RMW flag
+.endif
 	rts
 
 make_trans:
 ;
 ; make this sprite transparent
-
+.if ^^defined JAGUAR
 	lea -32(a0),a3
 	bset.b #7,10(a3)
+.endif
 	rts
 
 ModeVex: dc.l rrts
@@ -12197,6 +13162,7 @@ InitLists:
 
 	move.l #list1,d0
 	and.l #$ffffffe0,d0	;make sure it's quadphrase aligned
+.if ^^defined JAGUAR
 
 	move.l d0,a0
 	move.l #0,(a0)+		;The STOP Object for v pos out of range.
@@ -12228,6 +13194,11 @@ InitLists:
 	swap d0
 	move d0,(a0)+
 	move d2,(a0)+
+.endif
+.if ^^defined PROPELLER
+	move.l d0,a0
+	move.l a0,ddlist	;Initial start point of list
+.endif
 
 ;	move.l d0,dlist
 	move.l a0,dlist
@@ -12240,10 +13211,16 @@ InitLists:
 	move.l d0,a0
 	bra StopList
 
-StopList: move #15,d0
+StopList: 
+.if ^^defined JAGUAR
+	move #15,d0
 sl: 	move.l #0,(a0)+
 	move.l #4,(a0)+		;make a stopobject
 	dbra d0,sl
+.endif
+.if ^^defined PROPELLER
+	move.l #0,(a0)+
+.endif
 	rts
 
 	 
@@ -12353,6 +13330,7 @@ MakeUnScaledObject:
 ;
 ; uses all d-regs, a0 must have OL position, a6 used internally
 ;
+.if ^^defined JAGUAR
 	move.l a0,d6
 	and #$1f,d6		;check for aligned
 	beq muso
@@ -12417,7 +13395,17 @@ muso:	move.l a1,d6		;get copy of data pointer
 	lea 16(a0),a0		;not economical but if all objects are 32 bytes it makes life easier
 	lea 32(a4),a4		;where the list is really going to
 * Outta here.
-
+.endif
+.if ^^defined PROPELLER
+	move.l #1,(a0)+
+	move.l a1,(a0)+
+	move.w d0,(a0)+
+	lsl.w #2,d3
+	move.w d3,(a0)+
+	asr.w #1,d1 ; damn half-lines
+	move.w d1,(a0)+
+	move.w d4,(a0)+
+.endif
 	rts
 
 
@@ -12426,6 +13414,7 @@ BlitBlock:
 ; use the Blitter to draw a block, origin d0/d1, size d2/d3, colour d4,
 ; on the 384-pixel wide bitmap addressed at a0.
 
+.if ^^defined JAGUAR
 	move.l #PITCH1|PIXEL16|WID384|XADDINC,d7
 	move.l d7,A1_FLAGS
 	move.l a0,d7
@@ -12455,49 +13444,84 @@ BlitBlock:
 	move.l d7,B_PATD+4	;fill up phrase wide pattern register
 	move.l #PATDSEL|UPDA1,d7
 	move.l d7,B_CMD	;do the thang
+.endif
+.if ^^defined PROPELLER
+	movem.l d0-d5/a0-a1,-(a7)
+	; dst address
+	move.l a0,a1
+	ext.l d0
+	mulu #384,d1
+	add.l d1,d0
+	asl.l #1,d0
+	add.l d0,a1
+	; setup width
+	ext.l d2
+	move.l d2,d0
+	;asl.l #1,d0
+	; setup color (don't ask)
+	move.w d4,a0
+	; actual filling loop
+.loop:
+	dc.w MIKO68K_WORDFILL
+	;add.w d7,a0
+	;add.w d7,a0
+	add.w #384*2,a1
+	sub.w #1,d3
+	bne .loop
 
-WaitBlit: move.l B_CMD,d7	;get Blitter status regs
+	movem.l (a7)+,d0-d5/a0-a1
+	rts
+.endif
+
+WaitBlit: 
+.if ^^defined JAGUAR
+	move.l B_CMD,d7	;get Blitter status regs
 	btst #0,d7
 	beq WaitBlit		;wait until outer loop is idle
+.endif
+	; P2 TODO
 rrts:	rts
 
 
-fxBlock:
-;
-; use the Blitter to draw a block, origin d0/d1, size d2/d3, colour d4,
-; on the 384-pixel wide bitmap addressed at a0.
+;fxBlock:
+;;
+;; use the Blitter to draw a block, origin d0/d1, size d2/d3, colour d4,
+;; on the 384-pixel wide bitmap addressed at a0.
+;.if ^^defined JAGUAR
+;	move.l #PITCH1|PIXEL16|WID384|XADDINC,d7
+;	move.l d7,A1_FLAGS
+;	move.l a0,d7
+;	move.l d7,A1_BASE	;base of dest screen
+;	move d1,d7
+;	swap d7
+;	move d0,d7		;X and Y destination start
+;	move.l d7,A1_PIXEL
+;	move.l #0,A1_FPIXEL
+;	move.l #$1,d7
+;	move.l d7,A1_INC
+;	move.l #0,A1_FINC	;No fractional parts of increment
+;	move #1,d7		;X and Y Step
+;	swap d7
+;	move d2,d7
+;	neg d7
+;	move.l d7,A1_STEP
+;	move.l #0,A1_FSTEP	;no fraction of step
+;	move d3,d7
+;	swap d7
+;	move d2,d7		;Inner and outer loop count
+;	move.l d7,B_COUNT
+;	move d4,d7		;get colour
+;	swap d7
+;	move d4,d7		;duplicate
+;	move.l d7,B_PATD
+;	move.l d7,B_PATD+4	;fill up phrase wide pattern register
+;	move.l #PATDSEL|UPDA1,d7
+;	move.l d7,B_CMD	;do the thang
+;.endif
+;	bra WaitBlit
 
-	move.l #PITCH1|PIXEL16|WID384|XADDINC,d7
-	move.l d7,A1_FLAGS
-	move.l a0,d7
-	move.l d7,A1_BASE	;base of dest screen
-	move d1,d7
-	swap d7
-	move d0,d7		;X and Y destination start
-	move.l d7,A1_PIXEL
-	move.l #0,A1_FPIXEL
-	move.l #$1,d7
-	move.l d7,A1_INC
-	move.l #0,A1_FINC	;No fractional parts of increment
-	move #1,d7		;X and Y Step
-	swap d7
-	move d2,d7
-	neg d7
-	move.l d7,A1_STEP
-	move.l #0,A1_FSTEP	;no fraction of step
-	move d3,d7
-	swap d7
-	move d2,d7		;Inner and outer loop count
-	move.l d7,B_COUNT
-	move d4,d7		;get colour
-	swap d7
-	move d4,d7		;duplicate
-	move.l d7,B_PATD
-	move.l d7,B_PATD+4	;fill up phrase wide pattern register
-	move.l #PATDSEL|UPDA1,d7
-	move.l d7,B_CMD	;do the thang
-	bra WaitBlit
-			
+
+.if ^^defined JAGUAR	
 ecopy:
 	move.l #PITCH1|PIXEL16|WID384|XADDINC,d7
 	bra eec
@@ -12555,11 +13579,48 @@ eec:	move.l d7,A1_FLAGS	;a1 (Source) Gubbins
 	move.l #SRCEN|UPDA1|UPDA2|DSTA2|LFU_A|LFU_AN,d7
 	move.l d7,B_CMD
 	bra WaitBlit
+.endif
+.if ^^defined PROPELLER
+ecopy:
+	move.w #384,d7
+	bra.s eec
+CopyBlock:
+	move.w #320,d7
+eec:
+	movem.l d0-d5/a0-a1,-(a7)
+	; source address
+	ext.l d0
+	mulu d7,d1
+	add.l d1,d0
+	asl.l #1,d0
+	add.l d0,a0
+	; dst address
+	ext.l d4
+	mulu #384,d5
+	add.l d5,d4
+	asl.l #1,d4
+	add.l d4,a1
+	; setup width
+	ext.l d2
+	move.l d2,d0
+	asl.l #1,d0
+	; actual copying loop
+.loop:
+	dc.w MIKO68K_BURSTCOPY
+	add.w d7,a0
+	add.w d7,a0
+	add.w #384*2,a1
+	sub.w #1,d3
+	bne .loop
+
+	movem.l (a7)+,d0-d5/a0-a1
+	rts
+.endif
 
 
 MergeBlock:
 ;
-
+.if ^^defined JAGUAR
 	move.l #0,B_PATD
 	move.l #0,B_PATD+4		;set transparency colour
 
@@ -12605,6 +13666,26 @@ MergeBlock:
 	move.l #SRCEN|UPDA1|UPDA2|DSTA2|LFU_A|LFU_AN|DCOMPEN,d7
 	move.l d7,B_CMD
 	bra WaitBlit
+.endif
+.if ^^defined PROPELLER
+	move.l gpu_screen,-(a7)
+	move.l a1,gpu_screen
+	lea in_buf,a1
+	move.l a0,(a1)+
+	move.w d0,(a1)+
+	move.w d1,(a1)+
+	move.w d4,(a1)+
+	move.w d5,(a1)+
+	move.w d2,(a1)+
+	move.w d3,(a1)+
+	
+	move.l #MIKOGPU_MERGE,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+	move.l (a7)+,gpu_screen
+	rts
+.endif
 
 
 
@@ -12845,10 +13926,19 @@ draw_fw: tst 32(a6)
 	move 40(a6),d0
 	and.l #$ff,d0
 	move.l d0,12(a0)
+.if ^^defined JAGUAR
 	move.l #5,gpu_mode
 	lea xparrot,a0
 	jsr gpurun		;do pixel in 3d
 	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_SNGLPIX,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+	rts
+.endif
 
 fw_ex:	lea in_buf,a0
 	move.l 4(a6),(a0)
@@ -12876,9 +13966,18 @@ fw_ex:	lea in_buf,a0
 	add.l #$ff,d0		;calculate i decreasing
 	move.l d0,44(a0)
 	move.l #4,gpu_mode
+.if ^^defined JAGUAR
 	lea bovine,a0
 	jsr gpurun			;do clear screen
 	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PSPHERE,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+	rts
+.endif
 
 run_fw: tst 32(a6)
 	bmi xpired
@@ -13196,9 +14295,18 @@ dostarf:
 	move.l d0,in_buf+16	;address off the starfield data structure
 	move.l warp_count,in_buf+20
 	move.l warp_add,in_buf+24
+.if ^^defined JAGUAR
 	lea fastvector,a0
 	jsr gpurun		;do gpu routine
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_STARFIELD,GPU_MAILBOX
+	;dc.w MIKO68K_DUMPREGS
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 
 gwb:
 	move.l vp_x,d3
@@ -13242,10 +14350,18 @@ solweb:
 	move.l d0,28(a0)
 	move.l #w16col,32(a0)
 	move.l #0,gpu_mode
+.if ^^defined JAGUAR
 	lea equine2,a0
 	jsr gpurun
 	jsr gpuwait
 	jsr WaitBlit
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_WEB3D,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 ;	bra n_wb
 vweb:	tst t2k
 	beq gvweb
@@ -13391,9 +14507,16 @@ gp1smart:	cmpa.l #-1,a6
 	and.l #$ff,d0
 	or #$01,d0
 	move.l d0,(a0)+
+.if ^^defined JAGUAR
 	move.l #bovine,a0
 	jsr gpurun		;do it
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_FLINE,GPU_MAILBOX
+.wait:	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 
 	movem.l (a7)+,d2-d3
 	
@@ -13424,9 +14547,16 @@ gp1smart:	cmpa.l #-1,a6
 	and.l #$ff,d0
 	or #$01,d0
 	move.l d0,(a0)+
+.if ^^defined JAGUAR
 	move.l #bovine,a0
 	jsr gpurun		;do it
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_FLINE,GPU_MAILBOX
+.wait2:	tst.l GPU_MAILBOX
+	bne .wait2
+.endif
 
 
 xox1: 	tst evon
@@ -13459,9 +14589,17 @@ nodraw:  bsr clearscreen
 	move.l d0,in_buf+16	;address off the starfield data structure
 	move.l warp_count,in_buf+20
 	move.l warp_add,in_buf+24
+.if ^^defined JAGUAR
 	lea fastvector,a0
-	jsr gpurun		;do *field routine
+	jsr gpurun		;do gpu routine
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_STARFIELD,GPU_MAILBOX
+.waitstarf:
+	tst.l GPU_MAILBOX
+	bne .waitstarf
+.endif
 
 	move.l #4,gpu_mode
 	lea vpang,a0
@@ -13477,9 +14615,12 @@ nodraw:  bsr clearscreen
 	lea _web,a1
 	move.l 12(a1),d0
 	move.l d0,(a0)+
+.if ^^defined JAGUAR
 	lea xvector,a0
 	jsr gpurun		;do set viewer-OTM
 	jsr gpuwait
+	; Don't need this on P2
+.endif
 
 
 	move.l #96+32,xcent
@@ -13548,10 +14689,19 @@ nudl:   tst l_ud
 nudr:
  	bra nevon 
 
-h2hinsc: lea screen3,a0		;source screen for any score u/d xfers
+h2hinsc:
+.if ^^defined JAGUAR
+	lea screen3,a0		;source screen for any score u/d xfers
 	move.l a0,a1
 	move #0,d0
 	move #32,d1
+.endif
+.if ^^defined PROPELLER
+	lea.l hub_screen+screensize,a0
+	lea.l ps_screen3,a1
+	move #0,d0
+	move #0,d1
+.endif
 	move #26,d2
 	move #32,d3
 	move #0,d5
@@ -13567,8 +14717,14 @@ zoopy1:	move d6,d4
 	add #10+32,d4
 	jsr ecopy
 	dbra d6,zoopy1
+.if ^^defined JAGUAR
 	move #32,d0
 	move #32,d1
+.endif
+.if ^^defined PROPELLER
+	move #32,d0
+	move #0,d1
+.endif
 	move #26,d2
 	move #32,d3
 	move #0,d5
@@ -13797,8 +14953,13 @@ drawweb: move.l a6,oopss
 	sub.l #$40000,d0	;hack to avoid floating Flippers
 swebbo:	move.l d0,(a0)+
 	tst h2h
-	beq dragg 
+	beq dragg
+.if ^^defined JAGUAR
 	lea xvector,a2
+.endif
+.if ^^defined PROPELLER
+	move.w #MIKOGPU_SLOWVECTOR,a2
+.endif
 	bra draaa	
 
 vector:	move.l d0,a1		;Get object header
@@ -13812,7 +14973,13 @@ vector:	move.l d0,a1		;Get object header
 	move.l 12(a6),d0
 dra:	sub.l vp_z,d0
 	move.l d0,(a0)+
-dragg:	lea fastvector,a2
+dragg:	
+.if ^^defined JAGUAR
+	lea fastvector,a2
+.endif
+.if ^^defined PROPELLER
+	move.w #MIKOGPU_FASTVECTOR,a2
+.endif
 draaa:	move 28(a6),d0
 druuu:	and.l #$ff,d0
 	move.l d0,24(a1)	;XY orientation
@@ -13834,11 +15001,20 @@ xhead: 	move.l (a1)+,(a0)+	;copy the header to GPU input ram
 ;	bsr gpu			;go and draw the cube	
 	move.l a1,oopss+4
 	move.l (a6),oopss+8
-godraa:	move.l #2,gpu_mode
+godraa:	
+.if ^^defined JAGUAR
+	move.l #2,gpu_mode
 ;	lea fastvector,a0
 	move.l a2,a0
 	jsr gpurun		;do gpu routine
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l a2,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	rts
 
 
@@ -13881,9 +15057,18 @@ draw_h2hclaw: move 48(a6),d4
 	add.l #$ff,d2		;calculate i decreasing
 	move.l d2,44(a0)
 	move.l #2,gpu_mode
+.if ^^defined JAGUAR
 	lea equine,a0
 	jsr gpurun			;do clear screen
 	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_PSPHERE,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+	rts
+.endif
 
 
 rezza:	movem.l d0-d5,-(a7)
@@ -13905,9 +15090,17 @@ fcolour: and.l #$ff,d6
 	swap d0
 	move.l d0,(a0)+	;radius
 	move.l d6,(a0)+		;phase
+.if ^^defined JAGUAR
 	lea equine,a0
 	jsr gpurun			;do clear screen
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_CPRING,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	asr #1,d4
 	dbra d2,xlxlxl
 	movem.l (a7)+,d0-d5
@@ -13949,7 +15142,12 @@ snopp2:	lsl #2,d6
 	move.l d3,(a0)+
 	move.l d1,(a0)+
 	move.l 36(a6),a1
+.if ^^defined JAGUAR
 	lea xvector,a2
+.endif
+.if ^^defined PROPELLER
+	move.w #MIKOGPU_SLOWVECTOR,a2
+.endif
 	bra draaa
 
 draw_h2hball: tst 18(a6)	;check for are we zapping someone
@@ -13990,9 +15188,16 @@ nohorra: sub.l vp_z,d0
 	or #$01,d0
 	move.l d0,(a0)+		;rnd seed
 	move.l #0,gpu_mode
+.if ^^defined JAGUAR
 	move.l #bovine,a0
 	jsr gpurun		;do it
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_FLINE,GPU_MAILBOX
+.wait:	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	jsr WaitBlit
 	movem.l (a7)+,d0-d5
 
@@ -14001,7 +15206,12 @@ onlyball: lea in_buf+4,a0
 	move.l d3,(a0)+
 	move.l d1,(a0)+
 	move.l _cube,a1
+.if ^^defined JAGUAR
 	lea xvector,a2
+.endif
+.if ^^defined PROPELLER
+	move.w #MIKOGPU_SLOWVECTOR,a2
+.endif
 	move 28(a6),d0
 	and.l #$ff,d0
 	move.l d0,24(a1)	;XY orientation
@@ -14033,26 +15243,52 @@ draw_pel: lea in_buf,a0
 	move.l d0,(a0)+
 	move 54(a6),d0
 	and #$ff,d0
+.if ^^defined FIX_FLIPPER_LOD_COLOR
+	cmp #2,d0 ; 2 is flipper object id
+	bne.s .notflipper
+	move flipcol,d0
+	bra.s .store_pixcol
+.endif
+.notflipper:
 	lea pixcols,a4
 	move.b 0(a4,d0.w),d0
 ;	move.l #$f0,(a0)+
-	and.l #$ff,d0
+.store_pixcol:
+	and.l #$ff,d0	
 	move.l d0,(a0)+
 	move.l #5,gpu_mode
+.if ^^defined JAGUAR
 	lea xparrot,a0
 	jsr gpurun		;do gpu routine
-	jsr gpuwait
+	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_SNGLPIX,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
 	rts
+.endif
 
 
 
 
 
 clearscreen:
+.if ^^defined JAGUAR
  	move.l #0,gpu_mode	;GPU op 0 is clear the screen
 	lea fastvector,a0
 	jsr gpurun		;do gpu routine
 	jmp gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_CLEAR,GPU_MAILBOX
+	;dc.w MIKO68K_DUMPREGS
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+	rts
+.endif
 
 
 readpad:
@@ -14099,6 +15335,7 @@ dopad:	movem.l	d0-d2,-(sp)
 ;	move.l	d0,pad_shot		; PAD_SHOT = Oneshot joypad
 
 ;scan for player 1
+.if ^^defined JAGUAR
 	move.l	#$f0fffffc,d1		; d1 = Joypad data mask
 	moveq.l	#-1,d2			; d2 = Cumulative joypad reading
 
@@ -14126,6 +15363,12 @@ dopad:	movem.l	d0-d2,-(sp)
 
 	moveq.l	#-1,d1
 	eor.l	d2,d1			; d1 = xxAPxxBx RLDU741* xxCxxxOx 2580369# <== now inputs active high
+.else
+	;moveq #0,d1 ; P2 TODO
+	moveq #0,d0
+	dc.w MIKO68K_GETINPUT
+	move.l d0,d1
+.endif
 
 	move.l	pad_now,d0			; old joycur needed for determining the new joyedge
 	move.l	d1,pad_now			; Current joypad reading stored into joycur
@@ -14134,6 +15377,7 @@ dopad:	movem.l	d0-d2,-(sp)
 	move.l	d0,pad_shot		;joypad, buttons, keys that were just pressed
 
 ;scan for player 2
+.if ^^defined JAGUAR
 	move.l	#$0ffffff3,d1		; d1 = Joypad data mask
 	moveq.l	#-1,d2			; d2 = Cumulative joypad reading
 
@@ -14165,6 +15409,11 @@ dopad:	movem.l	d0-d2,-(sp)
 
 	moveq.l	#-1,d1
 	eor.l	d2,d1			; d1 = xxAPxxBx RLDU741* xxCxxxOx 2580369# <== now inputs active high
+.else
+	moveq #1,d0
+	dc.w MIKO68K_GETINPUT
+	move.l d0,d1
+.endif
 
 	move.l	pad_now+4,d0			; old joycur needed for determining the new joyedge
 	move.l	d1,pad_now+4			; Current joypad reading stored into joycur
@@ -14798,6 +16047,7 @@ showscore: tst show_warpy
 	beq shoscc
 	move.l gpu_screen,d0
 	move.l d0,-(a7)
+.if ^^defined JAGUAR
 	move.l #screen3,gpu_screen
 	move #2,d6
 	sub warpy,d6
@@ -14807,12 +16057,42 @@ showscore: tst show_warpy
 	move #31,d0		
 	move #20,d1	
 	move #20,d7
+.endif
+.if ^^defined PROPELLER
+	move.l #hub_screen+screensize,a1
+	move.l a1,gpu_screen
+	move.w #0,a0
+	move.l #384*32,d0
+	dc.w MIKO68K_WORDFILL
+
+	move #31,d0		
+	move #20,d1
+	move #20,d7	
+	move #16,d6
+.endif	
 	move.l #$40000,pc_1
 	move.l #$560100,pc_2
 	jsr makepyr			;make a pyramid for warpy display
 	jsr ppyr			;draw that pyramid
-	move.l (a7)+,d0
-	move.l d0,gpu_screen
+
+.if ^^defined PROPELLER
+	lea.l hub_screen+screensize,a0
+	lea.l ps_screen3,a1
+	move #0,d0
+	move #0,d1
+	move #32,d2
+	move #32,d3
+	move #0,d5
+	
+	move #2,d4
+	sub warpy,d4
+	lsl #5,d4
+	neg d4
+	add #352-32,d4
+	jsr ecopy
+.endif
+
+	move.l (a7)+,gpu_screen
 
 
 shoscc: tst ud_score
@@ -15321,7 +16601,11 @@ anima1:	add.b #'0',d0
 	dbra d4,xscore	;xfer them all
 	rts
 	
-eepromsave: move #63,d1
+eepromsave: 
+	tst chenable
+	bne rrts ; cheaters don't get to save
+.if ^^defined JAGUAR
+	move #63,d1
 	move #$6510,d0
 	jsr eewrite	;$6510 is validation no.
 
@@ -15341,8 +16625,38 @@ unchnged: lea 2(a2),a2
 	move #62,d1
 	jsr eewrite	;save checksum
 	rts
+.endif
+.if ^^defined PROPELLER
+	move.w #$6510,epromcopy+(63*2) ;$6510 is validation no.
+	lea hscom1,a0
+	lea epromcopy,a1
+	; compute checksum and check if anything actually changed
+	move #57,d1
+	clr d2 ; change flag
+	clr d3 ; checksum
+xxhs1:
+	move (a0)+,d0
+	add d0,d3
+	cmp (a1),d0
+	beq.s unchnged
+	add #1,d2
+unchnged: 
+	move d0,(a1)+
+	dbra d1,xxhs1
+	move.w d3,epromcopy+(62*2) ; store checksum
+	tst.w d2
+	beq rrts ; no change at all
+	
+	lea epromcopy,a0
+	move.l #$03D0DEAD,d0 ; magic safety number
+	dc.w MIKO68K_SAVEWRITE
+	clr.l d0
+	rts
+.endif
 
-eepromload: move #63,d1
+eepromload: 
+.if ^^defined JAGUAR
+	move #63,d1
 	jsr eeread
 	cmp #$6510,d0
 	bne rrts		;not valid - accept defaults
@@ -15361,6 +16675,25 @@ gghs1:  jsr eeread
 	cmp d2,d3
 	bne zapreset
 	rts
+.endif
+.if ^^defined PROPELLER
+	lea epromcopy,a0
+	dc.w MIKO68K_SAVEREAD
+	cmp.w #$6510,epromcopy+(63*2)
+	bne.s zapreset ;not valid - accept defaults
+	clr d3
+	move #57,d1
+	lea hscom1,a1
+gghs1:
+	move (a0)+,d0
+	move d0,(a1)+
+	add d0,d3
+	dbra d1,gghs1
+
+	cmp epromcopy+(62*2),d3 ; compare checksum
+	bne.s zapreset
+	rts
+.endif
 zapreset: lea defaults,a0		;reset defaults
 	lea hscom1,a1
 	move #57,d0
@@ -15392,9 +16725,17 @@ nxline:	bsr g_getline		;returns length in d6, d7 is flag for text end
 	move d0,d2
 	move.l d2,32(a0)		;set text origin
 	move.l a0,-(a7)
+.if ^^defined JAGUAR
  	lea texter,a0
 	jsr gpurun
 	jsr gpuwait
+.endif
+.if ^^defined PROPELLER
+	move.l #MIKOGPU_TEXTER,GPU_MAILBOX
+.wait:
+	tst.l GPU_MAILBOX
+	bne .wait
+.endif
 	move.l (A7)+,a0
 nuline:	tst d7
 	beq rrts			;d7 0 means text has ended
@@ -15535,6 +16876,7 @@ playtune: jsr STOP_MOD
  	lsl #2,d0
 	lea modbase,a0
 	move.l 0(a0,d0.w),a0	;get tune base
+.if ^^defined JAGUAR
 	jsr PT_MOD_INIT
 	move.b vols,d0
 	and.l #$ff,d0
@@ -15543,6 +16885,39 @@ playtune: jsr STOP_MOD
 	move.l d0,vset
 	jsr NOFADE
 	jmp START_MOD
+.endif
+.if ^^defined PROPELLER
+.prewait:
+	move.b vols,d0
+	;and.l #$ff,d0
+	clr d1
+	jsr SET_VOLUME
+	tst.l DSP_MAILBOX
+	bne .prewait
+	move.l a0,DSP_MAILBOX+4
+	dc.w MIKO68K_DUMPREGS
+	move.l #$80000000,DSP_MAILBOX
+	; don't need to wait afterwards, may take a hot second
+	rts
+.endif
+
+.if ^^defined PROPELLER
+SET_VOLUME:
+	tst d1
+	bne.s .nope
+	and.l #$FF,d0
+	lsl.w #3,d0
+	or.l #$81000000,d0
+	dc.w MIKO68K_DUMPREGS
+.prewait:
+	tst.l DSP_MAILBOX
+	bne .prewait
+	move.l d0,DSP_MAILBOX
+.nope:
+	rts
+.endif
+
+
 
 fox: 	movem.l d0-d3/a0,-(a7)	;play a SFX sample
 	move sfx,d0
@@ -15552,18 +16927,106 @@ fox: 	movem.l d0-d3/a0,-(a7)	;play a SFX sample
 	add d1,d0		;d0 is 40x, much faster than mulu
 	lea samtab,a0
 	lea 20(a0,d0.w),a0	;point to past FX name...
+.if ^^defined JAGUAR
 	move sfx_pri,d1
 	move sfx_vol,d2
 	move.l sfx_pitch,d3
 	jsr PLAYFX2
 	move d0,handl
+.endif
+.if ^^defined PROPELLER
+.prewait:
+	tst.l DSP_MAILBOX
+	bne .prewait
+	move.l 4(a0),DSP_MAILBOX+8; sample start
+	move.l 12(a0),DSP_MAILBOX+16 ; loop start
+	move.l 16(a0),d0 ; loop length
+	beq.s .noloop
+	move.l #$01000100,d3 ; command for looping fx
+	lsr.l #8,d0
+	add.l 12(a0),d0
+	bra.s .ggg
+.noloop:
+	move.l #$01000000,d3 ; command for one-shot fx
+	move.l 8(a0),d0 ; sample length (????)
+	lsr.l #8,d0
+	add.l 4(a0),d0
+.ggg:
+	move.l d0,DSP_MAILBOX+12
+	; I have no idea what's on with sfx_vol
+	move.b vols+1,d0
+	and.w #$ff,d0
+	lsl #3,d0 ; this adjusts overall volume?
+	move.w d0,DSP_MAILBOX+20
+	move.w d0,DSP_MAILBOX+22
+	;move.w #$0400,DSP_MAILBOX+20
+	;move.w #$0400,DSP_MAILBOX+22
+	;move.l #$40000000,DSP_MAILBOX+24
+	move.l sfx_pitch,d0
+	tst.l d0
+	bne.s .explicit_pitch
+	move.w 2(a0),d0
+.explicit_pitch:
+	;dc.w MIKO68K_DUMPREGS
+	lsl.l #8,d0
+	lsl.l #8,d0
+	lsl.l #6,d0
+	move.l d0,DSP_MAILBOX+24
+	; horrible hack determine channel by sfx id
+	;move.w sfx,d0
+	;and.l #15,d0
+	;or.l #$01000000,d0
+	;move.l d0,DSP_MAILBOX ; FIRE IN THE HOLE
+	move.l d3,DSP_MAILBOX ; FIRE IN THE HOLE
+.postwait:
+	tst.l DSP_MAILBOX
+	bne .postwait
+	move DSP_MAILBOX+6,handl ; grab handle
+.endif
 	clr sfx_pri
 	clr sfx_vol
 	clr.l sfx_pitch
 	movem.l (a7)+,d0-d3/a0
 	rts
 
-.include "eeprim.s"		;EEPROM code
+.if ^^defined PROPELLER
+CHANGEFX:
+	movem.l d0,-(a7)
+	and.w #255,d0
+	or.w #$0300,d0
+	swap d0
+	move.w d1,d0 ; put in handle
+.prewait:
+	tst.l DSP_MAILBOX
+	bne .prewait
+	move.l d3,DSP_MAILBOX+4
+	move.l d0,DSP_MAILBOX
+	movem.l (a7)+,d0
+	rts
+.endif
+
+kill_all_sfx:
+.if ^^defined JAGUAR
+	jsr DISABLE_FX
+	jmp ENABLE_FX
+.endif
+.if ^^defined PROPELLER
+.prewait:
+	tst.l DSP_MAILBOX
+	bne .prewait
+	move.l #$02000000,DSP_MAILBOX
+	rts
+.endif
+
+.if ^^defined PROPELLER
+gpuwait:
+	tst.l GPU_MAILBOX
+	bne gpuwait
+	rts
+.endif
+
+;.include "eeprim.s"		;EEPROM code
+.extern eewrite,eeread
 
 *---------  fixed data
 
@@ -17460,6 +18923,11 @@ optmsg: dc.b "PRESS option FOR GAME OPTIONS",0
 
 bftest: dc.b "llama love",0
 llamacop: dc.b "DEVELOPED BY llamasoft",0
+.if ^^defined PROPELLER
+irqsoftcop: dc.b "P2 PORT BY IRQSOME SOFTWARE",0
+.else
+irqsoftcop: dc.b "HI forums.parallax.com",0
+.endif
 ataricop: dc.b "(C) 1981,1994 ATARI CORP.",0
 ataricop1: dc.b "COPYRIGHT 1981,",0
 ataricop2: dc.b "1994 ATARI CORP.",0
@@ -17605,6 +19073,9 @@ pvolts: dc.l pvolt2,pvolt3
 fires: dc.l $20000000
  dc.l $02000000
  dc.l $00002000
+.if ^^defined PROPELLER
+ dc.l $00001000
+.endif
 
 testpage: dc.b "ORIGINAL GAME DESIGNED BY/       dave theurer~"
 	dc.b "JAGUAR VERSION BY/      yak~"
@@ -18280,7 +19751,7 @@ pixcols: dc.b 0,0,$f0,0,0,$0f,0,0,0,$80,0,$ff	;11
 	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0	;30
 	dc.b 0,0,0,0,0,$88,0,0,$55 
 
-ObTypes:
+ObTypes: ; I think only 0, 7 and 8 are actually used
  	dc.w $60,279,4,0	;384x280, 16bit
 	dc.w $28,99,4,0		;160x100
 	dc.w $10,99,4,0		;64x100, robot object
@@ -18303,17 +19774,24 @@ solids: dc.l rrts,cdraw_sflipper,draw_sfliptank,s_shot,draw_sfuseball,draw_spuls
 	dc.l draw_pprex,draw_h2hball,draw_blueflip,ringbull,supf1,supf2,draw_beast,dr_beast3,dr_beast2				;25
 	dc.l draw_adroid						
 
+; Why were these in RAM???
+; The actual bitmaps are ROM, so clearly these ought to be fine
+;	.include "obj2d.s"
+	.include "afont.s"
+	.include "bfont.s"
+	.include "cfont.s"
 
 romstart:
 	dc.l 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
+.if ^^defined JAGUAR
 	.include "moomoo.dat"
-
+.endif	
 
 	.include "obj2d.dat"
-	.include "afont.dat"
-	.include "bfont.dat"
-	.include "cfont.dat"
+;	.include "afont.dat"
+;	.include "bfont.dat"
+;	.include "cfont.dat"
 
  dc.l $a00000,0,$1000,$800,$1400000,0,$20000
  dc.l $80000,0,$8000,$2000,$1400000,-$1400000,$80000
@@ -18374,8 +19852,14 @@ romstart:
 
 
  dc.w 300
- dc.l screen1
- dc.l screen2
+.if ^^defined JAGUAR
+dc.l screen1
+dc.l screen2
+.endif
+.if ^^defined PROPELLER
+dc.l ps_screen1
+dc.l ps_screen2
+.endif
  dc.w $0505
  dc.l $10000
 	dc.l $10000
@@ -18394,6 +19878,13 @@ romstart:
  dc.b "jump        a",0,0,0
  dc.b "fire        b",0,0,0
  dc.b "superzapper c",0,0,0
+
+.if ^^defined JAGUAR
+ dc.b "a  ",0,"b  ",0,"c  ",0
+.endif
+.if ^^defined PROPELLER
+ dc.b "c-1",0,"v-2",0,"z-3",0,"x-4",0
+.endif
 
  dc.l o5t1,o5t2,o5s10,o5s2,o3s3,0
 
@@ -18425,9 +19916,16 @@ defaults: dc.l 500017		;0	-eeprom position
 	dc.b "axe",0		;102
 
  	dc.b $7f,$7f		;106
+.if ^^defined JAGUAR
  	dc.w 0			;108
 	dc.w 1			;110
 	dc.w 2			;112
+.endif
+.if ^^defined PROPELLER
+ 	dc.w 0			;108
+	dc.w 2			;110
+	dc.w 3			;112
+.endif
 	dc.w $0100		;114
 
 	dc.w 0,0,0,0,0
@@ -18467,13 +19965,16 @@ romend: dc.l 0
 .data
 
 copstart:	dc.l 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-       .include "moomoo.dat"
+.if ^^defined JAGUAR
+	.include "moomoo.dat"
+.endif	
 
 
-       .include "obj2d.s"
-	.include "afont.s"
-	.include "bfont.s"
-	.include "cfont.s"
+
+   .include "obj2d.s"
+;	.include "afont.s"
+;	.include "bfont.s"
+;	.include "cfont.s"
 
 
 
@@ -18541,8 +20042,14 @@ pgens: dc.w $80,$16
 
 
 pgenctr: dc.w 300
+.if ^^defined JAGUAR
 cscreen: dc.l screen1
 dscreen: dc.l screen2
+.endif
+.if ^^defined PROPELLER
+cscreen: dc.l ps_screen1
+dscreen: dc.l ps_screen2
+.endif
 droidel: dc.w $0505
 palad2: dc.l $10000
 palad3:	dc.l $10000
@@ -18563,6 +20070,12 @@ o4s1: dc.b "jump        a",0,0,0
 o4s2: dc.b "fire        b",0,0,0
 o4s3: dc.b "superzapper c",0,0,0
 
+.if ^^defined JAGUAR
+fire_names: dc.b "a  ",0,"b  ",0,"c  ",0
+.endif
+.if ^^defined PROPELLER
+fire_names: dc.b "c-1",0,"v-2",0,"z-3",0,"x-4",0
+.endif
 
 option5: dc.l o5t1,o5t2,o5s10,o5s2,o3s3,0
 
@@ -18594,7 +20107,7 @@ keys: dc.b "yak",0
 	dc.b "axe",0
 
 vols: 	dc.b $ff,$ff
-firea: dc.w 0
+firea: dc.w 0 ; note: actual defaults come from somewhere else
 fireb: dc.w 1
 firec: dc.w 2
 sysflags: dc.w 0
@@ -18773,7 +20286,8 @@ sync: dc.w 0
 screen_ready: dc.w 0
 db_on: dc.w 0
 elist: dc.l 0
-gscreen: dc.l 0
+;gscreen: dc.l 0
+screen_uploaded: dc.w 0
 mainloop_routine: dc.l 0
 imsk: dc.w 0
 paws: dc.l 0

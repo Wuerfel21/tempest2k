@@ -1,0 +1,396 @@
+CON
+
+#include "p2defs.inc"
+#include "p2config.spin2"
+
+_CLKFREQ = vga.VIDEO_CLKFREQ
+
+NO_FS = false
+
+OBJ
+
+c: "libc"
+vga : "p2lib/TempestVGA"
+padmap : "p2lib/padmap_parser"
+usb: "p2lib/usbnew" | ACTIVITY_LED = -1, ERROR_LED = -1, USB_BASE_PIN = USB0_BASEPIN, USB_ENABLE_OFFSET = ENABLE_PIN, USB_DMINUS_OFFSET = DM_PIN, ...
+                 OVERLAP_MEMORY = true,  ...
+                 EMUPAD_KB_BT0 = $06, EMUPAD_KB_BT1 = $19, EMUPAD_KB_BT2 = $1D, EMUPAD_KB_BT3 = $1B, ...
+                 EMUPAD_MAX_PLAYER = 2, EMUPAD_BUILTIN_RULES = false
+
+cry: "mikoobj"
+gpu: "mikogpu"
+dsp: "mikodsp"
+cpu: "miko68k"
+
+
+#ifdef USE_PSRAM16
+exmem : "p2lib/psram16drv.spin2"
+#elseifdef USE_PSRAM8
+exmem : "p2lib/psram8drv.spin2"
+#elseifdef USE_PSRAM4
+exmem : "p2lib/psram4drv-dualCE.spin2"
+#elseifdef USE_HYPER
+exmem : "p2lib/hyperdrv.spin2"
+#endif
+
+
+VAR
+
+long exmem_mailbox[8*3]
+
+long exmem_size
+
+long scanline_buffer[384*2]
+
+long emupad[2]
+
+byte exmem_cog,vblank_lock
+
+byte string_buffer[64]
+
+PUB main() | tmp,player,pmf
+
+vblank_lock := locknew()
+
+vga.start(SCANLINE_CTR,0,@scanline_buffer,VIDEO_MODE,VGA_BASEPIN,VGA_VSYNC,VIDEO_SUBMODE) ' cog 1
+
+_setbaud(2_000_000)
+'c.printf(string("Hello World!",10))
+c.printf(string("Tempest 2000 for Parallax P2",10,"============================",10))
+
+
+exmem_start() ' cog 2
+
+' draw border around screen to help auto-adjust along
+repeat 240:tmp
+  word[$20000+tmp*768+64] := $FF88
+  word[$20000+tmp*768+702] := $FF88
+wordfill($20000+64,$FF88,320)
+wordfill($20000+64+768*239,$FF88,320)
+screentext(@"Tempest 2000 for Parallax P2",35,3,1,1,$CF88)
+screentext(@"by IRQsome Software non-inc.",37,12,1,1,$CF88)
+
+cry.start(@exmem_mailbox,@scanline_buffer,vblank_lock) ' cog 3
+
+waitms(1)
+
+ifnot NO_FS
+  tmp := @"Memory timing canary! ;3 UwU"
+  exmem_write(0,tmp,32,true)
+  exmem_read(@string_buffer,0,32,false)
+  c.printf(string("Got: %s",10),@string_buffer)
+  if c.strcmp(tmp,@string_buffer)
+    c.printf(string("Memory test failed!",10))
+    centext(@"Memory test failed!",192,40,2,2,$FFF0)
+    repeat
+
+
+c.printf(string("before mount",10))
+ifnot NO_FS
+#ifdef FS_SDCARD
+  _mount(@"/sd",c._vfs_open_sdcardx(SDCARD_CLK,SDCARD_SELECT,SDCARD_DI,SDCARD_DO))
+#endif
+#ifdef FS_9P
+  _mount(@"/sd",c._vfs_open_host())
+#endif
+#ifdef FS_FLASH
+  _mount(@"/sd",c._vfs_open_parallaxfs())
+#endif
+  '_mount(@"/sd",c._vfs_open_sdcardx(SDCARD_CLK,SDCARD_SELECT,SDCARD_DI,SDCARD_DO))
+  c.printf(string("after mount",10))
+  pmf := c.fopen(@"/sd/PADMAP.TXT",@"r")
+  if pmf
+    tmp := padmap.parse(long[$68],long[$6C],@c.fgetc,pmf,@"tempest2000")
+    c.sprintf(@string_buffer,@"PADMAP.TXT loaded, %d rules",tmp)
+    screentext(@string_buffer,37,25,1,1,$CF48)
+    c.printf(string("%s",10),@string_buffer)
+    c.fclose(pmf)
+  long[$68] := 0
+  c.printf(string("after padmap",10))
+
+
+usb.set_emupad_ptr(@emupad)
+usb.start() ' cog 4
+
+ifnot NO_FS
+  if load_rodata() < 0
+    c.printf(string("oops error %s",10),c.strerror(errno))
+    repeat
+  'repeat
+
+waitms(1)
+
+c.printf(string("%08X",10),@exmem_mailbox)
+
+gpu.start(@exmem_mailbox,@funscii) ' cog 5
+cpu.start(@exmem_mailbox,vblank_lock) ' cog 6
+dsp.start(@exmem_mailbox,AUDIO_LEFT,AUDIO_RIGHT) ' cog 7
+
+repeat
+  case tmp:=long[FUNC_MAILBOX]
+    0: ' ok
+    1:
+      c.printf( ...
+        string("---- PC: %08X",10,"D0: %08X A0: %08X",10,"D1: %08X A1: %08X",10,"D2: %08X A2: %08X",10,"D3: %08X A3: %08X",10,"D4: %08X A4: %08X",10,"D5: %08X A5: %08X",10,"D6: %08X A6: %08X",10,"D7: %08X A7: %08X",10), ...
+        long[FUNC_MAILBOX][1], ...
+        long[FUNC_MAILBOX][2],long[FUNC_MAILBOX][10], ...
+        long[FUNC_MAILBOX][3],long[FUNC_MAILBOX][11], ...
+        long[FUNC_MAILBOX][4],long[FUNC_MAILBOX][12], ...
+        long[FUNC_MAILBOX][5],long[FUNC_MAILBOX][13], ...
+        long[FUNC_MAILBOX][6],long[FUNC_MAILBOX][14], ...
+        long[FUNC_MAILBOX][7],long[FUNC_MAILBOX][15], ...
+        long[FUNC_MAILBOX][8],long[FUNC_MAILBOX][16], ...
+        long[FUNC_MAILBOX][9],long[FUNC_MAILBOX][17])
+      long[FUNC_MAILBOX] := 0
+      'c.printf(string("Yuckie wucky $64: %08X",10),long[$64])
+    2:
+      player := long[FUNC_MAILBOX+4]
+      tmp := 0
+      if player +< 2
+        tmp.[20] := emupad[player].[usb.EMUPAD_UP_BIT]
+        tmp.[21] := emupad[player].[usb.EMUPAD_DOWN_BIT]
+        tmp.[22] := emupad[player].[usb.EMUPAD_LEFT_BIT]
+        tmp.[23] := emupad[player].[usb.EMUPAD_RIGHT_BIT]
+        tmp.[9]  := emupad[player].[usb.EMUPAD_BT8_BIT] ' option
+        tmp.[28] := emupad[player].[usb.EMUPAD_BT9_BIT] ' pause
+        tmp.[29] := emupad[player].[usb.EMUPAD_BT0_BIT] ' A
+        tmp.[25] := emupad[player].[usb.EMUPAD_BT1_BIT] ' B
+        tmp.[13] := emupad[player].[usb.EMUPAD_BT2_BIT] ' C
+        tmp.[12] := emupad[player].[usb.EMUPAD_BT3_BIT] ' D
+      if player == 0
+        tmp.[ 1] := usb.keystate(usb.KEY_3) || usb.keystate(usb.KEY_NUM3) ' 3
+        tmp.[ 2] := usb.keystate(usb.KEY_6) || usb.keystate(usb.KEY_NUM6) ' 6
+        tmp.[ 3] := usb.keystate(usb.KEY_9) || usb.keystate(usb.KEY_NUM9) ' 9
+        tmp.[ 5] := usb.keystate(usb.KEY_2) || usb.keystate(usb.KEY_NUM2) ' 2
+        tmp.[ 6] := usb.keystate(usb.KEY_5) || usb.keystate(usb.KEY_NUM5) ' 5
+        tmp.[ 4] := usb.keystate(usb.KEY_8) || usb.keystate(usb.KEY_NUM8) ' 8
+        tmp.[17] := usb.keystate(usb.KEY_1) || usb.keystate(usb.KEY_NUM1) ' 1
+        tmp.[18] := usb.keystate(usb.KEY_4) || usb.keystate(usb.KEY_NUM4) ' 4
+        tmp.[19] := usb.keystate(usb.KEY_7) || usb.keystate(usb.KEY_NUM7) ' 7
+      long[FUNC_MAILBOX+4] := tmp
+      long[FUNC_MAILBOX] := 0
+      'c.printf(string("Input read %08X",10),tmp)
+    16: ' read save data
+      ifnot NO_FS
+        tmp := c.fopen(@"/sd/T2000.SAV",@"rb")
+        if tmp
+          c.fread((long[FUNC_MAILBOX+4]),1,128,tmp)
+          c.fclose(tmp)
+          c.printf(string("Save read OK!",10))
+        else
+          c.printf(string("Save read error: %s",10),c.strerror(errno))
+          errno := 0
+          bytefill((long[FUNC_MAILBOX+4]),0,128)
+      long[FUNC_MAILBOX] := 0
+    17: ' write save data
+      ifnot NO_FS
+        if long[FUNC_MAILBOX+8] == $03D0DEAD ' Safety check - only do it if D0 contains magic number
+          tmp := c.fopen(@"/sd/T2000.SAV",@"wb")
+          if tmp
+            c.fwrite((long[FUNC_MAILBOX+4]),1,128,tmp)
+            c.fflush(tmp)
+            c.fclose(tmp)
+            c.printf(string("Save write OK!",10))
+          else
+            c.printf(string("Save write error: %s",10),c.strerror(errno))
+          errno := 0
+        else
+          c.printf(string("Attempt to save with bad magic: %08X",10),long[FUNC_MAILBOX+8])
+      long[FUNC_MAILBOX+8] := 0
+      long[FUNC_MAILBOX] := 0
+    other:
+      c.printf(string("Bad function code %08X",10),tmp)
+      'c.printf(string("Yuckie wucky $64: %08X",10),long[$64])
+      long[FUNC_MAILBOX] := 0
+
+
+
+PRI centext(text,x,y,xrep,yrep,color)
+  screentext(text,x-strsize(text)*4*xrep,y,xrep,yrep,color)
+
+PRI screentext(text,x,y,xrep,yrep,color) | chr,cx,cy,clin
+  repeat while chr := byte[text++]
+    repeat 8 : cy
+      clin := funscii.byte[chr*8+cy]
+      repeat yrep
+        repeat 8 : cx
+          repeat xrep
+            if x +< 384 && y +< 240
+              word[$20000+x*2+y*768] := ((clin >> cx)&1) ? color : 0
+            x++
+        x -= 8*xrep
+        y++
+    y -= 8*yrep
+    x += 8*xrep
+
+PRI rocolor(ptr) : r | tmp
+asm
+  shl ptr,#11
+  qrotate #7,ptr
+  getqx r
+  getqy tmp
+  add r,#8
+  add tmp,#8
+  rolnib r,tmp,#0
+  setbyte r,#255,#1
+endasm
+
+PRI load_rodata() | f,ptr,tmp,tmp2,crc,color,total
+f := c.fopen(@"/sd/t2000p2.dat",@"rb")
+c.fseek(f,0,c.SEEK_END)
+total := c.ftell(f)
+c.fseek(f,0,c.SEEK_SET)
+ifnot f
+  return -1
+
+' draw a box
+wordfill($20000+126+768*118,$FF88,258)
+wordfill($20000+126+768*131,$FF88,258)
+repeat tmp from 118 to 131
+  word[$20000+124+768*tmp] := $FF88
+  word[$20000+124+518+768*tmp] := $FF88
+
+
+repeat
+  color := rocolor(ptr)
+  centext(@"NOW LOADING!",192,80,3,3,color)
+  tmp2 := (ptr*256 +/ total)<#256
+  repeat tmp from 120 to 129
+    wordfill($20000+128+768*tmp,color,tmp2)
+  c.printf(string("Chunk %d",10),ptr)
+  tmp := c.fread($10000,1,$10000,f)
+  ifnot tmp
+    quit
+  exmem_write(ptr,$10000,tmp,true)
+  ptr+=tmp
+  crc := crc_chunk(crc,$10000,tmp)
+  c.printf(string("%08X",10),crc)
+  exmem_sync()
+  if ptr >= $30000
+    'quit ' debug: don't load all the data gunk
+c.fclose(f)
+c.printf(string("Loaded %d bytes of rodata with CRC %08X",10),ptr,crc)
+tmp := __builtin_alloca(64)
+c.sprintf(tmp,@"rodata CRC: %08X",crc)
+screentext(tmp,90,110,1,1,$8888)
+
+
+PRI crc_chunk(running, ptr, len) : crc | w,poly
+poly := $04C11DB7 rev 31
+crc := !running
+  org
+  rdfast #0,ptr
+  rep @.loop,len
+    rfbyte w
+    rev	   w
+    setq   w
+    crcnib crc, poly
+    crcnib crc, poly
+.loop
+  end
+crc := !crc
+
+
+PRI exmem_start() | tmp,cogs,banks,i,sizelen
+
+tmp := c.malloc(8*4+8*4+32*4)
+cogs := tmp+8*4
+banks := cogs+8*4
+
+if exmem_cog
+  return
+
+long[tmp][0] := clkfreq
+#ifdef USE_HYPER
+long[tmp][1] := (HYPER_SYNC_CLOCK?0:1)<<exmem.UNREGCLK_BIT
+long[tmp][2] := (HYPER_RESET < 32 && HYPER_RESET > 0) ? 1<<HYPER_RESET : 0
+long[tmp][3] := HYPER_RESET >= 32 ? 1<<(HYPER_RESET-32) : 0
+#elseifdef USE_PSRAM_EITHER
+long[tmp][1] := (PSRAM_SYNC_CLOCK?0:1)<<exmem.UNREGCLK_BIT 
+#ifdef USE_PSRAM_SLOW
+long[tmp][1] |= 1<<exmem.SLOWCLK_BIT | 1<<exmem.CLKSEL_BIT
+#endif
+long[tmp][2] := 0
+long[tmp][3] := 0 
+#endif
+
+#ifdef USE_PSRAM_EITHER
+long[tmp][4] := PSRAM_BASE
+#elseifdef USE_HYPER
+long[tmp][4] := HYPER_BASE
+#endif
+long[tmp][5] := banks
+long[tmp][6] := cogs
+long[tmp][7] := @exmem_mailbox[0]
+
+longfill(cogs,-1<<16 + (1<<exmem.NOTIFY_BIT),8)
+longfill(banks,negx,32)
+
+#ifdef USE_PSRAM16
+exmem_size := 32*1024*1024 * PSRAM_BANKS
+sizelen := encod(exmem_size-1)+1
+repeat i from 0 to PSRAM_BANKS-1
+  long[banks][0+i*2] := 512<<16 + (PSRAM_DELAY-11)<<13 + (PSRAM_SYNC_DATA?0:1)<<12 + sizelen
+  long[banks][1+i*2] := 512<<16 + (PSRAM_DELAY-11)<<13 + (PSRAM_SYNC_DATA?0:1)<<12 + sizelen
+  long[banks][16+i*2] := PSRAM_SELECT+i + PSRAM_CLK<<8
+  long[banks][17+i*2] := PSRAM_SELECT+i + PSRAM_CLK<<8
+#elseifdef USE_PSRAM8
+exmem_size := 16*1024*1024 * PSRAM_BANKS
+sizelen := encod(exmem_size-1)+1
+repeat i from 0 to PSRAM_BANKS-1
+  long[banks][0+i] := 256<<16 + (PSRAM_DELAY-11)<<13 + (PSRAM_SYNC_DATA?0:1)<<12 + sizelen
+  long[banks][16+i] := PSRAM_SELECT+i + PSRAM_CLK<<8
+#elseifdef USE_PSRAM4
+exmem_size := 8*1024*1024 * PSRAM_BANKS
+sizelen := encod(exmem_size-1)+1
+repeat i from 0 to (PSRAM_BANKS-1)/2
+  long[banks][0+i] := 128<<16 + (PSRAM_DELAY-11)<<13 + (PSRAM_SYNC_DATA?0:1)<<12 + sizelen
+  long[banks][16+i] := PSRAM_SELECT+i*2 + PSRAM_CLK<<8 + (PSRAM_SELECT+i*2+(((PSRAM_BANKS&1)&&(i>=PSRAM_BANKS/2)) ? 0 : 1))<<16
+#elseifdef USE_HYPER
+exmem_size := 16*1024*1024 * HYPER_BANKS
+sizelen := encod(exmem_size-1)+1
+repeat i from 0 to HYPER_BANKS-1
+  long[banks][0+i] := 256<<16 + (HYPER_DELAY-7)<<13 + (HYPER_SYNC_DATA?0:1)<<12 + sizelen
+  long[banks][16+i] := HYPER_SELECT+i + HYPER_CLK<<8 + HYPER_RWDS<<16 + HYPER_LATENCY<<25 ' Latency????
+#endif
+
+exmem_mailbox[0] := -1
+cogs := exmem.getDriverAddr()
+exmem_cog := coginit(COGEXEC_NEW,cogs,tmp)+1
+repeat while exmem_mailbox[0] ' wait for init so data structures can go dead
+
+PRI exmem_stop()
+if exmem_cog
+  exmem_sync()
+  cogstop((exmem_cog\0)-1)
+
+PRI exmem_sync()
+repeat while exmem_mailbox[cogid()*3]
+
+PRI exmem_write(dst,src,length,async) | cog
+exmem_sync()
+exmem_mailbox[cog+2] := length
+exmem_mailbox[cog+1] := src
+exmem_mailbox[cog+0] := exmem.R_WRITEBURST + (dst & $fffffff)
+ifnot async
+  exmem_sync()
+
+PRI exmem_fill(dst,val,length,async) | cog
+exmem_sync()
+cog := cogid()*3
+exmem_mailbox[cog+2] := length
+exmem_mailbox[cog+1] := val
+exmem_mailbox[cog+0] := exmem.R_WRITEBYTE + (dst & $fffffff)
+ifnot async
+  exmem_sync()
+
+PRI exmem_read(dst,src,length,async) | cog
+exmem_sync()
+exmem_mailbox[cog+2] := length
+exmem_mailbox[cog+1] := dst
+exmem_mailbox[cog+0] := exmem.R_READBURST + (src & $fffffff)
+ifnot async
+  exmem_sync()
+
+DAT
+funscii file "images/funscii.bin"

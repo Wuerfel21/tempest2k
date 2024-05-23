@@ -1,0 +1,876 @@
+OBJ {{
+      PSRAM Sampler and MOD Replayer for Tempest 2000
+}}
+CON
+
+#include "p2defs.inc"
+
+SAMPLE_RATE = 44_100
+MAX_CHANNELS = 16
+
+' Hardcoded for 44100Hz (3546895<<32)/44100)
+P2F_HIGH = $50
+P2F_LOW = $6daf6d3f
+
+PUB start(mailbox,l,r)
+
+  lpin := l
+  rpin := r
+  sample_period := clkfreq/SAMPLE_RATE
+  exmem_mailbox := mailbox
+  coginit(COGEXEC_NEW,@entry,0)
+
+
+
+DAT
+              org
+entry
+              add ptrb,##@lutcode - @entry
+              setq2 #511
+              rdlong 512-512,ptrb
+              
+              cogid pa
+              mul pa,#12
+              add exmem_mailbox,pa
+
+              wrpin ##P_DAC_75R_2V|P_OE|P_DAC_DITHER_RND,lpin
+              wrpin ##P_DAC_75R_2V|P_OE|P_DAC_DITHER_RND,rpin
+              wxpin sample_period,lpin
+              wxpin sample_period,rpin
+              mov ijmp1,#atn_isr
+              setint1 #EVENT_ATN
+              {
+              mov ch_position+0,##$8010_0000
+              mov ch_loopstart+0,##$8010_0000
+              mov ch_loopend+0,##$801F_0000
+              mov ch_volume+0,##$0300_0300
+              mov ch_freq+0,##$4000_0000
+              mov ch_fracpos+0,#0
+              bith ch_active,#0
+              bith ch_loopflag,#0
+              bith ch_bufferadv,#0
+              callpa #0,#queue_tran
+              '}
+
+              mov lsmp,#0
+              mov rsmp,#0
+              drvl lpin
+              drvl rpin
+smploop
+
+              ' DAC adjust sample
+              mov tmp1,dac_center
+              mov tmp2,dac_center
+              scas lsmp,dac_scas
+              add tmp1,0-0
+              scas rsmp,dac_scas
+              add tmp2,0-0
+              ' DAC write
+              testp lpin wc
+        if_nc jmp #$-1
+              wypin tmp1,lpin
+              wypin tmp2,rpin
+
+              add mod_ticktimer,#1
+
+              calld mod_thread,mod_thread wcz
+              'call #handle_mailbox
+
+              mov curch,#MAX_CHANNELS-1
+              mov lsmp,#0
+              mov rsmp,#0
+chloop
+              
+              ' check enablement
+              testb ch_active,curch wc
+        if_nc jmp #.skipch
+              ' grab pointer
+              alts curch,#ch_position
+              mov tmp3,0-0
+              ' check for buffer underrun
+              testb ch_bufferadv,curch wz
+              testb tran_pending,curch wc
+        if_11 jmp #owie_ouch'.skipch
+        if_z  bitnot ch_bufferflag,curch
+        if_z  bitl ch_bufferadv,curch
+              ' request new block if needed
+        if_z  callpa curch,#queue_tran
+              ' grab sample from buffer
+              mov tmp1,curch
+              testbn ch_bufferflag,curch wc
+              rcl tmp1,#1
+              mul tmp1,#64
+              setq #63
+              muxq tmp1,tmp3
+              add tmp1,bufferbase
+              rdbyte tmp1,tmp1 ' Amiga samples are signed
+              'sub tmp1,#$80
+              shl tmp1,#8
+              ' do mixing
+              alts curch,#ch_volume
+              mov tmp2,0-0
+              scas tmp1,tmp2
+              add lsmp,0-0
+              shr tmp2,#16
+              scas tmp1,tmp2
+              add rsmp,0-0
+              ' advance pointer
+              alts curch,#ch_freq
+              mov tmp1,0-0
+              altd curch,#ch_fracpos
+              add 0-0,tmp1 wc
+        if_nc jmp #.noadv
+              add tmp3,#1
+
+              alts curch,#ch_loopend
+              cmp tmp3,0-0 wc
+              testb ch_loopflag,curch wz
+        if_00 bitl ch_active,curch
+        if_01 bith ch_bufferadv,curch
+        if_01 alts curch,#ch_loopstart
+        if_01 mov tmp3,0-0
+              test tmp3,#63 wz
+        if_z  bith ch_bufferadv,curch
+.noadv
+              altd curch,#ch_position
+              mov 0-0,tmp3
+
+.skipch
+              djnf curch,#chloop
+              
+
+              ' clamp sample 
+              fges lsmp,clamp_min
+              fges rsmp,clamp_min
+              fles lsmp,clamp_max
+              fles rsmp,clamp_max
+
+              'debug(sdec(lsmp,rsmp))
+
+              'debug(ubin_long(ch_active),ubin_long(tran_pending),sdec(tran_current))
+              'debug(uhex_long(ch_position+0))
+
+              jmp #smploop
+
+queue_tran_mod
+              mov pa,#31
+queue_tran
+              'debug("queue_tran ",sdec(pa,tran_current))
+              cmp tran_current,pa wz
+        if_z  neg tran_current,#1 ' hack for retriggering channel that just submitted a tran
+              bith tran_pending,pa
+        _ret_ tjs tran_current,#start_tran
+
+atn_isr
+              'debug("ISR",sdec(tran_current))
+              push pa
+              rdlong pa,exmem_mailbox wz ' Make sure this is the ATN we want
+        if_nz jmp #.oop
+              tjs tran_current,#.ignore_tran
+              bitl tran_pending,tran_current
+              neg tran_current,#1
+.ignore_tran
+              encod pa,tran_pending wc
+        if_c  call #start_tran
+.oop
+              pop pa
+              'debug("ISR over")
+              reti1
+              
+owie_ouch
+              debug("underrun!")
+              jmp #chloop:skipch
+
+start_tran
+              mov tran_current,pa
+              cmp pa,#31 wz
+        if_z  jmp #.mod_tran
+              mov exmem_len,#64
+              mov exmem_target,pa
+              testb ch_bufferflag,pa wc
+              rcl exmem_target,#1
+              mul exmem_target,#64
+              add exmem_target,bufferbase
+              alts pa,#ch_position
+              mov exmem_cmd,0-0
+              testb ch_bufferadv,pa wc ' If C, first transfer
+        if_nc add exmem_cmd,#64
+              andn exmem_cmd,#63
+              alts pa,#ch_loopend
+              cmp exmem_cmd,0-0 wc
+        if_ae alts pa,#ch_loopstart
+        if_ae mov exmem_cmd,0-0
+              andn exmem_cmd,#63
+              setnib exmem_cmd,#$B,#7 ' B stands for burst
+              'debug(uhex_long(exmem_cmd,exmem_target,exmem_len),udec(pa),uhex_long(ch_position+0))
+              setq #2
+        _ret_ wrlong exmem_cmd,exmem_mailbox
+.mod_tran
+              mov exmem_len,mod_tran_length
+              mov exmem_target,mod_tran_target
+              mov exmem_cmd,mod_tran_addr
+              setnib exmem_cmd,#$B,#7 ' B stands for burst
+              setq #2
+        _ret_ wrlong exmem_cmd,exmem_mailbox
+
+
+handle_mailbox
+              rdlong tmp3,#DSP_MAILBOX wz
+        if_z  ret wcz
+              movbyts tmp3,#%%0123
+              getbyte tmp1,tmp3,#3
+              cmp tmp1,#$01 wz
+        if_z  jmp #.trigger_sfx
+              cmp tmp1,#$02 wz
+        if_z  jmp #.kill_sfx
+              cmp tmp1,#$03 wz
+        if_z  jmp #.handleop
+              cmp tmp1,#$80 wz
+        if_z  jmp #.modload
+              cmp tmp1,#$81 wz
+        if_z  jmp #.modvolume
+.drop_cmd
+        _ret_ wrlong #0,#DSP_MAILBOX
+.trigger_sfx
+              'getbyte tmp1,tmp3,#0
+              'fle tmp1,#MAX_CHANNELS-1
+              setq #6-1
+              rdlong mbbuf,#DSP_MAILBOX+4
+
+              ' find channel to go into
+              neg tmp5,#1
+              mov tmp2,#4' iterator channel (start at 4 to not disturb music)
+.ploop
+              altgb tmp2,#ch_priority
+              getbyte pa
+              cmp pa,tmp5 wc
+              testbn ch_active,tmp2 wz
+   if_c_or_z  mov tmp1,tmp2
+        if_c  mov tmp5,pa
+        if_z  mov tmp5,#0
+              incmod tmp2,#MAX_CHANNELS-1 wc
+        if_nc jmp #.ploop
+
+              getbyte tmp4,mbbuf+0,#0 ' DSP_MAILBOX+4 (priority)
+              cmp tmp4,tmp5 wc
+        if_b  jmp #.drop_sfx ' lowest priority channel has higher priority than new sound
+
+              ' tmp1 has channel id now
+              altsb tmp1,#ch_priority
+              setbyte tmp4
+
+              altr tmp1,#ch_position
+              movbyts mbbuf+1,#%%0123 'DSP_MAILBOX+8
+              altr tmp1,#ch_loopend
+              movbyts mbbuf+2,#%%0123 'DSP_MAILBOX+12
+              altr tmp1,#ch_loopstart
+              movbyts mbbuf+3,#%%0123 'DSP_MAILBOX+16
+              altr tmp1,#ch_volume
+              movbyts mbbuf+4,#%%0123 'DSP_MAILBOX+20
+              altr tmp1,#ch_freq
+              movbyts mbbuf+5,#%%0123 'DSP_MAILBOX+24
+              altr tmp1,#ch_fracpos
+              mov 0-0,#0
+
+              bith ch_active,tmp1
+              bith ch_bufferadv,tmp1
+              testb tmp3,#8 wc
+              bitc ch_loopflag,tmp1
+
+              ' Increment handle ID and report back
+              mov mbbuf+0,#0
+              altgb tmp1,#ch_handleid
+              getbyte mbbuf+1
+              incmod mbbuf+1,#255
+              altsb tmp1,#ch_handleid
+              setbyte mbbuf+1
+              setbyte mbbuf+1,tmp1,#1 ' combine channel and handle id to form full handle
+              'debug("new handle ",uhex_long(mbbuf+1))
+              movbyts mbbuf+1,#%%0123
+              setq #2-1
+              wrlong mbbuf,#DSP_MAILBOX
+              mov pa,tmp1
+              'mov ch_volume+0,##$0800_0800 'DEBUG
+              jmp #queue_tran
+.drop_sfx
+              mov mbbuf+0,#0
+              neg mbbuf+1,#1
+              setq #2-1
+        _ret_ wrlong mbbuf,#DSP_MAILBOX
+
+
+.kill_sfx
+              bitl ch_active,#4 addbits (MAX_CHANNELS - 4 - 1)
+        _ret_ wrlong #0,#DSP_MAILBOX
+
+.handleop
+              'debug("handleop ",uhex_long(tmp3))
+              getbyte tmp2,tmp3,#0 ' grab handle id
+              getbyte tmp1,tmp3,#1 ' grab channel
+              cmp tmp1,#MAX_CHANNELS wc
+        if_ae jmp #.drop_cmd
+              altgb tmp1,#ch_handleid
+              getbyte pa
+              cmp pa,tmp2 wz
+        if_nz jmp #.drop_cmd
+              getbyte tmp2,tmp3,#2 ' grab command type
+              cmp tmp2,#$01 wz
+        if_z  jmp #.handle_stop
+              cmp tmp2,#$08 wz
+        if_z  jmp #.handle_pitch
+              cmp tmp2,#$0c wz
+        if_z  jmp #.handle_pitchvol
+        _ret_ wrlong #0,#DSP_MAILBOX
+
+.handle_stop
+              bitl ch_active,tmp1
+        _ret_ wrlong #0,#DSP_MAILBOX
+.handle_pitch
+              rdlong mbbuf,#DSP_MAILBOX+4
+              movbyts mbbuf,#%%0123
+              'debug("handle_pitch ",udec(tmp1),uhex_long(mbbuf))
+              shl mbbuf,#8+8+6
+              altd tmp1,#ch_freq
+              add 0-0,mbbuf
+        _ret_ wrlong #0,#DSP_MAILBOX
+.handle_pitchvol
+              ' ???????
+              rdlong mbbuf,#DSP_MAILBOX+4
+              movbyts mbbuf,#%%0123
+              'debug("handle_pitchvol ",udec(tmp1),uhex_long(mbbuf))
+              getword mbbuf+1,mbbuf,#0
+              shl mbbuf,#8+8+6
+              altd tmp1,#ch_freq
+              add 0-0,mbbuf
+
+              alts tmp1,#ch_volume
+              mov pa,0-0
+              signx mbbuf+1,#15
+              shl mbbuf+1,#3
+              getword pb,pa,#0
+              add pb,mbbuf+1
+              setword pa,pb,#0
+              getword pb,pa,#1
+              add pb,mbbuf+1
+              setword pa,pb,#1
+              altd tmp1,#ch_volume
+              mov 0-0,pa
+
+        _ret_ wrlong #0,#DSP_MAILBOX
+.modload
+              rdlong mod_newmodule,#DSP_MAILBOX+4
+              movbyts mod_newmodule,#%%0123
+        _ret_ wrlong #0,#DSP_MAILBOX
+.modvolume
+              getword mod_globvol,tmp3,#0
+        _ret_ wrlong #0,#DSP_MAILBOX
+
+
+
+ch_active     long 0
+ch_loopflag   long 0
+ch_bufferflag long 0
+ch_bufferadv  long 0
+
+tran_pending  long 0
+tran_current  long -1
+
+dac_center    long $7F80
+dac_scas      long $7F80
+
+clamp_min     long -$7FFF
+clamp_max     long +$7FFF
+
+p2f_low_const long P2F_LOW
+
+mod_globvol   long $03FF
+
+exmem_mailbox long 0
+lpin          long 0
+rpin          long 0
+sample_period long 0
+bufferbase    long @@@ex_buffers
+
+mod_thread    long mod_idle
+mod_newmodule long 0
+
+curch         res 1
+lsmp          res 1
+rsmp          res 1
+tmp1          res 1
+tmp2          res 1
+tmp3          res 1
+tmp4          res 1
+tmp5          res 1
+
+mbbuf         res 6
+
+exmem_cmd     res 1
+exmem_target  res 1
+exmem_len     res 1
+
+ch_position   res MAX_CHANNELS
+ch_loopstart  res MAX_CHANNELS
+ch_loopend    res MAX_CHANNELS
+ch_volume     res MAX_CHANNELS
+ch_freq       res MAX_CHANNELS
+ch_fracpos    res MAX_CHANNELS
+ch_priority   res (MAX_CHANNELS+3)/4
+ch_handleid   res (MAX_CHANNELS+3)/4
+
+mod_tran_addr res 1
+mod_tran_length res 1
+mod_tran_target res 1
+
+mod_ticktimer res 1
+mod_ticknum res 1
+mod_row res 1
+mod_order res 1
+mod_tempo res 1
+
+mod_rowbuffer res 4
+
+mod_volumes res 1 ' byte-packed channel volumes
+mod_periods res 2 ' word-packed periods
+
+mod_trigit  res 4 ' dumb stupid thing
+
+' temp values that persist thread suspensions
+mtmp1 res 1
+mtmp2 res 1
+mtmp3 res 1
+
+mod_modulebase res 1
+
+              fit 496
+
+              org 512
+lutcode
+
+mod_musicstop
+              mov mod_newmodule,#0
+              calld mod_thread,mod_thread wcz
+mod_idle
+              bitl ch_active,#0 addbits 3 ' kill music channels
+              call #handle_mailbox
+              calld mod_thread,mod_thread wcz
+              tjnz mod_newmodule,#mod_loadmodule
+              jmp #mod_idle      
+
+mod_loadmodule
+              bitl ch_active,#0 addbits 3 ' kill music channels
+              tjf mod_newmodule,#mod_musicstop ' -1 is module kill
+              mov mod_modulebase,mod_newmodule
+              debug(uhex_long(mod_newmodule))
+              mov mod_newmodule,#0
+
+              ' load order + length
+              mov mod_tran_addr,##950
+              add mod_tran_addr,mod_modulebase
+              mov mod_tran_length,#130
+              mov mod_tran_target,##@@@mod_orders - 2 ' grab extra 2 bytes for length
+              call #queue_tran_mod
+
+.orderstall   calld mod_thread,mod_thread wcz
+              testb tran_pending,#31 wc
+        if_c  jmp #.orderstall
+
+              rdbyte mtmp1,mod_tran_target wz ' grab length
+              debug("song length ",udec_(mtmp1))
+        if_z  jmp #mod_idle ' length zero hangs address computation, just don't
+              loc pa,#@@@mod_orders
+              add pa,mtmp1
+              wrbyte #255,pa ' add end marker to order table
+
+
+              ' to figure out how many patterns are in the file
+              ' we need to scan the order table
+              ' thanks I hate it
+              mov mtmp2,#0 ' max. encountered pattern number
+              mov mtmp3,pa
+              sub mtmp1,#1
+.patscanlp
+              test mtmp1,#%111 wz
+        if_z  calld mod_thread,mod_thread wcz
+              sub mtmp3,#1
+              rdbyte pa,mtmp3
+              fge mtmp2,pa
+              djnf mtmp1,#.patscanlp
+
+              add mtmp2,#1
+              debug("pattern count ",udec_(mtmp2))
+              shl mtmp2,#10 ' is now length of pattern data
+              add mtmp2,##1084 ' add header length, now have offset of first sample
+              add mtmp2,mod_modulebase
+
+              ' load all samples
+              mov mtmp1,#0 ' sample id
+.smploadlp
+              ' address of sample info (ignore name we don't care)
+              mov mod_tran_addr,mtmp1
+              mul mod_tran_addr,#30
+              add mod_tran_addr,#42
+              add mod_tran_addr,mod_modulebase
+              mov mod_tran_length,#8
+              loc pa,#@@@mod_buffer
+              mov mod_tran_target,pa
+              call #queue_tran_mod
+
+.smpstall     calld mod_thread,mod_thread wcz
+              testb tran_pending,#31 wc
+        if_c  jmp #.smpstall
+              ' convert it
+              mov mbbuf+0,mtmp2 ' current sample pointer
+              loc pa,#@@@mod_buffer
+              setq #2-1
+              rdlong tmp1,pa
+              movbyts tmp1,#%%3201
+              movbyts tmp2,#%%2301
+
+              getword mbbuf+2,tmp1,#0 ' grab sample length (in words)
+              shl mbbuf+2,#1
+              debug("length ",udec_(mbbuf+2))
+              add mbbuf+2,mbbuf+0 ' make loop end pointer
+              mov mtmp2,mbbuf+2 ' advance sample pointer
+
+              getword mbbuf+1,tmp2,#0 ' grab loop start
+              shl mbbuf+1,#1
+              add mbbuf+1,mbbuf+0
+
+              getword pa,tmp2,#1 ' grab loop length
+              cmp pa,#2 wc
+              wrnc mbbuf+3 ' loop flag
+              ' replace loop end
+        if_nc mov mbbuf+2,pa
+        if_nc shl mbbuf+2,#1
+        if_nc add mbbuf+2,mbbuf+1
+
+              rolword mbbuf+3,tmp1,#1 ' volume and finetune
+
+              loc pa,#@@@mod_smpinfo
+              mov tmp1,mtmp1
+              mul tmp1,#16
+              add pa,tmp1
+              setq #4-1
+              wrlong mbbuf+0,pa
+              debug("sample init ",udec(mtmp1),uhex_reg_array(#mbbuf,#4))
+
+              incmod mtmp1,#31-1 wc ' there really are _31_ samples
+        if_nc jmp #.smploadlp
+
+              ' setup some stuff
+              mov mod_order,#0
+              mov mod_row,#0
+              mov mod_ticknum,#0
+              mov mod_ticktimer,#0
+              mov mod_tempo,#6-1'6-1 ' ???
+              neg mod_trigit+0,#1
+              neg mod_trigit+1,#1
+              neg mod_trigit+2,#1
+              neg mod_trigit+3,#1
+              jmp #mod_dorow
+              'jmp #mod_idle
+
+mod_run
+              calld mod_thread,mod_thread wcz
+              tjnz mod_newmodule,#mod_loadmodule
+              cmpsub mod_ticktimer,##SAMPLE_RATE/50 wc
+        if_c  jmp #mod_dotick
+              call #handle_mailbox
+              jmp #mod_run
+
+mod_dotick
+              calld mod_thread,mod_thread wcz
+              call #mod_updvoices ' big jug hot samples
+              calld mod_thread,mod_thread wcz
+              incmod mod_ticknum,mod_tempo wc ' ???
+        if_nc jmp #mod_norow
+mod_nextrow
+              incmod mod_row,#63 wc
+        if_c  add mod_order,#1
+mod_dorow
+              mov mod_tran_addr,mod_row
+              shl mod_tran_addr,#4 ' 16 bytes per row!!
+              mov mod_tran_length,#16
+.loopit       loc pa,#@@@mod_orders
+              add pa,mod_order
+              rdbyte pa,pa wc ' grab pattern id
+              debug("pattern ",udec_(pa),udec(mod_row),udec(mod_order))
+        if_c  mov mod_order,#0
+        if_c  jmp #.loopit
+              shl pa,#10 ' 1024 bytes per pattern
+              add mod_tran_addr,pa
+              add mod_tran_addr,##1084 ' header size
+              add mod_tran_addr,mod_modulebase
+              loc pa,#@@@mod_buffer
+              mov mod_tran_target,pa
+              call #queue_tran_mod
+
+.rowstall     testb tran_pending,#31 wz
+        if_11 calld mod_thread,mod_thread wcz
+        if_11 jmp #.rowstall
+              loc pa,#@@@mod_buffer
+              setq #4-1
+              rdlong mod_rowbuffer,pa
+mod_norow
+              mov mtmp1,#0 ' Channel number to process
+.ch_tick_loop
+              alts mtmp1,#mod_rowbuffer
+              mov mtmp2,0-0 ' grab data from pattern
+
+              ' if first tick of row, handle trigger
+              tjnz mod_ticknum,#.notrig
+              'tjnz mtmp1,#.notrig ' DEBUG only CH0
+              ' grab sample id
+              getnib tmp1,mtmp2,#1
+              rolnib tmp1,mtmp2,#5
+              djf tmp1,#.notrig ' samples are 1-indexed and zero means no trigger
+              ' set trigger
+              'debug("trigger sample ",udec(tmp1))
+              altr mtmp1,#mod_trigit
+              shl tmp1,#24
+              ' grab period
+              getnib tmp2,mtmp2,#0
+              rolbyte tmp2,mtmp2,#1
+              ' set period
+              altsw mtmp1,#mod_periods
+              setword tmp2
+              ' grab volume and set that
+              loc pa,#@@@mod_smpinfo + 12
+              mul tmp1,#16
+              add pa,tmp1
+              rdlong pa,pa
+              getbyte pb,pa,#1
+              altsb mtmp1,#mod_volumes
+              setbyte pb
+.notrig
+              ' Try handling effects
+              getbyte tmp1,mtmp2,#3 ' effect parameters
+              getnib pa,mtmp2,#4 ' effect nibble
+              jmprel pa
+              jmp #.arpeggio
+              jmp #.porta_up
+              jmp #.porta_down
+              jmp #.porta_tone
+              jmp #.vibrato
+              jmp #.volslide_porta
+              jmp #.volslide_vibrato
+              jmp #.tremolo
+              jmp #.setpan
+              jmp #.smp_offset
+              jmp #.volslide
+              jmp #.jump
+              jmp #.setvolume
+              jmp #.break
+              jmp #.eee
+              jmp #.setspeed
+
+.setvolume
+              fle tmp1,#$40
+              altsb mtmp1,#mod_volumes
+              setbyte tmp1
+              jmp #.effectdone
+
+
+.smp_offset
+              ' thanks I hate it
+              altd mtmp1,#mod_trigit
+              setbyte 0-0,tmp1,#0
+              jmp #.effectdone
+
+.setspeed
+              cmp tmp1,#20 wc
+        if_ae jmp #.unimplemented
+              debug("set speed ",udec(tmp1))
+              mov mod_tempo,tmp1
+              sub mod_tempo,#1
+              fge mod_tempo,#1
+              jmp #.effectdone
+
+.porta_up
+.porta_down
+.porta_tone
+.vibrato
+.volslide_porta
+.volslide_vibrato
+.tremolo
+.setpan
+.volslide
+.jump
+.break
+.eee
+.unimplemented
+              ' NYI
+              debug("unimplemented effect ",uhex(pa),uhex_byte(tmp1))
+              jmp #.effectdone
+
+
+
+.arpeggio
+              tjnz tmp1,#.unimplemented
+.effectdone
+              calld mod_thread,mod_thread wcz
+              incmod mtmp1,#4-1 wc
+        if_nc jmp #.ch_tick_loop
+
+
+
+              jmp #mod_run
+
+
+mod_updvoices
+              ' Update all voices at once
+
+              getword pa,mod_periods,#0
+              setq #P2F_HIGH
+              qdiv p2f_low_const,pa
+              getbyte ch_volume+0,mod_volumes,#0
+
+              getword pa,mod_periods,#1
+              setq #P2F_HIGH
+              qdiv p2f_low_const,pa
+              getbyte ch_volume+1,mod_volumes,#1
+              
+              getword pa,mod_periods+1,#0
+              setq #P2F_HIGH
+              qdiv p2f_low_const,pa
+              getbyte ch_volume+2,mod_volumes,#2
+
+              getword pa,mod_periods+1,#1
+              setq #P2F_HIGH
+              qdiv p2f_low_const,pa
+              getbyte ch_volume+3,mod_volumes,#3
+
+              ' TODO: Panning
+              mul ch_volume+0,mod_globvol
+              shr ch_volume+0,#6
+              rolword ch_volume+0,ch_volume+0,#0
+              mul ch_volume+1,mod_globvol
+              shr ch_volume+1,#6
+              rolword ch_volume+1,ch_volume+1,#0
+              mul ch_volume+2,mod_globvol
+              shr ch_volume+2,#6
+              rolword ch_volume+2,ch_volume+2,#0
+              mul ch_volume+3,mod_globvol
+              shr ch_volume+3,#6
+              rolword ch_volume+3,ch_volume+3,#0
+
+              getqx ch_freq+0
+              getqx ch_freq+1
+              getqx ch_freq+2
+              getqx ch_freq+3
+
+              tjs mod_trigit+0,#.notrig0
+              debug("trigger ch0")
+              getbyte pa,mod_trigit+0,#3 ' sample id
+              loc pb,#@@@mod_smpinfo
+              mul pa,#16
+              add pb,pa
+              setq #4-1
+              rdlong tmp1,pb
+              getbyte pa,mod_trigit+0,#0 ' sample offset
+              shl pa,#8
+              add tmp1,pa
+              mov ch_position+0,tmp1
+              mov ch_loopstart+0,tmp2
+              mov ch_loopend+0,tmp3
+              debug(uhex_long(ch_position+0,ch_loopstart+0,ch_loopend+0))
+              ' Volume/finetune already set earlier?
+              bith ch_active,#0
+              bith ch_bufferadv,#0
+              testb tmp4,#16 wc
+              bitc ch_loopflag,#0
+              mov pa,#0
+              call #queue_tran
+              neg mod_trigit+0,#1
+.notrig0
+
+
+              tjs mod_trigit+1,#.notrig1
+              debug("trigger ch1")
+              getbyte pa,mod_trigit+1,#3 ' sample id
+              loc pb,#@@@mod_smpinfo
+              mul pa,#16
+              add pb,pa
+              setq #4-1
+              rdlong tmp1,pb
+              getbyte pa,mod_trigit+1,#0 ' sample offset
+              shl pa,#8
+              add tmp1,pa
+              mov ch_position+1,tmp1
+              mov ch_loopstart+1,tmp2
+              mov ch_loopend+1,tmp3
+              ' Volume/finetune already set earlier?
+              bith ch_active,#1
+              bith ch_bufferadv,#1
+              testb tmp4,#16 wc
+              bitc ch_loopflag,#1
+              mov pa,#1
+              call #queue_tran
+              neg mod_trigit+1,#1
+.notrig1
+
+              tjs mod_trigit+2,#.notrig2
+              debug("trigger ch2")
+              getbyte pa,mod_trigit+2,#3 ' sample id
+              loc pb,#@@@mod_smpinfo
+              mul pa,#16
+              add pb,pa
+              setq #4-1
+              rdlong tmp1,pb
+              getbyte pa,mod_trigit+2,#0 ' sample offset
+              shl pa,#8
+              add tmp1,pa
+              mov ch_position+2,tmp1
+              mov ch_loopstart+2,tmp2
+              mov ch_loopend+2,tmp3
+              ' Volume/finetune already set earlier?
+              bith ch_active,#2
+              bith ch_bufferadv,#2
+              testb tmp4,#16 wc
+              bitc ch_loopflag,#2
+              mov pa,#2
+              call #queue_tran
+              neg mod_trigit+2,#1
+.notrig2
+
+              tjs mod_trigit+3,#.notrig3
+              debug("trigger ch3")
+              getbyte pa,mod_trigit+3,#3 ' sample id
+              loc pb,#@@@mod_smpinfo
+              mul pa,#16
+              add pb,pa
+              setq #4-1
+              rdlong tmp1,pb
+              getbyte pa,mod_trigit+3,#0 ' sample offset
+              shl pa,#8
+              add tmp1,pa
+              mov ch_position+3,tmp1
+              mov ch_loopstart+3,tmp2
+              mov ch_loopend+3,tmp3
+              ' Volume/finetune already set earlier?
+              bith ch_active,#3
+              bith ch_bufferadv,#3
+              testb tmp4,#16 wc
+              bitc ch_loopflag,#3
+              mov pa,#3
+              call #queue_tran
+              neg mod_trigit+3,#1
+.notrig3
+              'bitl ch_active,#0
+              'bitl ch_active,#1
+              'bitl ch_active,#2
+              'bitl ch_active,#3
+              'debug(ubin_long(ch_active))
+              ret wcz
+
+
+              fit 1024 
+
+DAT
+              orgh 
+ex_buffers    byte 0[MAX_CHANNELS*2*64]
+mod_buffer    byte 0[32] ' has to go exactly before mod_order
+mod_orders    byte 0[129]
+alignl
+mod_smpinfo   byte 0[31*(16)] ' longs start, loopstart, loopend, then bytes finetune, volume, loop flag(?), ???

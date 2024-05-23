@@ -1,4 +1,4 @@
-.globl data_start
+.globl assets_start
 .globl pic
 .globl pic2
 .globl pic3
@@ -11,7 +11,7 @@
 .globl smp1
 
 
-data_start:
+assets_start:
 pic:    .incbin "images/beasty3.cry"
 pic2:   .incbin "images/beasty4.cry"
 pic3:   .incbin "images/beasty5.cry"
