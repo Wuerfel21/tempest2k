@@ -8635,9 +8635,6 @@ oaafire2:	move #10,34(a0)
 	; and the rapid refire makes it VERY LOUD
 	move.b vols+1,d0
 	lsr.b #1,d0
-	bne.s .nomin
-	move.w #1,d0
-.nomin:
 	move.w d0,sfx_vol 
 .endif
 	jsr fox
