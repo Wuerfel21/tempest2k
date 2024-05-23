@@ -8630,6 +8630,16 @@ konk:	move.l #$10000,d2
 oaafire2:	move #10,34(a0)
 	move #$0b,sfx
 	move #1,sfx_pri
+.if ^^defined PROPELLER
+	; P2 can handle more channels
+	; and the rapid refire makes it VERY LOUD
+	move.b vols+1,d0
+	lsr.b #1,d0
+	bne.s .nomin
+	move.w #1,d0
+.nomin:
+	move.w d0,sfx_vol 
+.endif
 	jsr fox
 	bra insertobject		;Do it!
 	
@@ -16954,7 +16964,10 @@ fox: 	movem.l d0-d3/a0,-(a7)	;play a SFX sample
 .ggg:
 	move.l d0,DSP_MAILBOX+12
 	; I have no idea what's on with sfx_vol
+	move.w sfx_vol,d0
+	bne.s .explicit_vol
 	move.b vols+1,d0
+.explicit_vol:
 	and.w #$ff,d0
 	lsl #3,d0 ; this adjusts overall volume?
 	move.w d0,DSP_MAILBOX+20

@@ -7,10 +7,11 @@
 - Add highscore entry effect DONESKI
 - Fix color of volume change box  DONESKI
 - Add audio PARITIAL
-  - Fix particle laser obnoxiously loud
+  - Fix particle laser obnoxiously loud (DONESKI?)
   - Fix remaining unimplemented effects
 - Add sound test menu
 - Fix prettypoly issue on ending screen DONESKI
 - Restore unused music (I think PC order is not so hot)
 - P2 minor adjustments (animation timers, button text, etc) PARTIAL
 - Investigate fixing polygon seams DONESKI?
+- Is the crosshair off-center in the Jaguar version, too?
