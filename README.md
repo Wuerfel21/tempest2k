@@ -8,7 +8,7 @@ This is a source port of Tempest 2000 by Jeff Minter for the Parallax Propeller 
 
 ### Build Requirements
 ```sh
-sudo apt install build-essentials b
+sudo apt install build-essentials
 ```
 
 ### Build the assembler and Spin2 toolchains
