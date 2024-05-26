@@ -29,8 +29,8 @@ t2000p2.dat:
 	./rmac/rmac -fb -Isrc src/images_sounds.s -o bin_p2/images_sounds.o
 	./rln/rln -v -n -a 80000000 2000 r bin_p2/yak.cof bin_p2/vidinit_stub.cof bin_p2/stubsound.cof bin_p2/images_sounds.o -o t2000p2.dat
 	
-t2000p2.binary:
-	./spin2cpp/build/flexspin -2 -H 0x50000 --compress src/t2000p2.spin2 -l -o t2000p2.binary
+t2000p2.bix:
+	./spin2cpp/build/flexspin -2 -H 0x50000 --compress src/t2000p2.spin2 -l -o t2000p2.bix
 
 
 cartridge: t2000.abs
@@ -41,8 +41,8 @@ cartridge: t2000.abs
 run: cartridge
 	wine ./utils/t2k.exe t2k.rom
 
-runp2: t2000p2.binary t2000p2.dat
-	loadp2 t2000p2.binary -9 . -t -b 2000000
+runp2: t2000p2.bix t2000p2.dat
+	loadp2 t2000p2.bix -9 . -t -b 2000000
 
 clean:
 	-rm bin/*.o
@@ -55,6 +55,6 @@ clean:
 	-rm T2000.DTA
 	-rm t2k.rom
 	-rm t2000p2.dat
-	-rm t2000p2.binary
+	-rm t2000p2.bix
 	-rm t2000p2.p2asm
 	-rm *.lst

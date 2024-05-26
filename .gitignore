@@ -6,6 +6,7 @@
 /*.bin
 /*.lst
 /*.binary
+/*.bix
 /*.p2asm
 /*.dat
 /bin*/*
