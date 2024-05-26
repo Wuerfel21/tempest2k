@@ -587,7 +587,7 @@ mod_dotick
         if_nc jmp #mod_norow
 mod_nextrow
               incmod mod_row,#63 wc
-        if_c  add mod_order,#1
+        if_c  incmod mod_order,#127
 mod_dorow
               mov mod_tran_addr,mod_row
               shl mod_tran_addr,#4 ' 16 bytes per row!!
@@ -687,6 +687,22 @@ mod_norow
               fge mod_tempo,#1
               jmp #.effectdone
 
+.jump
+              jmp #.unimplemented ' TODO THIS IS BROKEN
+              mov mod_order,tmp1
+              and mod_order,#127 ' just hope it is in range for other purposes
+              neg mod_row,#1 ' awful
+              jmp #.effectdone
+
+.break
+              mov mod_row,tmp1
+              and mod_row,#63
+              sub mod_row,#1
+              incmod mod_order,#127
+              jmp #.effectdone
+
+
+
 .porta_up
 .porta_down
 .porta_tone
@@ -696,8 +712,6 @@ mod_norow
 .tremolo
 .setpan
 .volslide
-.jump
-.break
 .eee
 .unimplemented
               ' NYI
