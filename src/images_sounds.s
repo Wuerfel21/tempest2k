@@ -9,6 +9,8 @@
 .globl modbase
 .globl samtab
 .globl smp1
+.globl max_musnum
+.globl max_sfxnum
 
 
 assets_start:
@@ -30,8 +32,15 @@ modbase:
 .dc.l tune4
 .dc.l tune5
 .dc.l tune12
+.dc.l tune11
+.dc.l tune10
+.dc.l tune9
+.dc.l tune8
+.dc.l tune6
 .dc.l 0
 ;.dcb.b 256-(8*4),0 ; Does this actually do anthing?
+
+max_musnum equ (* - modbase)/4 - 1
 
 tune13:
 .incbin "sounds/tune13.mod"
@@ -59,6 +68,26 @@ tune5:
 
 tune12:
 .incbin "sounds/tune12.mod"
+.DC.L $0000
+
+tune11:
+.incbin "sounds/tune11.mod"
+.DC.L $0000
+
+tune10:
+.incbin "sounds/tune10.mod"
+.DC.L $0000
+
+tune9:
+.incbin "sounds/tune9.mod"
+.DC.L $0000
+
+tune8:
+.incbin "sounds/tune8.mod"
+.DC.L $0000
+
+tune6:
+.incbin "sounds/tune6.mod"
 .DC.L $0000
 
 ;.incbin "incbin/paddingbetweentunesandsmp.bin"
@@ -191,6 +220,7 @@ samtab:
 .dc.l smp15_dummy, 10606592 ; start, len
 .dc.l smp15_dummy, 0 ; repstart, replen
 
+max_sfxnum equ (*-samtab)/40 - 1
 ; do we need this?
 ;.dc.b $02, $02, $FE, $0D, $04, $04, $0B, $00, $FB, $00, $0C, $FF, $FF, $07, $08, $F9, $01, $05, $F2, $FE, $0F, $17, $0D, $13, $0B, $02, $05, $FB, $F1, $E7, $FB, $0A, $0E, $1E, $13, $06, $FB, $F0, $EF, $EE
 

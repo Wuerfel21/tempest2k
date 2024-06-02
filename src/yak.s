@@ -75,6 +75,8 @@ FIX_FLIPPER_LOD_COLOR equ 1
 	.extern samtab
 ;	modbase	EQU $8d6800
 	.extern modbase
+	.extern max_musnum
+	.extern max_sfxnum
 ;	tune1	EQU $8e6900
 ;	eeprom EQU $980000 
 	allkeys EQU $000f00ff
@@ -91,6 +93,7 @@ FIX_FLIPPER_LOD_COLOR equ 1
 	view3	EQU $0000000e
 	allpad EQU $00f00000
 	somepad EQU $00300000
+	somepad2 EQU $00C00000
 	bigreset EQU $00010001
 	videomode equ $6c1
 	width EQU 384
@@ -446,7 +449,7 @@ crashedit:
 
 spall:	btst.b #6,sysflags
 	beq slopt
-	move.l #o2s3,option2+16
+	move.l #o2s4,option2+20
 slopt:	clr palside
 	clr paltop
 	bclr.b #5,sysflags
@@ -2378,6 +2381,51 @@ gotwhr: cmp selected,d6
 firsend: jmp eepromsave
 
 
+soundtest:
+	clr auto ; need this for music change to work...
+	move.w #05,stmus
+	move.w #34,stsfx
+	move.l #option12,the_option
+	move #-1,blanka
+	move #2,selectable
+	clr selected
+	bsr stsetnum
+.lp:	bsr do_choose
+	tst z
+	bne fago
+	cmp #2,selected
+	beq fago
+	cmp #1,selected
+	bne .chkmus
+.chkmus:
+	cmp #0,selected
+	bne .lp
+	move.w stmus,modnum ; request tune from music system
+	bne.s .lp
+	jsr FADEDOWN ; zero means fade it out
+	bra.s .lp
+
+stsetnum:
+	move.w stmus,d0
+	ext.l d0
+	divu #10,d0
+	add.b #48,d0
+	move.b d0,o12s1+12
+	swap d0
+	add.b #48,d0
+	move.b d0,o12s1+13
+
+	move.w stsfx,d0
+	ext.l d0
+	divu #10,d0
+	add.b #48,d0
+	move.b d0,o12s2+12
+	swap d0
+	add.b #48,d0
+	move.b d0,o12s2+13
+	rts
+
+
 rotset: move.l #option5,the_option
 
 	bsr sconopt
@@ -2397,7 +2445,7 @@ bglp:	bsr do_choose
 	bra bglp
 con2chg: bchg.b #4,sysflags
 	bsr sconopt
-	bra bglp
+	bra.s bglp
 
 
 sconopt: move.l #o5s10,d0
@@ -2494,7 +2542,11 @@ fago:	bsr fade
 	bra xsel1			;go start up with h2h asserted...
 
 gameopt: clr selected			;this does game option menu
-	move #1,selectable
+	move #2,selectable
+	btst.b #6,sysflags
+	beq .no_ctype
+	add #1,selectable
+.no_ctype:
 	move.l #option2,the_option
 	bsr do_choose
 	tst z
@@ -2503,12 +2555,19 @@ gameopt: clr selected			;this does game option menu
 	move selected,d0
 	beq dispop
 	cmp #1,d0
-	bne nxtsl
+	bne .nxtsl
 	bsr firesel
 	tst z
 	bne fago
 	bra dcc
-nxtsl: cmp #2,d0
+.nxtsl:
+	cmp #2,d0
+	bne .nxtsl2
+	bsr soundtest
+	bra optionscreen
+
+.nxtsl2: 
+	cmp #3,d0
 	bne dcc
 	bsr rotset
 	bra optionscreen
@@ -2684,8 +2743,8 @@ selector: cmp.l #option2,the_option
 	beq selector2
 	bset.b #6,sysflags
 	jsr sayex
-sopt2:	move.l #o2s3,option2+16
-	move #2,selectable
+	add #1,selectable
+sopt2:	move.l #o2s4,option2+20
 selector2: move #1000,attime
 
  	move.b pad_now+1,d0
@@ -2694,22 +2753,24 @@ selector2: move #1000,attime
 	beq jcononly
 	tst.l rot_cum
 	beq jcononly
-	bpl stup
+	bpl.s stup
 	bset #4,d0
 	clr.l rot_cum
 	bra jcononly
 stup:	bset #5,d0	
 	clr.l rot_cum
-jcononly: and #$30,d0
-	beq rrrts
+jcononly: 
+	move d0,d1
+	and #$30,d0
+	beq lateralsel
 	move selected,d1
 	move selectable,d2
 	btst #4,d0
-	bne decsel
+	bne.s decsel
 	cmp d1,d2
-	bne incsel
+	bne.s incsel
 	clr selected
-	bra selend
+	bra.s selend
 incsel: add #1,selected
 selend: move.l #seldb,routine
 	move #21,sfx
@@ -2724,9 +2785,44 @@ decsel: tst d1
 decsel1: sub #1,selected
 	bra selend
 
+lateralsel:
+	cmp.l #option12,the_option ; lateral selection for sound test
+	bne rrrts
+	move #max_musnum,d2 ; max of music
+	lea stmus,a0
+	tst selected
+	beq.s .dosel
+	move #max_sfxnum,d2 ; max of sfx
+	lea stsfx,a0
+.dosel:
+	move.w (a0),d0
+	btst #6,d1
+	bne.s .left
+	btst #7,d1
+	beq rrrts
+
+	add #1,d0
+	cmp d2,d0
+	bgt rrrts
+	bra.s .ok
+.left:	
+	sub #1,d0
+	bcs rrrts
+.ok:
+	move.l #seldb2,routine
+	move.w d0,(a0)
+	jmp stsetnum
+
 seldb: move.l pad_now,d0
 	or.l pad_now+4,d0
 	and.l #somepad,d0
+	bne rrrts
+	move.l #oselector,routine
+	rts
+
+seldb2: move.l pad_now,d0
+	or.l pad_now+4,d0
+	and.l #somepad2,d0
 	bne rrrts
 	move.l #oselector,routine
 	rts
@@ -16982,11 +17078,13 @@ fox: 	movem.l d0-d3/a0,-(a7)	;play a SFX sample
 	lsl.l #8,d0
 	lsl.l #6,d0
 	move.l d0,DSP_MAILBOX+24
-	; horrible hack determine channel by sfx id
-	;move.w sfx,d0
-	;and.l #15,d0
-	;or.l #$01000000,d0
-	;move.l d0,DSP_MAILBOX ; FIRE IN THE HOLE
+	; Set priority
+	move sfx_pri,d0
+	cmp #255,d0
+	bls.s .pri_ok
+	move #255,d0
+.pri_ok:
+	move.b d0,DSP_MAILBOX+4
 	move.l d3,DSP_MAILBOX ; FIRE IN THE HOLE
 .postwait:
 	tst.l DSP_MAILBOX
@@ -19000,9 +19098,16 @@ option7: dc.l o7t1,o7t2,o7s1,o7s2,o7s3,0
 option9: dc.l o9t1,o9t2,o9s1,o9s2,0
 option10: dc.l o10t1,o10t2,o10s1,o10s2,o10s3,0
 option11: dc.l o11t1,o11t2,o11s1,o11s2,0
+option12: dc.l o2s3,o12t2, o12s1,o12s2,o3s3,0
 
+.if ^^defined JAGUAR
 o11t1: dc.b "clear cartridge",0
 o11t2: dc.b "memory",0
+.endif
+.if ^^defined PROPELLER
+o11t1: dc.b "clear highscores",0
+o11t2: dc.b "and progress",0
+.endif
 o11s1: dc.b "no! no! no!",0
 o11s2: dc.b "absolutely!",0
 
@@ -19011,6 +19116,8 @@ o10t2: dc.b "of match to play",0
 o10s1: dc.b "one round",0
 o10s2: dc.b "best of three",0
 o10s3: dc.b "best of five",0
+
+o12t2: dc.b "play some tunes",0
 
 bstymsg: dc.b "PRESS option FOR BEASTLY MODE!",0
 
@@ -19032,7 +19139,8 @@ o2t1: dc.b "game options",0
 o2t2: dc.b "select, dude",0
 o2s1: dc.b "display setup",0
 o2s2: dc.b "control setup",0
-o2s3: dc.b "controller type",0
+o2s3: dc.b "sound test",0
+o2s4: dc.b "controller type",0
 
 o3t1: dc.b "display options",0
 o3t2: dc.b "please select",0
@@ -19813,7 +19921,7 @@ romstart:
  	dc.l web5,web11,web1,web2,web9,web3,web18,web19,web20,web4,web14,web10,web17,web6,web16,web22
  	dc.l web24,web23,web27,web25,web21,web28,web29,web30,web32,web33,web34,web35,web36,web37,web26,web31
 	dc.l 0
- dc.l o2t1,o2t2,o2s1,o2s2,0,0
+ dc.l o2t1,o2t2,o2s1,o2s2,o2s3,0,0
 
  dc.l pu1,pu2,pu3,pu4,pu5,pu6
  dc.w 50,50,$ffff,300,100,$8888,75,150,$2222,0
@@ -19897,6 +20005,9 @@ dc.l ps_screen2
 .endif
 
  dc.l o5t1,o5t2,o5s10,o5s2,o3s3,0
+
+ dc.b "music       00",0
+ dc.b "sfx         00",0
 
 defaults: dc.l 500017		;0	-eeprom position
 	dc.b 'yak',0		;4
@@ -20003,7 +20114,7 @@ raw_webs:
  	dc.l web5,web11,web1,web2,web9,web3,web18,web18,web13,web4,web14,web10,web20,web6,web16,web21
  	dc.l web24,web23,web27,web25,web21,web28,web26,web29,web30,web31,web32,web33,web34,web35,web36,web37
 	dc.l 0
-option2: dc.l o2t1,o2t2,o2s1,o2s2,o2s3,0
+option2: dc.l o2t1,o2t2,o2s1,o2s2,o2s3,0,0
 
 raw_pus: dc.l pu1,pu2,pu3,pu4,pu5,pu6
 testpoly: dc.w 50,50,$ffff,300,100,$8888,75,150,$2222,0
@@ -20088,6 +20199,9 @@ fire_names: dc.b "c-1",0,"v-2",0,"z-3",0,"x-4",0
 .endif
 
 option5: dc.l o5t1,o5t2,o5s10,o5s2,o3s3,0
+
+o12s1: dc.b "music       00",0
+o12s2: dc.b "sfx         00",0
 
 hscom1: dc.l 500002
 	dc.b 'yak',0
@@ -20550,6 +20664,8 @@ blist: dc.l list1
 dlist: dc.l list2
 ddlist: dc.l 0
 
+stmus: dc.w 0
+stsfx: dc.w 0
 
 .bss
 .phrase

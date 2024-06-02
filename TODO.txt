@@ -9,10 +9,12 @@
 - Add audio PARITIAL
   - Fix particle laser obnoxiously loud (DONESKI?)
   - Fix remaining unimplemented effects
-- Add sound test menu
+  - Add FADEDOWN
+- Add sound test menu (partial)
 - Fix prettypoly issue on ending screen DONESKI
 - Restore unused music (I think PC order is not so hot)
 - P2 minor adjustments (animation timers, button text, etc) PARTIAL
   - beastly mode related texts need editing
 - Investigate fixing polygon seams DONESKI?
 - Is the crosshair off-center in the Jaguar version, too?
+- Make it harder to skip end screen on accident

@@ -84,6 +84,10 @@ chloop
               ' check enablement
               testb ch_active,curch wc
         if_nc jmp #.skipch
+              ' make sure that samples triggered together start together
+              test ch_tdly_group,tran_pending wz ' Z -> group delay over
+              testbn ch_tdly_group,curch orz ' Z-> over or not part of group
+        if_nz jmp #.skipch
               ' grab pointer
               alts curch,#ch_position
               mov tmp3,0-0
@@ -93,6 +97,7 @@ chloop
         if_11 jmp #owie_ouch'.skipch
         if_z  bitnot ch_bufferflag,curch
         if_z  bitl ch_bufferadv,curch
+              bitl ch_tdly_group,curch
               ' request new block if needed
         if_z  callpa curch,#queue_tran
               ' grab sample from buffer
@@ -178,7 +183,7 @@ atn_isr
               reti1
               
 owie_ouch
-              debug("underrun!")
+              'debug("underrun!")
               jmp #chloop:skipch
 
 start_tran
@@ -371,6 +376,7 @@ ch_active     long 0
 ch_loopflag   long 0
 ch_bufferflag long 0
 ch_bufferadv  long 0
+ch_tdly_group long 0
 
 tran_pending  long 0
 tran_current  long -1
@@ -393,6 +399,10 @@ bufferbase    long @@@ex_buffers
 
 mod_thread    long mod_idle
 mod_newmodule long 0
+
+finetune_table ' I hate it here
+word $8000,$7f14,$7e2a,$7d42,$7c5b,$7b76,$7a93,$79b1,$879c,$86a3,$85ab,$84b5,$83c0,$82ce,$81dd,$80ed
+
 
 curch         res 1
 lsmp          res 1
@@ -431,7 +441,9 @@ mod_tempo res 1
 mod_rowbuffer res 4
 
 mod_volumes res 1 ' byte-packed channel volumes
+mod_emem  res 1 ' effect memory
 mod_periods res 2 ' word-packed periods
+mod_periods2 res 2 ' crusty crab 2 for portamento nonsense
 
 mod_trigit  res 4 ' dumb stupid thing
 
@@ -602,13 +614,14 @@ mod_dorow
               add mod_tran_addr,pa
               add mod_tran_addr,##1084 ' header size
               add mod_tran_addr,mod_modulebase
+              'debug(uhex_long(mod_tran_addr))
               loc pa,#@@@mod_buffer
               mov mod_tran_target,pa
               call #queue_tran_mod
 
 .rowstall     testb tran_pending,#31 wz
-        if_11 calld mod_thread,mod_thread wcz
-        if_11 jmp #.rowstall
+        if_z  calld mod_thread,mod_thread wcz
+        if_z  jmp #.rowstall
               loc pa,#@@@mod_buffer
               setq #4-1
               rdlong mod_rowbuffer,pa
@@ -619,6 +632,7 @@ mod_norow
               mov mtmp2,0-0 ' grab data from pattern
 
               ' if first tick of row, handle trigger
+              neg mtmp3,#1 ' make sure this isn't set
               tjnz mod_ticknum,#.notrig
               'tjnz mtmp1,#.notrig ' DEBUG only CH0
               ' grab sample id
@@ -632,9 +646,14 @@ mod_norow
               ' grab period
               getnib tmp2,mtmp2,#0
               rolbyte tmp2,mtmp2,#1
+              tjz tmp2,#.no_period
+              ' grab previous period for effect dumbassery
+              altgw mtmp1,#mod_periods
+              getword mtmp3
               ' set period
               altsw mtmp1,#mod_periods
               setword tmp2
+.no_period
               ' grab volume and set that
               loc pa,#@@@mod_smpinfo + 12
               mul tmp1,#16
@@ -688,30 +707,94 @@ mod_norow
               jmp #.effectdone
 
 .jump
-              jmp #.unimplemented ' TODO THIS IS BROKEN
+              'jmp #.unimplemented ' TODO THIS IS BROKEN
+              tjnz mod_ticknum,#.effectdone
+              debug("Jump! ",udec(tmp1))
               mov mod_order,tmp1
               and mod_order,#127 ' just hope it is in range for other purposes
               neg mod_row,#1 ' awful
               jmp #.effectdone
 
 .break
+              tjnz mod_ticknum,#.effectdone
+              debug("Pattern Break! ",udec(tmp1))
               mov mod_row,tmp1
               and mod_row,#63
               sub mod_row,#1
               incmod mod_order,#127
               jmp #.effectdone
 
-
-
 .porta_up
+              modc _set wc
+              skip #1
 .porta_down
+              modc _clr wc
+              tjz mod_ticknum,#.effectdone
+              altgw mtmp1,#mod_periods
+              getword pa
+              sumc pa,tmp1
+              debug("Portamento!",udec(mtmp1),udec(tmp1),uhex(pa))
+              altsw mtmp1,#mod_periods
+              setword pa
+              jmp #.effectdone
+
 .porta_tone
+              tjz mod_ticknum,#.porta_tone_init  
+
+              tjz tmp1,#.porta_tone_no_emem
+              altgb mtmp1,#mod_emem
+              getbyte tmp1
+.porta_tone_no_emem
+              altsb mtmp1,#mod_emem
+              setbyte tmp1
+
+              altgw mtmp1,#mod_periods
+              getword pa        
+              altgw mtmp1,#mod_periods2
+              getword pb            
+              debug("Tone Porta ",uhex(pa,pb,tmp1))
+              cmp pa,pb wcz
+        if_nz sumnc pa,tmp1
+        if_c  fle pa,pb
+        if_nc fge pa,pb
+              altsw mtmp1,#mod_periods
+              setword pa
+              jmp #.effectdone
+.porta_tone_init
+              ' restore original pitch and store target pitch
+              tjs mtmp3,#.effectdone
+              altgw mtmp1,#mod_periods
+              getword pa
+              altsw mtmp1,#mod_periods
+              setword mtmp3
+              altsw mtmp1,#mod_periods2
+              setword pa
+              ' kill retrigger
+              altd mtmp1,#mod_trigit
+              neg 0-0,#1
+              jmp #.effectdone
+
+
+.volslide
+              tjz mod_ticknum,#.effectdone
+              getnib pa,tmp1,#0
+              getnib pb,tmp1,#1
+              altgb mtmp1,#mod_volumes
+              getbyte tmp2
+              add tmp2,pb
+              sub tmp2,pa
+              fles tmp2,#64
+              fges tmp2,#0
+              altsb mtmp1,#mod_volumes
+              setbyte tmp2
+              jmp #.effectdone
+
+
 .vibrato
 .volslide_porta
 .volslide_vibrato
 .tremolo
 .setpan
-.volslide
 .eee
 .unimplemented
               ' NYI
@@ -735,47 +818,8 @@ mod_norow
 mod_updvoices
               ' Update all voices at once
 
-              getword pa,mod_periods,#0
-              setq #P2F_HIGH
-              qdiv p2f_low_const,pa
-              getbyte ch_volume+0,mod_volumes,#0
-
-              getword pa,mod_periods,#1
-              setq #P2F_HIGH
-              qdiv p2f_low_const,pa
-              getbyte ch_volume+1,mod_volumes,#1
-              
-              getword pa,mod_periods+1,#0
-              setq #P2F_HIGH
-              qdiv p2f_low_const,pa
-              getbyte ch_volume+2,mod_volumes,#2
-
-              getword pa,mod_periods+1,#1
-              setq #P2F_HIGH
-              qdiv p2f_low_const,pa
-              getbyte ch_volume+3,mod_volumes,#3
-
-              ' TODO: Panning
-              mul ch_volume+0,mod_globvol
-              shr ch_volume+0,#6
-              rolword ch_volume+0,ch_volume+0,#0
-              mul ch_volume+1,mod_globvol
-              shr ch_volume+1,#6
-              rolword ch_volume+1,ch_volume+1,#0
-              mul ch_volume+2,mod_globvol
-              shr ch_volume+2,#6
-              rolword ch_volume+2,ch_volume+2,#0
-              mul ch_volume+3,mod_globvol
-              shr ch_volume+3,#6
-              rolword ch_volume+3,ch_volume+3,#0
-
-              getqx ch_freq+0
-              getqx ch_freq+1
-              getqx ch_freq+2
-              getqx ch_freq+3
-
               tjs mod_trigit+0,#.notrig0
-              debug("trigger ch0")
+              'debug("trigger ch0")
               getbyte pa,mod_trigit+0,#3 ' sample id
               loc pb,#@@@mod_smpinfo
               mul pa,#16
@@ -788,10 +832,18 @@ mod_updvoices
               mov ch_position+0,tmp1
               mov ch_loopstart+0,tmp2
               mov ch_loopend+0,tmp3
-              debug(uhex_long(ch_position+0,ch_loopstart+0,ch_loopend+0))
+              mov ch_fracpos+0,#0
+              getnib pa,tmp4,#0
+              altgw pa,#finetune_table
+              getword pa
+              mul pa,mod_periods+0 ' can grab low word directly
+              shr pa,#15
+              setword mod_periods+0,pa,#0
+              'debug(uhex_long(ch_position+0,ch_loopstart+0,ch_loopend+0))
               ' Volume/finetune already set earlier?
               bith ch_active,#0
               bith ch_bufferadv,#0
+              bith ch_tdly_group,#0
               testb tmp4,#16 wc
               bitc ch_loopflag,#0
               mov pa,#0
@@ -801,7 +853,7 @@ mod_updvoices
 
 
               tjs mod_trigit+1,#.notrig1
-              debug("trigger ch1")
+              'debug("trigger ch1")
               getbyte pa,mod_trigit+1,#3 ' sample id
               loc pb,#@@@mod_smpinfo
               mul pa,#16
@@ -814,9 +866,18 @@ mod_updvoices
               mov ch_position+1,tmp1
               mov ch_loopstart+1,tmp2
               mov ch_loopend+1,tmp3
+              mov ch_fracpos+1,#0
+              getnib pa,tmp4,#0
+              altgw pa,#finetune_table
+              getword pa
+              getword pb,mod_periods+0,#1
+              mul pa,pb
+              shr pa,#15
+              setword mod_periods+0,pa,#1
               ' Volume/finetune already set earlier?
               bith ch_active,#1
               bith ch_bufferadv,#1
+              bith ch_tdly_group,#1
               testb tmp4,#16 wc
               bitc ch_loopflag,#1
               mov pa,#1
@@ -825,7 +886,7 @@ mod_updvoices
 .notrig1
 
               tjs mod_trigit+2,#.notrig2
-              debug("trigger ch2")
+              'debug("trigger ch2")
               getbyte pa,mod_trigit+2,#3 ' sample id
               loc pb,#@@@mod_smpinfo
               mul pa,#16
@@ -838,9 +899,17 @@ mod_updvoices
               mov ch_position+2,tmp1
               mov ch_loopstart+2,tmp2
               mov ch_loopend+2,tmp3
+              mov ch_fracpos+2,#0
+              getnib pa,tmp4,#0
+              altgw pa,#finetune_table
+              getword pa
+              mul pa,mod_periods+1 ' can grab low word directly
+              shr pa,#15
+              setword mod_periods+1,pa,#0
               ' Volume/finetune already set earlier?
               bith ch_active,#2
               bith ch_bufferadv,#2
+              bith ch_tdly_group,#2
               testb tmp4,#16 wc
               bitc ch_loopflag,#2
               mov pa,#2
@@ -849,7 +918,7 @@ mod_updvoices
 .notrig2
 
               tjs mod_trigit+3,#.notrig3
-              debug("trigger ch3")
+              'debug("trigger ch3")
               getbyte pa,mod_trigit+3,#3 ' sample id
               loc pb,#@@@mod_smpinfo
               mul pa,#16
@@ -862,15 +931,74 @@ mod_updvoices
               mov ch_position+3,tmp1
               mov ch_loopstart+3,tmp2
               mov ch_loopend+3,tmp3
+              mov ch_fracpos+3,#0
+              getnib pa,tmp4,#0
+              altgw pa,#finetune_table
+              getword pa
+              getword pb,mod_periods+1,#1
+              mul pa,pb
+              shr pa,#15
+              setword mod_periods+1,pa,#1
               ' Volume/finetune already set earlier?
               bith ch_active,#3
               bith ch_bufferadv,#3
+              bith ch_tdly_group,#3
               testb tmp4,#16 wc
               bitc ch_loopflag,#3
               mov pa,#3
               call #queue_tran
               neg mod_trigit+3,#1
 .notrig3
+              rep @.irqprotect,#1
+              getword pa,mod_periods,#0
+              setq #P2F_HIGH
+              qdiv p2f_low_const,pa
+              getbyte tmp1,mod_volumes,#0
+
+              getword pa,mod_periods,#1
+              setq #P2F_HIGH
+              qdiv p2f_low_const,pa
+              getbyte tmp2,mod_volumes,#1
+              
+              getword pa,mod_periods+1,#0
+              setq #P2F_HIGH
+              qdiv p2f_low_const,pa
+              getbyte tmp3,mod_volumes,#2
+
+              getword pa,mod_periods+1,#1
+              setq #P2F_HIGH
+              qdiv p2f_low_const,pa
+              getbyte tmp4,mod_volumes,#3
+
+              mul tmp1,mod_globvol
+              shr tmp1,#6
+              setword ch_volume+0,tmp1,#0
+              shr tmp1,#1
+              setword ch_volume+0,tmp1,#1
+
+              mul tmp2,mod_globvol
+              shr tmp2,#6
+              setword ch_volume+1,tmp2,#1
+              shr tmp2,#1
+              setword ch_volume+1,tmp2,#0
+
+              getqx ch_freq+0
+              getqx ch_freq+1
+              getqx ch_freq+2
+              getqx ch_freq+3
+.irqprotect
+              mul tmp3,mod_globvol
+              shr tmp3,#6
+              setword ch_volume+2,tmp3,#1
+              shr tmp3,#1
+              setword ch_volume+2,tmp3,#0
+
+              mul tmp4,mod_globvol
+              shr tmp4,#6
+              setword ch_volume+3,tmp4,#0
+              shr tmp4,#1
+              setword ch_volume+3,tmp4,#1
+
               'bitl ch_active,#0
               'bitl ch_active,#1
               'bitl ch_active,#2
