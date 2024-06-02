@@ -215,12 +215,12 @@ samtab:
 .dc.w 31, 512 ; prio, period
 .dc.l smp30, 2048 ; start, len
 .dc.l smp30, 0 ; repstart, replen
+max_sfxnum equ (*-samtab)/40 - 1
 .dc.b "dummy               "
 .dc.w 32, 512 ; prio, period
 .dc.l smp15_dummy, 10606592 ; start, len
 .dc.l smp15_dummy, 0 ; repstart, replen
 
-max_sfxnum equ (*-samtab)/40 - 1
 ; do we need this?
 ;.dc.b $02, $02, $FE, $0D, $04, $04, $0B, $00, $FB, $00, $0C, $FF, $FF, $07, $08, $F9, $01, $05, $F2, $FE, $0F, $17, $0D, $13, $0B, $02, $05, $FB, $F1, $E7, $FB, $0A, $0E, $1E, $13, $06, $FB, $F0, $EF, $EE
 

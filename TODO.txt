@@ -10,7 +10,7 @@
   - Fix particle laser obnoxiously loud (DONESKI?)
   - Fix remaining unimplemented effects
   - Add FADEDOWN
-- Add sound test menu (partial)
+- Add sound test menu DONESKI
 - Fix prettypoly issue on ending screen DONESKI
 - Restore unused music (I think PC order is not so hot)
 - P2 minor adjustments (animation timers, button text, etc) PARTIAL

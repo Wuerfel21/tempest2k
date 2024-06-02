@@ -2383,8 +2383,8 @@ firsend: jmp eepromsave
 
 soundtest:
 	clr auto ; need this for music change to work...
-	move.w #05,stmus
-	move.w #34,stsfx
+	move.w #01,stmus
+	move.w #01,stsfx
 	move.l #option12,the_option
 	move #-1,blanka
 	move #2,selectable
@@ -2392,18 +2392,30 @@ soundtest:
 	bsr stsetnum
 .lp:	bsr do_choose
 	tst z
-	bne fago
+	bne.s .quit
 	cmp #2,selected
-	beq fago
+	beq.s .quit
 	cmp #1,selected
-	bne .chkmus
+	bne.s .chkmus
+	; Do SFX
+	jsr kill_all_sfx
+	move stsfx,sfx
+	move #1,sfx_pri
+	jsr fox
+	bra .lp
 .chkmus:
 	cmp #0,selected
 	bne .lp
+	; Do music
+	tst.w modnum
+	bmi .lp ; don't allow it while still fading
 	move.w stmus,modnum ; request tune from music system
-	bne.s .lp
+	bne .lp
 	jsr FADEDOWN ; zero means fade it out
-	bra.s .lp
+	bra .lp
+.quit:
+	jsr kill_all_sfx
+	bra fago
 
 stsetnum:
 	move.w stmus,d0
@@ -2711,6 +2723,8 @@ xsel1:	move #-1,blanka
 do_choose: move.l #oselector,routine
 	clr.l rot_cum
 	bsr attract
+	cmp.l #option12,the_option
+	beq rrrts
 	move #27,sfx
 	move #101,sfx_pri
 	jmp fox
