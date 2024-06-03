@@ -17170,7 +17170,7 @@ sclaws: dc.l sclaw0,sclaw1,sclaw2,sclaw3,sclaw4,sclaw5,sclaw6,sclaw7
 
 .phrase
 
-webtunes: dc.b 5,2,6,7,5,2,6,7
+webtunes: dc.b 5,2,6,7,5,2,6,7 ; T2K mode only plays up to 7th (99 level limit)
 
 testskore: dc.b 0,0,6,0,5,0,0,1
 
@@ -19040,7 +19040,12 @@ autom1: dc.b "demo",0
 autom2: dc.b "press FIRE to play",0
 premes1: dc.b "PRESS c FOR MORE, a TO QUIT",0
 premes2: dc.b "PRESS any fire button TO QUIT",0
+.if ^^defined JAGUAR
 optmsg: dc.b "PRESS option FOR GAME OPTIONS",0
+.endif
+.if ^^defined PROPELLER
+optmsg: dc.b "PRESS tab,select FOR OPTIONS",0
+.endif
 
 
 bftest: dc.b "llama love",0
@@ -19133,7 +19138,12 @@ o10s3: dc.b "best of five",0
 
 o12t2: dc.b "play some tunes",0
 
+.if ^^defined JAGUAR
 bstymsg: dc.b "PRESS option FOR BEASTLY MODE!",0
+.endif
+.if ^^defined PROPELLER
+bstymsg: dc.b "HIT tab,select FOR BEASTLY MODE!",0
+.endif
 
 o9t1: dc.b "keys are available",0
 o9t2: dc.b "please choose",0
