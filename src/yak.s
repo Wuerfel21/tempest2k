@@ -20015,7 +20015,7 @@ dc.l ps_screen2
  dc.b "a  ",0,"b  ",0,"c  ",0
 .endif
 .if ^^defined PROPELLER
- dc.b "c-1",0,"v-2",0,"z-3",0,"x-4",0
+ dc.b "c-1",0,"v-2",0,"x-3",0,"z-4",0
 .endif
 
  dc.l o5t1,o5t2,o5s10,o5s2,o3s3,0
@@ -20058,8 +20058,8 @@ defaults: dc.l 500017		;0	-eeprom position
 .endif
 .if ^^defined PROPELLER
  	dc.w 0			;108
-	dc.w 2			;110
-	dc.w 3			;112
+	dc.w 3			;110
+	dc.w 2			;112
 .endif
 	dc.w $0100		;114
 
@@ -20209,7 +20209,7 @@ o4s3: dc.b "superzapper c",0,0,0
 fire_names: dc.b "a  ",0,"b  ",0,"c  ",0
 .endif
 .if ^^defined PROPELLER
-fire_names: dc.b "c-1",0,"v-2",0,"z-3",0,"x-4",0
+fire_names: dc.b "c-1",0,"v-2",0,"x-3",0,"z-4",0
 .endif
 
 option5: dc.l o5t1,o5t2,o5s10,o5s2,o3s3,0

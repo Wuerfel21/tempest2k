@@ -48,6 +48,8 @@ case mode
 
 case mode
   MODE_HDMI: ' do nothing
+  MODE_VGA5X: ' apply awful 384*240 hack
+    h40_command.word[0] := 384
   other: vbptr += 32*4
 
 clkset(computeClockMode(long[modeptr]),long[modeptr])
@@ -366,34 +368,34 @@ long    $00_00_5A_00 ' CQ
 long    $00_00_00_00 ' CQ XORlternate value
 long    0 ' CFRQ
 
-'' We have reached VGA nirvana
+'' Should be 1920x1200
 vga5x_config
 long VIDEO_CLKFREQ
 ' Timing
 long    5 - 1 ' line multiplier minus one
-long    32 ' native front porch lines
-long    8 ' native sync lines
-long    80 ' native back porch lines
-long    round(2147483648.0/10.76) ' Sync NCO value
-long    round(2147483648.0/10.76) ' H40 NCO value
-long    round(2147483648.0/10.76*256.0/320.0) ' H32 NCO value
+long    3 ' native front porch lines
+long    6 ' native sync lines
+long    26 ' native back porch lines
+long    round(2147483648.0/float(VIDEO_CLKFREQ)*154_000_000.0/5.0)*5 ' Sync NCO value
+long    round(2147483648.0/float(VIDEO_CLKFREQ)*154_000_000.0/5.0) ' H40 NCO value
+long    round(2147483648.0/float(VIDEO_CLKFREQ)*154_000_000.0/5.0*256.0/320.0) ' H32 NCO value
 long    %00 ' blanking color
 
-long    X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 320 ' blank line
+long    X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 384*5 ' blank line
 long    0 ' extra pillar
 
-long    X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 8,$00  ' HSync section 1 (front porch)
-long    X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 48,$01 ' HSync section 2 (sync pulse)
-long    X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 24,$00 ' HSync section 3 (back porch)
+long    X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 48,$00  ' HSync section 1 (front porch)
+long    X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 32,$01 ' HSync section 2 (sync pulse)
+long    X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 80,$00 ' HSync section 3 (back porch)
 long                         0,0 ' HSync padding 4
 long                         0,0 ' HSync padding 5
 long                         0,0 ' HSync padding 6
 long                         0,0 ' HSync padding 7
 long                         0,0 ' HSync padding 8
 
-long    X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 8,$00  ' VSync section 1 (front porch)
-long   X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 48,$01  ' VSync section 2 (sync pulse)
-long   X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 24 + 320,$00 ' VSync section 3 (back porch + active)
+long   X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 48,$00  ' VSync section 1 (front porch)
+long   X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 32,$01  ' VSync section 2 (sync pulse)
+long   X_DACS_3_2_1_0|X_IMM_1X32_4DAC8 + 80 + 384*5,$00 ' VSync section 3 (back porch + active)
 long                         0,0 ' VSync padding 4
 long                         0,0 ' VSync padding 5
 long                         0,0 ' VSync padding 6
@@ -589,6 +591,15 @@ entry
               setcq cq_val
               setcfrq cfrq_val
 
+              mov pb,line_multiplier
+              add pb,#1
+              mov pa,fp_lines
+              add pa,sync_lines
+              add pa,bp_lines
+              qdiv pa,pb
+              getqx vline_start
+              sub vline_start,#VDPR_OFFSET
+
 
               setxfrq pixelnco_sync
               cmps dotclk_pin,#0 wc
@@ -610,7 +621,8 @@ do_frame
 }
 
               '' Do blanking/sync
-              neg virtual_line,#24+1-VDPR_OFFSET
+              'neg virtual_line,#24+1-VDPR_OFFSET
+              neg virtual_line,vline_start
               mov subline,line_multiplier
               ' do front porch
               mov tmp1,fp_lines
@@ -627,7 +639,7 @@ do_frame
         if_ae drvl discrete_vsync
 .sync
               setq pixelnco_sync
-              xcont vsync_sequence_buffer+0,vsync_sequence_buffer+1
+              xzero vsync_sequence_buffer+0,vsync_sequence_buffer+1
               xcont vsync_sequence_buffer+2,vsync_sequence_buffer+3
               call #blanking_vline_update
               xcont vsync_sequence_buffer+4,vsync_sequence_buffer+5
@@ -919,6 +931,7 @@ halflines     res 1
 dither0       res 1
 dither1       res 1
 
+vline_start     res 1
 
 ' Loaded from mode struct
 mode_start
