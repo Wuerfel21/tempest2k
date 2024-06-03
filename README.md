@@ -36,9 +36,9 @@ cd ..
 
 WARNING: dependencies aren't properly set up, run `make clean` if you changed any code
 
-To build the native P2 executable `t2000p2.binary`
+To build the native P2 executable `t2000p2.bix`
 ```sh
-make t2000p2.binary
+make t2000p2.bix
 ```
 
 To build the asset/6800 file `t2000p2.dat`
