@@ -7,7 +7,7 @@
 - Add highscore entry effect DONESKI
 - Fix color of volume change box  DONESKI
 - Add audio PARITIAL
-  - Fix particle laser obnoxiously loud (DONESKI?)
+  - Fix particle laser obnoxiously loud DONESKI
   - Fix remaining unimplemented effects
   - Add FADEDOWN
 - Add sound test menu DONESKI
@@ -18,3 +18,5 @@
 - Investigate fixing polygon seams DONESKI?
 - Is the crosshair off-center in the Jaguar version, too?
 - Make it harder to skip end screen on accident
+- Rethink default controls
+- Fix 1-frame glitch on warp stage complete

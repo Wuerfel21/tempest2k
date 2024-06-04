@@ -141,6 +141,7 @@ FIX_FLIPPER_LOD_COLOR equ 1
 	screen1 equ page2	;a 16bit screen 384x200 at start of DRAM bank 1
 	screen2 equ screen1+screensize	;same again
 	screen3 equ $50000
+	ps_screen3 equ screen3
 	;screen4 equ screen1+$16800	;a 256-colour screensworth
 	rmwcursor equ screen2+screensize	;to make a RMW object, size is 48x30 16-bit pixels,
 	scoreimj equ rmwcursor+$b40
@@ -161,7 +162,6 @@ FIX_FLIPPER_LOD_COLOR equ 1
 	ps_screen2 equ $80430000	;same again
 	ps_screen3 equ $80460000
 	ps_tmpscreen equ $80490000 ; used for certain stupid purposes
-	screen3 equ ps_screen3
 	scoreimj equ ps_screen3+$b40 ; P2 TODO I think this needs to be in RAM
 	trailbuf equ $17C00 ; should have 512 bytes
 	;screen4 equ $804C0000	;a 256-colour screensworth
@@ -464,7 +464,7 @@ slopt:	clr palside
 notpal1: rts
 
 
-h2hover: move.l #screen3,a0
+h2hover: move.l #ps_screen3,a0 ; TODO check this again
 	move.l gpu_screen,a1
 	move #0,d0
 	move #0,d1
@@ -482,9 +482,19 @@ h2hover: move.l #screen3,a0
 	bra rreset
 
 nxtround: clr sync
+.if ^^defined JAGUAR
  	move.l #screen3,a0
 	move.l a0,gpu_screen
 	jsr clrscreen
+.endif
+.if ^^defined PROPELLER
+	move.l #hub_screen,a0
+	move.l a0,gpu_screen
+	move.l #MIKOGPU_CLEAR,GPU_MAILBOX
+.clrwait:
+	tst.l GPU_MAILBOX
+	bne .clrwait
+.endif	
 	move p1wins,d0
 	add.b #'0',d0
 	move.b d0,rndmsg+11
@@ -519,7 +529,17 @@ zaqw: move.b d2,wonmsg+7		;set who won...
 	lea afont,a1
 	move #110,d0
 	jsr centext			;display it
-	
+.if ^^defined PROPELLER
+	; upload screen3
+	move.l #hub_screen,a0
+	move.l #ps_screen3,a1
+	move.l #screensize,d0
+	dc.w MIKO68K_BURSTCOPY
+	move.l #MIKOGPU_CLEAR,GPU_MAILBOX
+.clrwait2:
+	tst.l GPU_MAILBOX
+	bne .clrwait2
+.endif
 
 raww:	jsr settrue3
 	move #1,mfudj
@@ -861,7 +881,7 @@ setauto: clr z
 	add #7,d0
 	move d0,cwave
 	move d0,cweb
-	move.l #screen3,a0
+	move.l #ps_screen3,a0
 	jsr clrscreen
 	bra lvlset
 
@@ -965,7 +985,7 @@ nbmsg:	lea cfont,a1
 .endif
 
  	lea beasties+64,a0
-	move.l #screen3,d2
+	move.l #ps_screen3,d2
 	move #SIDE,d0
 	sub palside,d0
 	move #TOP,d1
@@ -1297,7 +1317,7 @@ fxsel:
 settrue3:
 	move #TOP,d1
 settrue33: lea beasties+64,a0
-	move.l #screen3,d2
+	move.l #ps_screen3,d2
 	move #SIDE,d0
 	sub palside,d0
 	swap d0
@@ -3305,7 +3325,7 @@ dingy: add #$10,d0
 	add #4,cweb			;Warp 4 levels
 	movem.l d0-d7/a0-a6,-(a7)
 	move.l gpu_screen,-(a7)
-	move.l #screen3,a0
+	move.l #ps_screen3,a0
 	clr d0
 	move #64,d1
 	move #384,d2
@@ -3321,6 +3341,8 @@ dingy: add #$10,d0
 	jsr centext		;display msg 'Warp 5 Levels'
 .endif
 .if ^^defined PROPELLER
+	; TODO use the small hub buffer instead (like warp triangles)
+	; because this is bugged
 	; copy part of current GPU screen to tmp screen because ughhhh
 	move.l #hub_screen,a0
 	move.l #ps_tmpscreen,a1
@@ -3349,7 +3371,7 @@ dingy: add #$10,d0
 .endif
 
  	lea beasties+128,a0
-	move.l #screen3+(768*64),d2
+	move.l #ps_screen3+(768*64),d2
 	move #SIDE,d0
 	sub palside,d0
 	move #TOP+202+180,d1
@@ -3608,7 +3630,7 @@ ddonki:	jmp donki
 
 
 
-nxtpage: move.l #screen3,gpu_screen
+nxtpage: move.l #ps_screen3,gpu_screen
 	jsr clearscreen
 	move #40,d0
 	move #20,d1
@@ -3761,7 +3783,7 @@ m7go:	move.l #$200,yespitch
 	move.l #$80000,iycon
 	move.l #$80000,iycon+4
 
-	move.l #screen3,a0
+	move.l #ps_screen3,a0
  	clr d0
 	move #64,d1
 	move #384,d2
@@ -3770,7 +3792,7 @@ m7go:	move.l #$200,yespitch
 	jsr BlitBlock
 	jsr clearscreen
  	lea beasties+128,a0
-	move.l #screen3+(768*64),d2
+	move.l #ps_screen3+(768*64),d2
 	move #SIDE,d0
 	sub palside,d0
 	move #TOP+202,d1
@@ -3792,7 +3814,7 @@ nopalll: swap d0
 	move #172,d4
 	move #64,d5
 	move.l #pic2,a0
-	move.l #screen3,a1
+	move.l #ps_screen3,a1
 	jsr CopyBlock
 
 
@@ -3818,7 +3840,7 @@ nopalll: swap d0
 	tst x_end
 	bmi rrrts		;return -1 means we failed
 
-	move.l #screen3,a0
+	move.l #ps_screen3,a0
 	clr d0
 	move #64,d1
 	move #384,d2
@@ -3871,7 +3893,7 @@ nopalll: swap d0
 	add #4,cweb	
 
  	lea beasties+128,a0
-	move.l #screen3+(768*64),d2
+	move.l #ps_screen3+(768*64),d2
 	move #SIDE,d0
 	sub palside,d0
 	move #TOP+202+180,d1
@@ -4182,7 +4204,7 @@ fade:
 
 	tst beasties+76
 	bmi ofade
-	move.l #screen3,a0
+	move.l #ps_screen3,a0
 	move.l gpu_screen,a1
 	moveq #0,d0
 	moveq #0,d1
@@ -4218,7 +4240,7 @@ ofade:
 	move z,-(a7)
 	clr z
 	bsr gogame
-	move.l #screen3,a0
+	move.l #ps_screen3,a0
 	jsr clrscreen
 	move (a7)+,z
 ;	move #-1,db_on
@@ -7479,10 +7501,10 @@ zarka:	bsr setlives
 h2hin:	bsr h2hclaws
 
 	move.l gpu_screen,-(a7)
-	move.l #screen3,gpu_screen
+	move.l #ps_screen3,gpu_screen
 	jsr clearscreen
  	lea beasties+64,a0
-	move.l #screen3,d2
+	move.l #ps_screen3,d2
 	move #SIDE,d0
 	sub palside,d0
 	move #TOP,d1
@@ -7546,7 +7568,7 @@ h2hin:	bsr h2hclaws
 stdinit:
 
  	lea beasties+64,a0
-	move.l #screen3,d2
+	move.l #ps_screen3,d2
 	move #SIDE,d0
 	sub palside,d0
 	move #TOP,d1
@@ -7878,7 +7900,7 @@ sweb0:	move.l #rrts,routine
 wwoo: 	tst warpy
 	bpl swip1
 	move #2,warpy
-	move.l #screen3,a0
+	move.l #ps_screen3,a0
 	move #192,d0			;Clear screen a0
 	clr d1	
 	move #192,d2
@@ -14764,7 +14786,7 @@ noo_wb: move.l activeobjects,a6
 	bsr draw2polyos
 	bsr drawmsg
 
-	lea screen3,a0		;source screen for any score u/d xfers
+	lea ps_screen3,a0		;source screen for any score u/d xfers
 	move.l a0,a1
 	tst r_ud
 	beq nudl
@@ -16215,7 +16237,7 @@ showscore: tst show_warpy
 shoscc: tst ud_score
 	beq rrts
 ashowscore: clr ud_score		;fall thru to set lives display if requested
- 	lea screen3,a1
+	lea ps_screen3,a1
 	lea pic2,a0			;source/dest screens
 
 	move.l score,a2
@@ -16247,7 +16269,12 @@ setlives: move #148,d0
 	move #17,d3
 	move #30,d5
 	move #48,d4
+.if ^^defined JAGUAR
 	lea screen3,a1
+.endif
+.if ^^defined PROPELLER
+	lea ps_screen3,a1
+.endif
 	lea pic2,a0
 	move lives,d6
 	sub #1,d6
