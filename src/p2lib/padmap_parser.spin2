@@ -39,7 +39,7 @@ PUB parse(buffer_ptr,buffer_max,get_function,get_argument,appname)
     else
       unget()
 
-PRI {opt(spin-strict-memory)} parse_rule(buffer_ptr,buffer_max,appname) : r | tmp, chr, i, devid, byte rule_type, byte buttons[MAX_BUTTONS]
+PRI {++opt(spin-relax-memory)} parse_rule(buffer_ptr,buffer_max,appname) : r | tmp, chr, i, devid, byte rule_type, byte buttons[MAX_BUTTONS]
 
   skip_whitespace()
   ' Check for generic rule
