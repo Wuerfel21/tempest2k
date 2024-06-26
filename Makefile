@@ -2,7 +2,7 @@
 
 all: clean cartridge
 
-t2000.abs: 
+t2000.abs: src/*.s
 	$(shell mkdir -p bin)
 	./rmac/rmac -fr -mtom -isrc src/donky.gas -o bin/donky.o
 	./rmac/rmac -fr -mtom -isrc src/camel.gas -o bin/camel.o
@@ -21,7 +21,7 @@ t2000.abs:
 	./rln/rln -m -v -e -a 802000 4000 efa8 bin/yak.cof bin/eeprim.cof bin/vidinit.cof bin/yakgpu.cof bin/images_sounds.o -o t2000.abs
 #	echo "515c0e0fcfe9a96d24c858968c3bad72  t2000.abs" | md5sum -c
 
-t2000p2.dat:
+t2000p2.dat: src/*.s
 	$(shell mkdir -p bin_p2)
 	./rmac/rmac -l*yak.lst -fb -isrc -DPROPELLER src/yak.s -o bin_p2/yak.cof
 	./rmac/rmac -fb -isrc src/vidinit_stub.s -o bin_p2/vidinit_stub.cof
@@ -29,7 +29,7 @@ t2000p2.dat:
 	./rmac/rmac -fb -Isrc src/images_sounds.s -o bin_p2/images_sounds.o
 	./rln/rln -v -n -a 80000000 2000 r bin_p2/yak.cof bin_p2/vidinit_stub.cof bin_p2/stubsound.cof bin_p2/images_sounds.o -o t2000p2.dat
 	
-t2000p2.bix:
+t2000p2.bix: src/*.spin2
 	./spin2cpp/build/flexspin -2 -H 0x50000 --compress src/t2000p2.spin2 -l -o t2000p2.bix
 
 
