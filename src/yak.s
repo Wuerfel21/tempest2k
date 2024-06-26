@@ -25,11 +25,11 @@ FIX_FLIPPER_LOD_COLOR equ 1
 ;	.globl DISABLETIMER
 
 .if ^^defined PROPELLER
-	.extern INIT_SOUND	
-	.extern NT_VBL		
-	.extern PT_MOD_INIT	
-	.extern START_MOD	
-	.extern STOP_MOD	
+	;.extern INIT_SOUND	
+	;.extern NT_VBL		
+	;.extern PT_MOD_INIT	
+	;.extern START_MOD	
+	;.extern STOP_MOD	
 	;.extern PLAYFX2		
 	;.extern CHANGE_VOLUME
 	;.extern SET_VOLUME	
@@ -234,7 +234,9 @@ cram:	clr.l (a0)+
 	move #3,joby
 	move #15,t2k_max
 	move #15,trad_max
+.if ^^defined JAGUAR
 	jsr INIT_SOUND		;NEW Synth module
+.endif
 	clr.l d0
 	move #1,d1
 	jsr SET_VOLUME
@@ -12534,7 +12536,9 @@ no_db:
 	clr tuntime	
 dtoon:	tst modstop
 	bne ntoon
+.if ^^defined JAGUAR
 	jsr NT_VBL
+.endif
 ntoon:
 
 
@@ -17031,11 +17035,12 @@ playtune: jsr STOP_MOD
 	jmp START_MOD
 .endif
 .if ^^defined PROPELLER
-.prewait:
 	move.b vols,d0
 	;and.l #$ff,d0
 	clr d1
 	jsr SET_VOLUME
+playtune_a0:
+.prewait:
 	tst.l DSP_MAILBOX
 	bne .prewait
 	move.l a0,DSP_MAILBOX+4
@@ -17060,13 +17065,17 @@ SET_VOLUME:
 .nope:
 	rts
 
-
 FADEDOWN:
 .prewait:
 	tst.l DSP_MAILBOX
 	bne .prewait
 	move.l #$82000000,DSP_MAILBOX
 	rts
+
+STOP_MOD:
+	move.l #-1,a0
+	bra playtune_a0
+
 .endif
 
 
