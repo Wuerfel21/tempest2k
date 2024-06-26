@@ -8,6 +8,8 @@ CON
 SAMPLE_RATE = 44_100
 MAX_CHANNELS = 16
 
+FADE_SPEED = SAMPLE_RATE/100 ' higher is slower
+
 ' Hardcoded for 44100Hz (3546895<<32)/44100)
 P2F_HIGH = $50
 P2F_LOW = $6daf6d3f
@@ -234,6 +236,8 @@ handle_mailbox
         if_z  jmp #.modload
               cmp tmp1,#$81 wz
         if_z  jmp #.modvolume
+              cmp tmp1,#$82 wz
+        if_z  jmp #.modfade
 .drop_cmd
         _ret_ wrlong #0,#DSP_MAILBOX
 .trigger_sfx
@@ -368,8 +372,11 @@ handle_mailbox
         _ret_ wrlong #0,#DSP_MAILBOX
 .modvolume
               getword mod_globvol,tmp3,#0
+              mov mod_fadeflag,#0
         _ret_ wrlong #0,#DSP_MAILBOX
-
+.modfade
+              mov mod_fadeflag,#FADE_SPEED
+        _ret_ wrlong #0,#DSP_MAILBOX
 
 
 ch_active     long 0
@@ -390,6 +397,7 @@ clamp_max     long +$7FFF
 p2f_low_const long P2F_LOW
 
 mod_globvol   long $03FF
+mod_fadeflag  long 0
 
 exmem_mailbox long 0
 lpin          long 0
@@ -586,6 +594,14 @@ mod_loadmodule
 mod_run
               calld mod_thread,mod_thread wcz
               tjnz mod_newmodule,#mod_loadmodule
+
+              ' Handle fader
+              cmpsub mod_fadeflag,#1 wcz
+        if_11 mov mod_fadeflag,#FADE_SPEED
+        if_11 sca mod_globvol,##$EEEE
+              mov mod_globvol,mod_globvol wz
+        if_z  mov mod_fadeflag,#0
+
               cmpsub mod_ticktimer,##SAMPLE_RATE/50 wc
         if_c  jmp #mod_dotick
               call #handle_mailbox

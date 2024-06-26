@@ -33,9 +33,9 @@ FIX_FLIPPER_LOD_COLOR equ 1
 	;.extern PLAYFX2		
 	;.extern CHANGE_VOLUME
 	;.extern SET_VOLUME	
-	.extern NOFADE		
+	;.extern NOFADE		
 	;.extern FADEUP		
-	.extern FADEDOWN	
+	;.extern FADEDOWN	
 	.extern ENABLE_FX	
 	.extern DISABLE_FX	
 	;.extern CHANGEFX	
@@ -17058,6 +17058,14 @@ SET_VOLUME:
 	bne .prewait
 	move.l d0,DSP_MAILBOX
 .nope:
+	rts
+
+
+FADEDOWN:
+.prewait:
+	tst.l DSP_MAILBOX
+	bne .prewait
+	move.l #$82000000,DSP_MAILBOX
 	rts
 .endif
 
