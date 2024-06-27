@@ -1559,7 +1559,7 @@ ovl_fastvector
               sar r4,#shift1
               sub r4,r0 ' now it is the length of the x difference between the two points
               muls r4,r2 ' multiply by legal z size
-              mov r5,r4 wc ' save the sign
+              abs r5,r4 wc ' save the sign
 
               qdiv r5,r3 ' make the new unsigned x vector size
               mov x1_n,r6

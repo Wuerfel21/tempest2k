@@ -1,6 +1,6 @@
 - Fix warp token drawing DONESKI
 - Fix FB obj logic DONESKI
-- Investigate fastvector line clipping
+- Investigate fastvector line clipping YES YES YES YES YES
 - Investigate "E" issue on highscores DONESKI
 - Add screen FB effects DONESKI
 - Add superzapper lightning DONESKI
