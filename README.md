@@ -34,14 +34,14 @@ cd ..
 
 ### Build Tempest 2000
 
-WARNING: dependencies aren't properly set up, run `make clean` if you changed any code
+WARNING: dependencies aren't all properly set up, run `make clean` if in doubt
 
 To build the native P2 executable `t2000p2.bix`
 ```sh
 make t2000p2.bix
 ```
 
-To build the asset/6800 file `t2000p2.dat`
+To build the asset/68000 file `t2000p2.dat`
 ```sh
 make t2000p2.dat
 ```
