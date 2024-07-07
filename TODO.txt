@@ -1,22 +1,10 @@
-- Fix warp token drawing DONESKI
-- Fix FB obj logic DONESKI
-- Investigate fastvector line clipping YES YES YES YES YES
-- Investigate "E" issue on highscores DONESKI
-- Add screen FB effects DONESKI
-- Add superzapper lightning DONESKI
-- Add highscore entry effect DONESKI
-- Fix color of volume change box  DONESKI
 - Add audio PARITIAL
-  - Fix particle laser obnoxiously loud DONESKI
-  - Fix remaining unimplemented effects
-  - Add FADEDOWN DONESKI
-- Add sound test menu DONESKI
-- Fix prettypoly issue on ending screen DONESKI
+  - Fix remaining unimplemented effects (only affects tune6.mod ??? (soundtest 12 !))
 - Restore unused music (I think PC order is not so hot)
 - P2 minor adjustments (animation timers, button text, etc) PARTIAL
   - beastly mode related texts need editing
-- Investigate fixing polygon seams DONESKI?
 - Is the crosshair off-center in the Jaguar version, too?
 - Make it harder to skip end screen on accident
-- Rethink default controls
+- Rethink default controls (?)
+  - Maybe add option to use shoulder buttons
 - Fix 1-frame glitch on warp stage complete
