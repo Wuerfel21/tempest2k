@@ -16,7 +16,7 @@ PSRAM_BASE = 32
 PSRAM_BANKS = 2
 
 PSRAM_DELAY = 17
-PSRAM_SYNC_CLOCK = false
+PSRAM_SYNC_CLOCK = true
 PSRAM_SYNC_DATA = false
 
 ' \/ Uncomment for lameness
