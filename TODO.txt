@@ -1,7 +1,7 @@
 Before release:
 - Add option to use shoulder buttons DONESKI
-- Grab screenshots
-- Clean up p2config file
+- Grab screenshots DONESKI
+- Clean up p2config file DONESKI
 
 later:
 - Rethink default controls (?)
