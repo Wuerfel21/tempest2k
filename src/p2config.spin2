@@ -9,21 +9,6 @@ CON
 '#define USE_HYPER
 
 ' For PSRAM (either type)
-{
-PSRAM_CLK = 8 addpins 1
-PSRAM_SELECT = 10
-PSRAM_BASE = 0
-PSRAM_BANKS = 6
-
-'PSRAM_WAIT  = 5
-PSRAM_DELAY = 18
-PSRAM_SYNC_CLOCK = true
-PSRAM_SYNC_DATA = false
-
-' Uncomment for slower memory clock
-#define USE_PSRAM_SLOW
-}
-
 PSRAM_CLK = 56
 PSRAM_SELECT = 57
 PSRAM_BASE = 40
@@ -51,8 +36,8 @@ HYPER_SYNC_CLOCK = false
 HYPER_SYNC_DATA = false
 HYPER_BANKS = 1
 
-'#define FS_SDCARD
-#define FS_9P
+#define FS_SDCARD
+'#define FS_9P
 '#define FS_FLASH
 
 SDCARD_CLK = 61
@@ -69,7 +54,7 @@ VGA_VSYNC   = VGA_BASEPIN + 4
 '}
 
 {
-VIDEO_MODE = vconst.MODE_COMPOSITE
+VIDEO_MODE = vconst.MODE_SVIDEO
 VIDEO_SUBMODE = vconst.SUBMODE_NTSC
 
 VGA_BASEPIN = 24
@@ -93,9 +78,8 @@ VGA_VSYNC = (8<<0) + (9<<8) + (10<<16) + (11<<24)
 AUDIO_LEFT  = 24+6
 AUDIO_RIGHT = AUDIO_LEFT + 1
 
-'' Uncomment ONLY ONE of the below
+'' Only input option currently supported
 #define INPUT_USE_USB
-'#define INPUT_USE_PINS
 
 
 '' USB Keyboard/gamepad pins.
