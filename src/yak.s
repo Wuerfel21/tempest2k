@@ -17214,7 +17214,7 @@ sclaws: dc.l sclaw0,sclaw1,sclaw2,sclaw3,sclaw4,sclaw5,sclaw6,sclaw7
 
 .phrase
 
-webtunes: dc.b 5,2,6,7,5,2,6,7 ; T2K mode only plays up to 7th (99 level limit)
+webtunes: dc.b 5,2,6,7,9,8,11,12 ; T2K mode only plays up to 7th (99 level limit)
 
 testskore: dc.b 0,0,6,0,5,0,0,1
 

@@ -7,3 +7,16 @@ Extra music as per PC version:
 5. T2K (TUNE10.MOD)
 6. Tracking Depth (TUNE6.MOD)
 7. Hyper Prism (TUNE11.MOD)
+
+New Propeller 2 music order:
+
+1. Mind's eye (id 5, RAVE4.MOD) 
+2. --
+3. --
+4. --
+5. T2K (id 9, TUNE10.MOD)
+6. Hyper Prism (id 8, TUNE11.MOD)
+7. Future Tense (id 11, TUNE8.MOD)
+8. Tracking Depth (id 12, TUNE6.MOD)
+
+Maybe revisit this?
