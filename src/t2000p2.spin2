@@ -90,17 +90,17 @@ ifnot NO_FS
 c.printf(string("before mount",10))
 ifnot NO_FS
 #ifdef FS_SDCARD
-  _mount(@"/sd",c._vfs_open_sdcardx(SDCARD_CLK,SDCARD_SELECT,SDCARD_DI,SDCARD_DO))
+  _mount(@"/fs",c._vfs_open_sdcardx(SDCARD_CLK,SDCARD_SELECT,SDCARD_DI,SDCARD_DO))
 #endif
 #ifdef FS_9P
-  _mount(@"/sd",c._vfs_open_host())
+  _mount(@"/fs",c._vfs_open_host())
 #endif
 #ifdef FS_FLASH
-  _mount(@"/sd",c._vfs_open_parallaxfs())
+  _mount(@"/fs",c._vfs_open_parallaxfs())
 #endif
-  '_mount(@"/sd",c._vfs_open_sdcardx(SDCARD_CLK,SDCARD_SELECT,SDCARD_DI,SDCARD_DO))
+  '_mount(@"/fs",c._vfs_open_sdcardx(SDCARD_CLK,SDCARD_SELECT,SDCARD_DI,SDCARD_DO))
   c.printf(string("after mount",10))
-  pmf := c.fopen(@"/sd/PADMAP.TXT",@"r")
+  pmf := c.fopen(@"/fs/PADMAP.TXT",@"r")
   if pmf
     tmp := padmap.parse(long[$68],long[$6C],@c.fgetc,pmf,@"tempest2000")
     c.sprintf(@string_buffer,@"PADMAP.TXT loaded, %d rules",tmp)
@@ -176,7 +176,7 @@ repeat
       'c.printf(string("Input read %08X",10),tmp)
     16: ' read save data
       ifnot NO_FS
-        tmp := c.fopen(@"/sd/T2000.SAV",@"rb")
+        tmp := c.fopen(@"/fs/T2000.SAV",@"rb")
         if tmp
           c.fread((long[FUNC_MAILBOX+4]),1,128,tmp)
           c.fclose(tmp)
@@ -189,7 +189,7 @@ repeat
     17: ' write save data
       ifnot NO_FS
         if long[FUNC_MAILBOX+8] == $03D0DEAD ' Safety check - only do it if D0 contains magic number
-          tmp := c.fopen(@"/sd/T2000.SAV",@"wb")
+          tmp := c.fopen(@"/fs/T2000.SAV",@"wb")
           if tmp
             c.fwrite((long[FUNC_MAILBOX+4]),1,128,tmp)
             c.fflush(tmp)
@@ -240,7 +240,7 @@ asm
 endasm
 
 PRI load_rodata() | f,ptr,tmp,tmp2,crc,color,total
-f := c.fopen(@"/sd/t2000p2.dat",@"rb")
+f := c.fopen(@"/fs/t2000p2.dat",@"rb")
 c.fseek(f,0,c.SEEK_END)
 total := c.ftell(f)
 c.fseek(f,0,c.SEEK_SET)

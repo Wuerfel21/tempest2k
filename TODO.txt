@@ -18,3 +18,4 @@ later:
 - Fix remaining MOD issues (only affects tune6.mod ??? (soundtest 12 !))
   - Wait, I think it's actually fine, I'm just stupid
   - let's just put it in the 8th music slot where no one will notice
+- Fix original game bug: Getting shot doing nothing says "COLLECT POWERUPS"
