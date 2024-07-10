@@ -1,5 +1,0 @@
-VMODE 0
-nb
-load test.db
-xpc 4000
-g
