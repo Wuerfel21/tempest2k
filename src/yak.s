@@ -168,8 +168,8 @@ FIX_FLIPPER_LOD_COLOR equ 1
 	;rmwcursor equ ps_screen3
 	TOP equ 16
 	SIDE equ 0
-	NUM_FIRES equ 4
-	allbutts EQU $22003000
+	NUM_FIRES equ 6
+	allbutts EQU $22003C00
 .endif
 	z_max EQU (G_RAM+$fd8)	; Distance along Z-axis at which depth cue intensity is zero
 	z_top EQU (G_RAM+$fdc)	; Intensity value at z=1
@@ -19097,7 +19097,7 @@ llamacop: dc.b "DEVELOPED BY llamasoft",0
 .if ^^defined PROPELLER
 irqsoftcop: dc.b "P2 PORT BY IRQSOME SOFTWARE",0
 .else
-irqsoftcop: dc.b "HI forums.parallax.com",0
+irqsoftcop: dc.b "NOT BY IRQSOME SOFTWARE",0
 .endif
 ataricop: dc.b "(C) 1981,1994 ATARI CORP.",0
 ataricop1: dc.b "COPYRIGHT 1981,",0
@@ -19261,6 +19261,8 @@ fires: dc.l $20000000
  dc.l $00002000
 .if ^^defined PROPELLER
  dc.l $00001000
+ dc.l $00000800
+ dc.l $00000400
 .endif
 
 testpage: dc.b "ORIGINAL GAME DESIGNED BY/       dave theurer~"
@@ -20069,7 +20071,7 @@ dc.l ps_screen2
  dc.b "a  ",0,"b  ",0,"c  ",0
 .endif
 .if ^^defined PROPELLER
- dc.b "c-1",0,"v-2",0,"x-3",0,"z-4",0
+ dc.b "c-1",0,"v-2",0,"x-3",0,"z-4",0,"s-5",0,"d-6",0
 .endif
 
  dc.l o5t1,o5t2,o5s10,o5s2,o3s3,0
@@ -20263,7 +20265,7 @@ o4s3: dc.b "superzapper c",0,0,0
 fire_names: dc.b "a  ",0,"b  ",0,"c  ",0
 .endif
 .if ^^defined PROPELLER
-fire_names: dc.b "c-1",0,"v-2",0,"x-3",0,"z-4",0
+fire_names: dc.b "c-1",0,"v-2",0,"x-3",0,"z-4",0,"s-5",0,"d-6",0
 .endif
 
 option5: dc.l o5t1,o5t2,o5s10,o5s2,o3s3,0

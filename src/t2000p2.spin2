@@ -15,6 +15,7 @@ padmap : "p2lib/padmap_parser"
 usb: "p2lib/usbnew" | ACTIVITY_LED = -1, ERROR_LED = -1, USB_BASE_PIN = USB0_BASEPIN, USB_ENABLE_OFFSET = ENABLE_PIN, USB_DMINUS_OFFSET = DM_PIN, ...
                  OVERLAP_MEMORY = true,  ...
                  EMUPAD_KB_BT0 = $06, EMUPAD_KB_BT1 = $19, EMUPAD_KB_BT2 = $1B, EMUPAD_KB_BT3 = $1D, ...
+                 EMUPAD_KB_BT4 = $16, EMUPAD_KB_BT5 = $07, ...
                  EMUPAD_KB_BT8 = $2b, EMUPAD_KB_BT9 = $29, ...
                  EMUPAD_MAX_PLAYER = 2, EMUPAD_BUILTIN_RULES = false
 
@@ -158,6 +159,8 @@ repeat
         tmp.[25] := emupad[player].[usb.EMUPAD_BT1_BIT] ' B
         tmp.[13] := emupad[player].[usb.EMUPAD_BT2_BIT] ' C
         tmp.[12] := emupad[player].[usb.EMUPAD_BT3_BIT] ' D
+        tmp.[11] := emupad[player].[usb.EMUPAD_BT4_BIT] ' E
+        tmp.[10] := emupad[player].[usb.EMUPAD_BT5_BIT] ' F
       if player == 0
         tmp.[ 1] := usb.keystate(usb.KEY_3) || usb.keystate(usb.KEY_NUM3) ' 3
         tmp.[ 2] := usb.keystate(usb.KEY_6) || usb.keystate(usb.KEY_NUM6) ' 6

@@ -1,13 +1,10 @@
 Before release:
-- Rethink default controls (?)
-  - Maybe add option to use shoulder buttons
+- Add option to use shoulder buttons DONESKI
+- Grab screenshots
 - Clean up p2config file
-- Fix remaining MOD issues (only affects tune6.mod ??? (soundtest 12 !))
-  - Wait, I think it's actually fine, I'm just stupid
-  - let's just put it in the 8th music slot where no one will notice
-
 
 later:
+- Rethink default controls (?)
 - Is the crosshair off-center in the Jaguar version, too?
 - Make it harder to skip end screen on accident
 - Fix 1-frame glitch on warp stage complete
@@ -17,3 +14,7 @@ later:
 - P2 minor adjustments (animation timers, button text, etc) PARTIAL
   - beastly mode related texts need editing
 - Revist music assignments
+- Code cleanup (I think it's still including stub files for some things?)
+- Fix remaining MOD issues (only affects tune6.mod ??? (soundtest 12 !))
+  - Wait, I think it's actually fine, I'm just stupid
+  - let's just put it in the 8th music slot where no one will notice
