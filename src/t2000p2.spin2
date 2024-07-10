@@ -331,21 +331,21 @@ longfill(banks,negx,32)
 exmem_size := 32*1024*1024 * PSRAM_BANKS
 sizelen := encod(exmem_size-1)+1
 repeat i from 0 to PSRAM_BANKS-1
-  long[banks][0+i*2] := 512<<16 + (PSRAM_DELAY-11)<<13 + (PSRAM_SYNC_DATA?0:1)<<12 + sizelen
-  long[banks][1+i*2] := 512<<16 + (PSRAM_DELAY-11)<<13 + (PSRAM_SYNC_DATA?0:1)<<12 + sizelen
+  long[banks][0+i*2] := 768<<16 + (PSRAM_DELAY-11)<<13 + (PSRAM_SYNC_DATA?0:1)<<12 + sizelen
+  long[banks][1+i*2] := 768<<16 + (PSRAM_DELAY-11)<<13 + (PSRAM_SYNC_DATA?0:1)<<12 + sizelen
   long[banks][16+i*2] := PSRAM_SELECT+i + PSRAM_CLK<<8
   long[banks][17+i*2] := PSRAM_SELECT+i + PSRAM_CLK<<8
 #elseifdef USE_PSRAM8
 exmem_size := 16*1024*1024 * PSRAM_BANKS
 sizelen := encod(exmem_size-1)+1
 repeat i from 0 to PSRAM_BANKS-1
-  long[banks][0+i] := 256<<16 + (PSRAM_DELAY-11)<<13 + (PSRAM_SYNC_DATA?0:1)<<12 + sizelen
+  long[banks][0+i] := 384<<16 + (PSRAM_DELAY-11)<<13 + (PSRAM_SYNC_DATA?0:1)<<12 + sizelen
   long[banks][16+i] := PSRAM_SELECT+i + PSRAM_CLK<<8
 #elseifdef USE_PSRAM4
 exmem_size := 8*1024*1024 * PSRAM_BANKS
 sizelen := encod(exmem_size-1)+1
 repeat i from 0 to (PSRAM_BANKS-1)/2
-  long[banks][0+i] := 128<<16 + (PSRAM_DELAY-11)<<13 + (PSRAM_SYNC_DATA?0:1)<<12 + sizelen
+  long[banks][0+i] := 192<<16 + (PSRAM_DELAY-11)<<13 + (PSRAM_SYNC_DATA?0:1)<<12 + sizelen
   long[banks][16+i] := PSRAM_SELECT+i*2 + PSRAM_CLK<<8 + (PSRAM_SELECT+i*2+(((PSRAM_BANKS&1)&&(i>=PSRAM_BANKS/2)) ? 0 : 1))<<16
 #elseifdef USE_HYPER
 exmem_size := 16*1024*1024 * HYPER_BANKS

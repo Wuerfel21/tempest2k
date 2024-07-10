@@ -1,10 +1,18 @@
-- Add audio PARITIAL
-  - Fix remaining unimplemented effects (only affects tune6.mod ??? (soundtest 12 !))
-- Restore unused music (I think PC order is not so hot)
-- P2 minor adjustments (animation timers, button text, etc) PARTIAL
-  - beastly mode related texts need editing
-- Is the crosshair off-center in the Jaguar version, too?
-- Make it harder to skip end screen on accident
+Before release:
 - Rethink default controls (?)
   - Maybe add option to use shoulder buttons
+- Clean up p2config file
+- Fix remaining MOD issues (only affects tune6.mod ??? (soundtest 12 !))
+  - Wait, I think it's actually fine, I'm just stupid
+- Restore unused music (I think PC order is not so hot)
+
+
+later:
+- Is the crosshair off-center in the Jaguar version, too?
+- Make it harder to skip end screen on accident
 - Fix 1-frame glitch on warp stage complete
+- Optimize ripplewarp/texter/prettypoly so menu screens all run fast on EVAL96MB
+  - Check performance on 4 bit bus! DONESKI (is ok)
+    - Figure out what actual good values for burst length are?
+- P2 minor adjustments (animation timers, button text, etc) PARTIAL
+  - beastly mode related texts need editing
