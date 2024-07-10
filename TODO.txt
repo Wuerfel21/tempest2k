@@ -4,7 +4,7 @@ Before release:
 - Clean up p2config file
 - Fix remaining MOD issues (only affects tune6.mod ??? (soundtest 12 !))
   - Wait, I think it's actually fine, I'm just stupid
-- Restore unused music (I think PC order is not so hot)
+  - let's just put it in the 8th music slot where no one will notice
 
 
 later:
@@ -16,3 +16,4 @@ later:
     - Figure out what actual good values for burst length are?
 - P2 minor adjustments (animation timers, button text, etc) PARTIAL
   - beastly mode related texts need editing
+- Revist music assignments

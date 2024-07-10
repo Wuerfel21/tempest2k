@@ -37,6 +37,7 @@ modbase:
 .dc.l tune9
 .dc.l tune8
 .dc.l tune6
+.dc.l tune2
 .dc.l 0
 ;.dcb.b 256-(8*4),0 ; Does this actually do anthing?
 
@@ -88,6 +89,10 @@ tune8:
 
 tune6:
 .incbin "sounds/tune6.mod"
+.DC.L $0000
+
+tune2:
+.incbin "sounds/tune2.mod"
 .DC.L $0000
 
 ;.incbin "incbin/paddingbetweentunesandsmp.bin"
