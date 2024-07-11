@@ -15,9 +15,9 @@ PSRAM_SELECT = 28
 PSRAM_BASE = 32
 PSRAM_BANKS = 2
 
-PSRAM_DELAY = 17
+PSRAM_DELAY = 18
 PSRAM_SYNC_CLOCK = true
-PSRAM_SYNC_DATA = false
+PSRAM_SYNC_DATA = true
 
 ' \/ Uncomment for lameness
 #define USE_PSRAM_SLOW
