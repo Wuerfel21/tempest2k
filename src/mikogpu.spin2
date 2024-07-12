@@ -3723,6 +3723,18 @@ ovl_ripplewarp
 
               mov veepos,source3
               shl veepos,#16
+
+              ' Start grabbing source
+              mov exmem_cmd,source3
+              mul exmem_cmd,cryline320
+              add exmem_cmd,src_screen
+              mov exmem_len,cryline320
+              mov exmem_target,exmem_buffer_ptr
+              testb dest1,#0 wc
+        if_c  add exmem_target,cryline384
+              setnib exmem_cmd,#$B,#7 ' B stands for burst
+              setq #2
+              wrlong exmem_cmd,exmem_mailbox
               
 .rippleloop
               getbyte r0,lphase,#2 ' get int of phase
@@ -3740,17 +3752,30 @@ ovl_ripplewarp
               mul r0,r20
               mov source2,##$1400000 ' ##### FIXED for a 320 pixel wide source image
               sub source2,r0 ' end pixel set     
-.stretchline
-              'insert stretchline routine here
+' .stretchline
+              
               sub source2,source1 ' get width of source to stretch
               qdiv source2,dest2 ' divide by the dest width to yield the blitter source step
 
+              sub veepos,veestep
+              mov source3,veepos
+              shr source3,#16
+
+              ' prefetch next line
+              mov exmem_target,exmem_buffer_ptr
+              mov tmp1,exmem_buffer_ptr
+              testb dest1,#0 wc
+        if_nc add exmem_target,cryline384
+        if_c  add tmp1,cryline384
+              ' exmem_len is still 320px
               mov exmem_cmd,source3
               mul exmem_cmd,cryline320
               add exmem_cmd,src_screen
-              mov exmem_len,cryline320
-              mov exmem_target,exmem_buffer_ptr
-              call #ex_rdblock '' TODO: parallelize with blit
+              setnib exmem_cmd,#$B,#7 ' B stands for burst
+              cmp dest1,#0 wz ' don't do it on last line
+              waitatn ' wait for current line to have been fetched
+        if_nz setq #2
+        if_nz wrlong exmem_cmd,exmem_mailbox
 
               getqx source2
 
@@ -3762,7 +3787,7 @@ ovl_ripplewarp
               rep @.blitlp,#384
               getword r0,source1,#1
               shl r0,#1
-              add r0,exmem_buffer_ptr
+              add r0,tmp1
               rdword r0,r0
               wfword r0
               add source1,source2
@@ -3772,9 +3797,6 @@ ovl_ripplewarp
               add lphase,lstep
               add rphase,rstep
 
-              sub veepos,veestep
-              mov source3,veepos
-              shr source3,#16
               djnf dest1,#.rippleloop
               jmp #cmd_done
 ovl_ripplewarp_end
