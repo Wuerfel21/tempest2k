@@ -290,7 +290,7 @@ mpstab:	move.b (a0)+,d1
 	move.b d1,(a1)+
 	dbra d0,mpstab
 	tst.b vols
-	bne mu_on
+	bne.s mu_on
 	move #1,modstop
 	move.b #$80,oldvol
 mu_on:	jsr initobjects
@@ -341,13 +341,13 @@ mu_on:	jsr initobjects
 	move.l #1300,z_max
 
 rreset:	tst wson
-	beq nnnn
+	beq.s nnnn
 	jsr zzoomoff
 nnnn:	jsr flushfx
 ;	jsr DISABLE_FX		;any SFX to off
 ;	jsr ENABLE_FX	
 	tst z
-	beq nrstlvl
+	beq.s nrstlvl
 	clr cwave
 	clr cweb		;Key players, always reset the level
 	move #15,t2k_max
@@ -395,7 +395,7 @@ brdb:	move.l pad_now,d0
 	clr beastly
 	clr gb
 	move keyplay,d0
-	bmi dntrstl
+	bmi.s dntrstl
 	clr cwave
 	clr cweb		;Key players, always reset the level
 	move #15,t2k_max
@@ -437,7 +437,7 @@ ego:	move.l _demo,a0
 	tst z
 	bne zreset
 	tst h2h
-	bne h2hover
+	bne.s h2hover
 	tst finished
 	bne treset
 	bra dloop
@@ -450,13 +450,13 @@ crashedit:
 .endif
 
 spall:	btst.b #6,sysflags
-	beq slopt
+	beq.s slopt
 	move.l #o2s4,option2+20
 slopt:	clr palside
 	clr paltop
 	bclr.b #5,sysflags
 	tst pal
-	beq notpal1
+	beq.s notpal1
 	move #6,palside
 	move #10,paltop
 	move #40,palfix1
@@ -479,7 +479,7 @@ h2hover: move.l #ps_screen3,a0 ; TODO check this again
 	tst practise
 	bne rreset
 	tst rounds
-	bpl nxtround
+	bpl.s nxtround
 	clr h2h
 	bra rreset
 
@@ -510,13 +510,13 @@ nxtround: clr sync
 	lea nxrmsg,a0
 	move #-1,flock
 	sub #1,rounds
-	bpl godoit
+	bpl.s godoit
 	lea fnlmsg,a0
 godoit:	lea cfont,a1
 	move #170,d0
 	jsr centext
 	tst rounds
-	bpl raww
+	bpl.s raww
 	move #100,flock
 	move.b rndmsg+11,d0
 	and #$ff,d0
@@ -524,7 +524,7 @@ godoit:	lea cfont,a1
 	and #$ff,d1
 	move.b #'1',d2
 	cmp d0,d1
-	blt zaqw
+	blt.s zaqw
 	move.b #'2',d2
 zaqw: move.b d2,wonmsg+7		;set who won...
 	lea wonmsg,a0
@@ -550,12 +550,12 @@ raww:	jsr settrue3
 	move.l #rrts,routine
 	jsr attract
 	tst z
-	bmi z1
+	bmi.s z1
 	bne rreset
 z1:	clr z
 	jsr fade
 	tst z
-	bmi z2
+	bmi.s z2
 	bne rreset
 z2:	clr z
 	tst rounds
@@ -591,7 +591,7 @@ dobeastly:
 	jsr centext
 	lea victpage,a5
 	tst beastly
-	beq stvpa
+	beq.s stvpa
 	lea victpage2,a5
 stvpa:	move #40,d0
 	move #40,d1
@@ -624,7 +624,7 @@ stvpa:	move #40,d0
 	move #160,d4
 	move #88,d5
 	tst pal
-	beq certnotpal
+	beq.s certnotpal
 	add palfix2,d5
 certnotpal: move #63,d0
 	move #63,d1
@@ -766,7 +766,7 @@ glopyr:	lea sines,a0
 	add #192,d6
 	move #120,d7
 	tst flock
-	bmi echck
+	bmi.s echck
 	sub #1,flock
 	bra dop
 echck:	move.l pad_now+4,d2
@@ -825,9 +825,9 @@ lsel:
 	clr _auto
 	clr dnt
 	tst misstit
-	beq dtiti
+	beq.s dtiti
 	clr misstit
-	bra stropt
+	bra.s stropt
 
 dtiti:	bsr spall
 	bsr versionscreen
@@ -835,21 +835,21 @@ dtiti:	bsr spall
 ;	add #8,beasties+64
 	move #1,auto
 	tst z
-	bmi atra1
+	bmi.s atra1
 	bne rrrts
-	bra stropt
+	bra.s stropt
 atra1:	clr z
 	bsr showscores
 	tst z
-	bmi atra2
+	bmi.s atra2
 	bne rrrts
-	beq stropt
+	beq.s stropt
 atra2:  clr z
  	bsr yakscreen	; title screen with yak
 	tst z
-	bmi setauto
+	bmi.s setauto
 	bne rrrts
-	beq stropt
+	beq.s stropt
 ; 	bsr text_o_screen	; info screen thang
 ;	tst z
 ;	bne rrrts
@@ -863,7 +863,7 @@ stropt:
 	clr auto
 	tst z
 	beq gselg
-	bmi setauto
+	bmi.s setauto
 	bra rrrts
 setauto: clr z
 	clr cwave
@@ -885,12 +885,12 @@ setauto: clr z
 	move d0,cweb
 	move.l #ps_screen3,a0
 	jsr clrscreen
-	bra lvlset
+	bra.s lvlset
 
 gselg:	move solidweb,-(a7)
 	move #-1,lives
 	clr solidweb
-	bsr getlvl
+	bsr.s getlvl
 	move #3,lives
 	move #3,lastlives
 	move (a7)+,solidweb
@@ -924,19 +924,19 @@ getlvl:	clr pawsed
 	add #1,d0
 	move d0,topsel
 	cmp #15,d0
-	bgt keepset
+	bgt.s keepset
 	move #0,d0
 keepset: tst t2k
-	bne not2k
+	bne.s not2k
 
 	tst h2h
-	bne sh2h
+	bne.s sh2h
 	move trad_max,d0
 	move d0,topsel
 	cmp #15,d0
-	bgt not2k
+	bgt.s not2k
 	move #0,d0 
-	bra not2k
+	bra.s not2k
 
 sh2h: move #15,topsel
 	clr d0
@@ -966,7 +966,7 @@ not2k:  move d0,cwave
 	jsr clearscreen
 
 	tst h2h
-	bne nbmsg
+	bne.s nbmsg
 ;	bsr setcsmsg			;set the CS message
 	lea afont,a1
 ;	move.l csmsg,a0	
@@ -1022,7 +1022,7 @@ nbmsg:	lea cfont,a1
 	move.l #4,warp_count	;A good stiff starf with big streaks
 	move.l #$60000,vp_sfs	;fast starfield
 	tst cwave
-	beq alrzero
+	beq.s alrzero
 	sub #1,cwave
 	bclr.b #0,cwave+1
 	move cwave,cweb
@@ -1043,7 +1043,7 @@ alrzero:
 	jsr mainloop
 	jmp fade
 
-draw_oo: bsr draw_o
+draw_oo: bsr.s draw_o
  	btst.b #2,sysflags
 	beq rrrts
 	tst h2h
@@ -1052,17 +1052,17 @@ draw_oo: bsr draw_o
 	lea cfont,a1
 	move #180,d0
 	tst pal
-	beq gnopal2
+	beq.s gnopal2
 	add palfix2,d0
 gnopal2: jmp centext
 
 draw_o: cmp #1,webcol
-	bne do_2
+	bne.s do_2
 	add #1,wpt
 	and #7,wpt
-	bne do_1
+	bne.s do_1
 	bsr swebpsych
-	bra do_2
+	bra.s do_2
 do_1:
 ;	cmp #1,wpt
 ;	bne do_2
@@ -1111,7 +1111,7 @@ setcsmsg: lea csmsg1,a0
 	move.l score,a1
 	move #7,d0
 sstb:	move.b (a1)+,d1
-	bne gotadig
+	bne.s gotadig
 	move.b #'0',(a0)+
 	dbra d0,sstb
 	lea -2(a0),a0
@@ -1131,14 +1131,14 @@ zoomto: lea _web,a0
 	add #1,32(a0)
 	sub #1,12(a0)
 	add.b #1,29(a0)
-	bne rrrts
+	bne.s rrrts
 	move.l #waitfor,routine
 rrrts:	rts
 
 waitfor: lea _web,a0
  	add #1,28(a0)
 	btst.b #3,sysflags
-	beq ojoj
+	beq.s ojoj
 	move.b pad_now,d0
 	rol.b #3,d0			;get button A as low bit
 	and #1,d0
@@ -1150,7 +1150,7 @@ waitfor: lea _web,a0
 	bne zforward
 	btst #1,d0
 	bne zbackward
-	bra not2p
+	bra.s not2p
 
 ojoj:	btst.b #5,pad_now+1
 	bne zforward
@@ -1158,17 +1158,17 @@ ojoj:	btst.b #5,pad_now+1
 	bne zbackward
 not2p:
  btst.b #2,sysflags
-	beq nobeastyy
+	beq.s nobeastyy
 	tst h2h
-	bne nobeastyy
+	bne.s nobeastyy
 	move.l pad_now,d0
 	and.l #optionbutton,d0
-	beq nobeastyy
+	beq.s nobeastyy
 	move #1,beastly
-	bra gooff
+	bra.s gooff
 nobeastyy: move.l #allbutts,d0
 	and.l pad_now,d0
-	beq noxxo
+	beq.s noxxo
 	clr beastly
 gooff:	clr _pauen
 	clr pauen
@@ -1183,16 +1183,16 @@ noxxo:	tst h2h
 	bne rrrts
 
 	btst.b #6,pad_now+1
-	beq wfor
+	beq.s wfor
 	cmp #-$50,vp_x
-	ble oro
+	ble.s oro
 	sub.l #$11000,vp_x
 oro:	add #1,30(a0)
 	rts
 wfor:	btst.b #7,pad_now+1
 	beq rrrts
 	cmp #$50,vp_x
-	bge oro2
+	bge.s oro2
 	add.l #$11000,vp_x
 oro2:	sub #1,30(a0)
  	rts
@@ -1201,7 +1201,7 @@ zforward: move cwave,d0
 	move #2,d1
 	sub h2h,d1
 	sub d1,d0
-	bpl zff
+	bpl.s zff
 	rts
 zff: 	move.l #zprev,routine
 	clr 24(a0)
@@ -1211,7 +1211,7 @@ zbackward: move cwave,d0
 	sub h2h,d1
 	add d1,d0
 	cmp topsel,d0
-	ble gzn	
+	ble.s gzn	
 	rts
 gzn: 	move.l #znext,routine
 	clr 24(a0)
@@ -1227,7 +1227,7 @@ zprev: 	lea _web,a0
 	sub h2h,d0
 	sub d0,cwave
 	sub d0,cweb
-	bpl zprev_1
+	bpl.s zprev_1
 	clr cwave
 	clr cweb
 zprev_1: bsr sweb
@@ -1282,25 +1282,25 @@ dowf:
 	move.w warp_flash,BG
 .endif
 	tst.l warp_flash
-	beq zsho1
+	beq.s zsho1
 	sub.l #$11111111,warp_flash
 zsho1:	rts
 
 
 ccent: 	move 30(a0),d0
 	and #$fc,d0
-	beq ccnt2
+	beq.s ccnt2
 	cmp #127,d0
-	blt ccnt1
+	blt.s ccnt1
 	add #4,d0
 	move d0,30(a0)
-	bra ccnt2
+	bra.s ccnt2
 ccnt1:	sub #4,d0
 	move d0,30(a0)
 ccnt2:	move vp_x,d0
 	and #$fffc,d0
 	beq rrrts
-	bpl ccnt3
+	bpl.s ccnt3
 	add #4,d0
 	move d0,vp_x
 	rts
@@ -1566,7 +1566,7 @@ shapes: dc.l draw_sflipper,draw_sfliptank,draw_sfuseball,draw_spulsar,draw_sfuse
 draw_h2hgen: lea leaf,a1
 	move #7,d7
 	move #$20,d6
-	bra s_multi
+	bra.s s_multi
 
 s_shot: lea chevron,a1
 	move #2,d7
@@ -1608,7 +1608,7 @@ draw_blueflip: lea blueflipper,a1
 	bra ccdraw
 
 draw_adroid: cmp #2,20(a6)	;check for are we zapping someone
-	bne dadr
+	bne.s dadr
 	movem.l d0-d5,-(a7)
 	move.l #192,xcent
 	move.l #120,d6
@@ -1660,12 +1660,12 @@ draw_beast: move #0,d6
 	move 46(a6),d7
 	and #3,d7
 	cmp #1,24(a6)	;is it in Flipto mode?
-	bne dntdbl
+	bne.s dntdbl
 	lsl #1,d0	;angle x2 
 dntdbl:	lea beastybits,a0
 drbeast: move.l (a0)+,a1
  	movem.l d0-d7/a0,-(a7)
-	bsr ccdraw
+	bsr.s ccdraw
 	jsr gpuwait
 	movem.l (a7)+,d0-d7/a0
 	add #1,d6
@@ -1678,9 +1678,9 @@ beastybits: dc.l hornm1,hornm2,hornm3,hornm3
 cdraw_sflipper: lea s_flipper,a1
 ccdraw:	move #9,d4
 	tst h2hor		;if this is set, reverse the centering
-	beq stcnt
+	beq.s stcnt
 	add 36(a6),d4
-	bra cntdne
+	bra.s cntdne
 stcnt:	sub 36(a6),d4
 cntdne:	ext.l d4		;get x-centre
 	move.l #9,d5
@@ -1712,7 +1712,7 @@ draw_pup1:
 	bra pupring
 
 draw_spulsar: cmp #3,34(a6)	;check for flipper-mode
-	bne upulsa
+	bne.s upulsa
  	move #9,d4
 	sub 36(a6),d4
 	ext.l d4		;get x-centre
@@ -1749,7 +1749,7 @@ fleg:	move.l d0,-(a7)
 	lea fbpiece1,a1
 	jsr rannum
 	btst #0,d0
-	bne dsfb1
+	bne.s dsfb1
 	lea fbpiece2,a1
 dsfb1:	move.l (a7)+,d0
 	move.b 0(a6,d7.w),d6
@@ -1812,7 +1812,7 @@ ssat:	move d7,-(a7)
 	move.b 0(a6,d7.w),d2
 	move.b d2,9(a1)
 	move.b d2,25(a1)	;colour leg of fuseball	 
-	bsr drawsolid
+	bsr.s drawsolid
 	jsr gpuwait
 	movem.l (a7)+,d0-d1
 	add.b d6,d0
@@ -1826,13 +1826,13 @@ draw_sfliptank:	lea s_fliptank2,a1
 	asl #2,d7
 	add.b d7,d0
 	move.l d5,-(a7)
-	bsr pulser
+	bsr.s pulser
 	move.l (a7)+,d5
 	move d6,4(a1)
 	move d6,20(a1)
 	move d6,36(a1)
 	move d6,52(a1)
-	bra drawsolidxy
+	bra.s drawsolidxy
 
 pulser:
 ;
@@ -1895,20 +1895,20 @@ gameover: move.l #rrts,routine
 ;	move #-1,db_on
 	move #1,modnum
 	tst h2h
-	bne ddthis
+	bne.s ddthis
 	tst auto
-	bne ddthis
+	bne.s ddthis
 	move cwave,d0
 	cmp #98,d0
-	ble imaxx
+	ble.s imaxx
 	move #98,d0		;max possibl saved lvl
 imaxx:	lea t2k_max,a0
 	tst t2k
-	bne yty
+	bne.s yty
 	lea trad_max,a0
 yty:	move (a0),d1
 	cmp d1,d0
-	ble ddthat		;Do not update if this was llarger
+	ble.s ddthat		;Do not update if this was llarger
  	move d0,(a0)		;save the highest wave we ever reached
 ddthat: move d0,2(a0)		;save where we got to this game
 ddthis:	move.l #gofeed,demo_routine
@@ -2018,7 +2018,7 @@ gofeed:
 .endif
 
 	tst timer
-	bmi babb
+	bmi.s babb
 	sub #1,timer
 	bpl rrrts
 babb:	move.l pad_now,d0
@@ -2127,7 +2127,7 @@ versionscreen: move.l #rrts,routine
 	move #92,d4
 	move #120-15,d5
 	tst pal
-	beq mypal
+	beq.s mypal
 	add #10,d5
 mypal:	move.l #pic5,a0
 	move.l gpu_screen,a1
@@ -2262,7 +2262,7 @@ versiondraw:
 .endif
 
 	tst v_on
-	beq dopyr			;allows Excellent voctory thang to get @ it
+	beq.s dopyr			;allows Excellent voctory thang to get @ it
 
 	bsr ssys
 	jmp rexfb
@@ -2369,15 +2369,15 @@ firesel: bsr setfires
 	clr selected
 fslp:	bsr do_choose
 	tst z
-	bne firsend
+	bne.s firsend
 	cmp #3,selected
-	beq firsend		;user selected exit
+	beq.s firsend		;user selected exit
 	lea fires,a0
 	move.l selbutt,d0	;get button(s) used for select
 	move #0,d7
 whb:	move.l (a0)+,d1		;button mask
 	and.l d0,d1		;check button
-	bne bpressed		;got one
+	bne.s bpressed		;got one
 	addq #1,d7
 	cmp #NUM_FIRES,d7		;if not matched by here...
 	blt whb
@@ -2385,7 +2385,7 @@ whb:	move.l (a0)+,d1		;button mask
 bpressed: lea firea,a0		;now <selected> is func #, d7 is what button
 	move #0,d6
 fndwhr: cmp (a0)+,d7		;find where that value is at now
-	beq gotwhr
+	beq.s gotwhr
 	add #1,d6
 	bra fndwhr
 gotwhr: cmp selected,d6
@@ -2411,7 +2411,7 @@ soundtest:
 	move #-1,blanka
 	move #2,selectable
 	clr selected
-	bsr stsetnum
+	bsr.s stsetnum
 .lp:	bsr do_choose
 	tst z
 	bne.s .quit
@@ -2462,7 +2462,7 @@ stsetnum:
 
 rotset: move.l #option5,the_option
 
-	bsr sconopt
+	bsr.s sconopt
 
 	move #-1,blanka
 	move #2,selectable
@@ -2473,23 +2473,23 @@ bglp:	bsr do_choose
 	cmp #2,selected
 	beq firsend		;go save any changed controller shit
 	cmp #1,selected
-	beq con2chg
+	beq.s con2chg
 	bchg.b #3,sysflags
-	bsr sconopt
+	bsr.s sconopt
 	bra bglp
 con2chg: bchg.b #4,sysflags
-	bsr sconopt
+	bsr.s sconopt
 	bra.s bglp
 
 
 sconopt: move.l #o5s10,d0
 	btst.b #3,sysflags
-	beq scono1
+	beq.s scono1
 	move.l #o5s11,d0
 scono1: move.l d0,option5+8
 	move.l #o5s20,d0
 	btst.b #4,sysflags
-	beq scono2
+	beq.s scono2
 	move.l #o5s21,d0
 scono2:	move.l d0,option5+12
 scint:
@@ -2499,7 +2499,7 @@ scint:
 
 	move.b sysflags,d0
 	and #$18,d0
-	beq sintoff
+	beq.s sintoff
 ;	move.b #3,intmask		;enable rocon interrupt
 	move pit1,d0
 	lsr #3,d0
@@ -2550,14 +2550,14 @@ dcc: tst z
 	move.l #option6,the_option
 	bsr do_choose
 	tst z
-	bne fago
+	bne.s fago
 	cmp #2,selected
 	beq dcc				;#2, was Exit, back to main title
 	move selected,practise		;0=full 2-player, 1=practise
 	move #1,h2h			;select h2h mode
 	clr rounds
 	tst practise
-	bne fago
+	bne.s fago
 	clr selected
 	move #2,selectable
 	move.l #option10,the_option
@@ -2578,7 +2578,7 @@ fago:	bsr fade
 gameopt: clr selected			;this does game option menu
 	move #2,selectable
 	btst.b #6,sysflags
-	beq .no_ctype
+	beq.s .no_ctype
 	add #1,selectable
 .no_ctype:
 	move.l #option2,the_option
@@ -2587,16 +2587,16 @@ gameopt: clr selected			;this does game option menu
 	bne fago
 	jsr eepromsave
 	move selected,d0
-	beq dispop
+	beq.s dispop
 	cmp #1,d0
-	bne .nxtsl
+	bne.s .nxtsl
 	bsr firesel
 	tst z
 	bne fago
 	bra dcc
 .nxtsl:
 	cmp #2,d0
-	bne .nxtsl2
+	bne.s .nxtsl2
 	bsr soundtest
 	bra optionscreen
 
@@ -2632,14 +2632,14 @@ dispop:	bsr fade			;going to do option on top of a displayed Web
 dcc2:	bsr do_choose
 	clr tblock
 	tst z
-	bne dcc3
+	bne.s dcc3
 	move selected,d0
-	bne vop11
+	bne.s vop11
 	bchg.b #0,sysflags
-voe:	bsr sopt3
+voe:	bsr.s sopt3
 	bra dcc2
 vop11:	cmp #1,d0
-	bne dcc3
+	bne.s dcc3
 	bchg.b #1,sysflags
 	bra voe
 dcc3:	jsr eepromsave
@@ -2656,12 +2656,12 @@ vecoptdraw: lea _web,a0
 
 sopt3:	move.l #o3s10,d0		;set correct optionlist for screen params
 	btst.b #0,sysflags
-	beq dweeb1
+	beq.s dweeb1
 	move.l #o3s11,d0
 dweeb1: move.l d0,option3+8
 	move.l #o3s20,d0		;set correct optionlist for screen params
 	btst.b #1,sysflags
-	beq dweeb2
+	beq.s dweeb2
 	move.l #o3s21,d0
 dweeb2: move.l d0,option3+12
 	rts
@@ -2681,14 +2681,14 @@ selse:	move #1,players
 	bsr do_choose
 
 	move selected,d0
-	beq stdstrt
+	beq.s stdstrt
 	cmp #2,d0
-	beq set22
+	beq.s set22
 	move #1,players
 	move #$3c,bulland	;for test droid mode
 	move #15,bullmax
 	move #2,entities
-	bra stdstrt
+	bra.s stdstrt
 set22:	move #2,players		;start 2-player simul mode
 	move #2,entities
 	move #$3c,bulland
@@ -2707,7 +2707,7 @@ npling: move #-1,keyplay
 	move.l #option9,the_option
 	bsr do_choose
 	tst selected
-	bne nonkey
+	bne.s nonkey
 
 	clr selected
 	move akeys,selectable
@@ -2721,7 +2721,7 @@ npling: move #-1,keyplay
 	and #$ff,d0
 	add #1,d0
 	cmp #99,d0
-	ble isoka
+	ble.s isoka
 	move #99,d0
 isoka:	move d0,t2k_max
 nonkey:	move (a7)+,selected
@@ -2729,7 +2729,7 @@ nonkey:	move (a7)+,selected
 opling:	bsr fade
 selsa:	clr blanka
 	tst selected
-	bne xsel1
+	bne.s xsel1
 	move #0,view
 	rts
 xsel1:	move #-1,blanka
@@ -2754,29 +2754,29 @@ do_choose: move.l #oselector,routine
 ;	bra attract
 
 oselector: cmp.l #option1,the_option
-	bne selector			;from the main game screen you get to the options screen..
+	bne.s selector			;from the main game screen you get to the options screen..
 
 	move.l pad_now,d0
 	and.l #a147,d0
 	cmp.l #a147,d0
-	bne nchen	
+	bne.s nchen	
 	tst chenable
-	bne nchen
+	bne.s nchen
 	move #1,chenable
 	jsr sayex		;say Excellent for cheat-enable
 nchen: 	btst.b #1,pad_now+2	;loop for Option pressed
-	beq selector
+	beq.s selector
 	move #1,optpress
 	move.l #rrts,routine
 	rts
 selector: cmp.l #option2,the_option
-	bne selector2
+	bne.s selector2
 	btst.b #6,sysflags
-	bne sopt2
+	bne.s sopt2
 	btst.b #4,pad_now
-	beq selector2
+	beq.s selector2
 	btst.b #4,pad_now+4
-	beq selector2
+	beq.s selector2
 	bset.b #6,sysflags
 	jsr sayex
 	add #1,selectable
@@ -2786,19 +2786,19 @@ selector2: move #1000,attime
  	move.b pad_now+1,d0
 	or.b pad_now+5,d0
 	tst roconon
-	beq jcononly
+	beq.s jcononly
 	tst.l rot_cum
-	beq jcononly
+	beq.s jcononly
 	bpl.s stup
 	bset #4,d0
 	clr.l rot_cum
-	bra jcononly
+	bra.s jcononly
 stup:	bset #5,d0	
 	clr.l rot_cum
 jcononly: 
 	move d0,d1
 	and #$30,d0
-	beq lateralsel
+	beq.s lateralsel
 	move selected,d1
 	move selectable,d2
 	btst #4,d0
@@ -2815,7 +2815,7 @@ selend: move.l #seldb,routine
 	jsr fox
 	rts
 decsel: tst d1
-	bne decsel1
+	bne.s decsel1
 	move d2,selected
 	bra selend
 decsel1: sub #1,selected
@@ -2898,7 +2898,7 @@ optiondraw: move.l #1,gpu_mode
 .endif
 
 opts:	cmp.l #option1,the_option	;see if other options are available
-	bne ntarnt			;no they arent
+	bne.s ntarnt			;no they arent
 	lea optmsg,a0
 	lea cfont,a1
 	move #15+8,d0
@@ -2910,7 +2910,7 @@ ntarnt:	move #25,d0
 	mulu #30,d7
 	add #105,d7
 	tst pal
-	beq dopdop
+	beq.s dopdop
 	add #20,d7
 dopdop:	bsr dop
 
@@ -2921,10 +2921,10 @@ drawopts: bsr text_setup		;do generic text setup
 	move #1,d7
 	move #40+8,d5
 	tst pal
-	beq dropts
+	beq.s dropts
 	add #10,d5
 dropts: move.l (a4)+,d6
-	beq nxopts
+	beq.s nxopts
 	move.l d6,a3
 	move.l d6,(a0)
 	bsr textlength			;returns length of $ (a3) in pixels in d0
@@ -2953,7 +2953,7 @@ nxopts:	add #20,d5
 	move #4,d7
 	move #100,d5
 	tst pal
-	beq dropts2
+	beq.s dropts2
 	add #20,d5
 dropts2: move.l (a4)+,d6
 	beq rrrts
@@ -2980,7 +2980,7 @@ dropts2: move.l (a4)+,d6
 
 text2_setup:lea in_buf,a0
 	move.l #bfont,4(a0)
-	bra tsu
+	bra.s tsu
 
 text_setup: lea in_buf,a0
 	move.l #afont,4(a0)		;font data structure
@@ -3006,7 +3006,7 @@ g_textlength: move.l d2,a2	;d2.l points to 0term text
 	move 6(a1),d6
 	add #2,d6
 g_tlengt: move.b (a2)+,d5
-	beq g_otit
+	beq.s g_otit
 	add d6,d7
 	bra g_tlengt
 g_otit: lsr #1,d6
@@ -3030,7 +3030,7 @@ itbb:	clr.l (a0)+		;Z FIRST (zero Z means no data!)
 run_tbb: tst pawsed
 	bne rrrts
  	move tbbptr,d0
- 	bsr get_tbb
+ 	bsr.s get_tbb
  	move.l d1,(a3)+
 	move.l d2,(a3)+
 	move.l d3,(a3)+
@@ -3102,7 +3102,7 @@ _tunn:
 	rts
  
 tunrun: btst.b #3,sysflags	;look for ro-con
-	beq sjoycon
+	beq.s sjoycon
 	move.l rot_cum,d0
 	clr.l rot_cum
 ;	lsl.l #2,d0
@@ -3113,27 +3113,27 @@ tunrun: btst.b #3,sysflags	;look for ro-con
 ;	lea iacon,a0
 ;	add.l d0,4(a0)
 ;	jsr iii
-	bra weewee
+	bra.s weewee
 	
 sjoycon: move.b pad_now+1,d0
 	rol.b #2,d0
 	and #$03,d0
 	lea iacon,a0
 	jsr inertcon		;control roll of tunnel on jpad
-weewee:	bsr run_pgens		;run the sidewall pattern generators
+weewee:	bsr.s run_pgens		;run the sidewall pattern generators
 	tst victree
-	bmi vpxfo
+	bmi.s vpxfo
 	clr.l vp_x
 	clr.l vp_y
 vpxfo:	jmp vp_xform
 
 run_pgens: sub #1,pgenctr
-	bpl rpg1
+	bpl.s rpg1
 	move #800,pgenctr
 	lea pgens,a0
 	move #1,d7
 	tst victree
-	bmi rndpgs
+	bmi.s rndpgs
 	addq #1,d7
 rndpgs: jsr rannum
 	and #$f,d0
@@ -3160,14 +3160,14 @@ rpg1:	move tunadd,d0
  	lea pgens,a0
 	move #1,d7		;2 blocks of these
 	tst victree
-	bmi r_pgens		;(could be threee)...
+	bmi.s r_pgens		;(could be threee)...
 	addq #1,d7
 r_pgens: move (a0),d0
 	move 2(a0),d1
 	add d1,d0
-	bmi bnc1
+	bmi.s bnc1
 	cmp #$fff,d0
-	ble nbnc1
+	ble.s nbnc1
 bnc1:	neg d1
 	add d1,d0
 nbnc1:	move d0,(a0)
@@ -3175,9 +3175,9 @@ nbnc1:	move d0,(a0)
  	move 4(a0),d0
 	move 6(a0),d1
 	add d1,d0
-	bmi bnc2
+	bmi.s bnc2
 	cmp #$fff,d0
-	blt nbnc2
+	blt.s nbnc2
 bnc2:	neg d1
 	add d1,d0
 nbnc2:	move d0,4(a0)
@@ -3270,7 +3270,7 @@ inst:	move pongzv,d0			;get current CB pointer
 	move #1,d7
 	move #0,d6			;do two lots of...
 	tst victree
-	bmi xpgdat
+	bmi.s xpgdat
 	move #2,d7
 	move #$80,d6
 xpgdat:	move (a2),d0
@@ -3286,7 +3286,7 @@ xpgdat:	move (a2),d0
 	move.b 12(a2),d0		;get #-pixels
 	and #$3f,d0
 	sub #$1f,d0
-	bpl dingy
+	bpl.s dingy
 	neg d0
 dingy: add #$10,d0
 	move.b d0,1(a1)			;set #-pixels
@@ -3407,11 +3407,11 @@ sttoat: move.b d1,2(a1)
 	neg d1
 	and #$ff,d1
 	sub d0,d1			;get distance between
-	bpl xono
+	bpl.s xono
 	neg d1				;(absolute)
 xono:
 	cmp #$7f,d1
-	ble xono2
+	ble.s xono2
 	move #$7f,d2
 	sub #$80,d1			;hack for circular wrap
 	sub d1,d2
@@ -3434,14 +3434,14 @@ xono2:  cmp #$20,d1
 	move.l ltail,d0
 	add.l #$8000,d0
 	cmp.l #$1fffff,d0
-	bgt over
+	bgt.s over
 	move.l d0,ltail
-	bra over
+	bra.s over
 notover: move.l ltail,d0
 	sub.l #$10000,d0
-	bmi odeer
+	bmi.s odeer
 	move.l d0,ltail
-	bra over
+	bra.s over
 odeer: 	move #$20,pongxv
 	clr.l vp_xtarg
 	clr.l vp_ytarg
@@ -3474,14 +3474,14 @@ nomo:	lea in_buf,a0
 .endif
 
 	tst pawsed
-	bne restuff
+	bne.s restuff
 
  	tst victree
-	bpl restuff0
+	bpl.s restuff0
 
 
 	move pongxv,d1
-	bmi restuff	
+	bmi.s restuff	
 	lea field1,a0
 	move #$3f,d0
 claps:	move.b d1,3(a0)
@@ -3525,14 +3525,14 @@ restuff:
 	neg.l d6
 	move.l d6,vp_xtarg
 	cmp.l #pausing,routine
-	beq nmoo1
+	beq.s nmoo1
 	add.l d6,sfxo
 nmoo1:	asr.l #1,d3
 	move.l d3,d6
 	neg.l d6
 	move.l d6,vp_ytarg
 	cmp.l #pausing,routine
-	beq nmoo2
+	beq.s nmoo2
 	add.l d6,sfyo
 nmoo2:	move.l d1,-(a7)
 	move.l d2,-(a7)
@@ -3568,13 +3568,13 @@ pobjs:	move.l d1,12(a0)
 	move.l d6,28(a0)
 	move.l #pobj,(a0)	;Particle Object draw - pointer to p.obj data struct
 	tst victree
-	bmi xxxooo
+	bmi.s xxxooo
 	move.l #pobj3,(a0)
 xxxooo:	move.l #3,16(a0)	;XYZ scales
 	move.l #3,20(a0)
 	move.l #3,24(a0)
 	cmp #0,d4
-	bne snoxy
+	bne.s snoxy
 	move.l #pobj2,(a0)
 	move d0,d2
 	jsr rannum
@@ -3608,25 +3608,25 @@ nxtox:	addq #1,d4
 	cmp ltail,d4
 	ble pobjs
 	tst psmsgtim
-	beq xam
+	beq.s xam
 	lea warp2msg,a0
 	lea cfont,a1
 	move #180,d0
 	tst pal
-	beq gnopal
+	beq.s gnopal
 	add palfix2,d0
 gnopal:	jsr centext
 	sub #1,psmsgtim
 
 xam:	tst victree
-	bmi ddonki
+	bmi.s ddonki
 
 	bsr bobo
 
 	tst pawsed
-	bne ddonki
+	bne.s ddonki
 	sub #1,victree
-	bpl ddonki
+	bpl.s ddonki
 	move #1,x_end
 ddonki:	jmp donki
 
@@ -3638,7 +3638,7 @@ nxtpage: move.l #ps_screen3,gpu_screen
 	move #20,d1
 	jsr pager
 	move d7,-(a7)
-	bsr premess
+	bsr.s premess
 	jsr settrue3
 	bsr wnb
 	move.l #text_o_run,routine
@@ -3649,7 +3649,7 @@ premess: lea premes1,a0
 	lea cfont,a1
 	move #200,d0
 	tst pal
-	beq defnotpal
+	beq.s defnotpal
 	add #10,d0
 defnotpal: tst d7
 	bne centext
@@ -3740,7 +3740,7 @@ m7test2: move #1,psycho
 	move #3,rocnt
 	move bolev3,d0	
 	add #1,bolev3
-	bra m7go
+	bra.s m7go
 
 m7scr:  clr psycho
 	move #1,pongz
@@ -3800,7 +3800,7 @@ m7go:	move.l #$200,yespitch
 	move #TOP+202,d1
 	add paltop,d1
 	tst pal
-	beq nopalll
+	beq.s nopalll
 	add #26,d1
 nopalll: swap d0
 	swap d1
@@ -3890,7 +3890,7 @@ nopalll: swap d0
 	move.l (a7)+,gpu_screen
 
 	cmp #90,cwave
-	bge sttoat2			;Warp not after l90
+	bge.s sttoat2			;Warp not after l90
 	add #4,cwave
 	add #4,cweb	
 
@@ -3930,7 +3930,7 @@ vicbon:	move frames,d7
 	lsr #2,d7
 	and #$7f,d7
 	sub #$3f,d7
-	bpl vicbon1
+	bpl.s vicbon1
 	neg d7
 vicbon1: sub #$1f,d7
 	and.l #$ff,d7	;angle for this
@@ -4011,7 +4011,7 @@ m7run:	btst.b #3,sysflags		;are we on the rotary controller?
 	sub.l #$a00000,d0
 	move.l d0,vp_x
 	move.b pad_now+5,d0
-	bra do_yy
+	bra.s do_yy
 
 
 wjoy: 	move.b pad_now+1,d0
@@ -4040,7 +4040,7 @@ do_yy:	rol.b #4,d0
 	add.l d0,grnd
 	bsr dowf
 	jsr rob
-	bsr cg
+	bsr.s cg
 	tst psycho
 	beq rrrts
 	cmp #$f0,delta_i
@@ -4069,7 +4069,7 @@ cg:	move.l grndvel,d0
 	ext d0
 	ext d1		;make them signed
 	tst psycho
-	beq nflippit
+	beq.s nflippit
 	neg d0
 	move #8,cg_tim	;psycho courses are never as clost together as ring ones
 nflippit: swap d0
@@ -4077,7 +4077,7 @@ nflippit: swap d0
 	clr d0
 	clr d1		;make signed 16:16 XY co-ordinates
 	move.b (a5)+,d2	;get type in d2
-	bpl slegg
+	bpl.s slegg
 ;	move.l #course1,cg_ptr
 ;	clr cg_tim
 ;	rts
@@ -4098,7 +4098,7 @@ slegg:	and #$ff,d2
 	clr 20(a6)
 	move.l a6,a0
 	sub #1,tunc
-	bpl isso
+	bpl.s isso
 	move #1,20(a6)
 	move #2,tunc
 isso:	jmp insertobject	;make it
@@ -4111,7 +4111,7 @@ run_gate: add #1,28(a6)
 	move vp_x,d0
 ;	neg d0
 	sub 4(a6),d0
-	bpl lamag1
+	bpl.s lamag1
 	neg d0
 lamag1: cmp #8,d0
 	bpl mist
@@ -4119,7 +4119,7 @@ lamag1: cmp #8,d0
 	move vp_y,d0
 ;	neg d0
 	sub 8(a6),d0
-	bpl lamag2
+	bpl.s lamag2
 	neg d0
 lamag2: cmp #8,d0
 	bpl mist 
@@ -4128,7 +4128,7 @@ lamag2: cmp #8,d0
 	move #$20,d1
 	jsr rannum
 	btst #0,d0
-	bne lnpt
+	bne.s lnpt
 	neg d1
 lnpt:
 	lea gatefx,a0
@@ -4148,7 +4148,7 @@ lnpt:
 	move #100,sfx_pri
 	jsr fox
 	tst psycho
-	beq nanna
+	beq.s nanna
 	move.l #$1c0000,delta_i
 	add #1,rocnt
 	move rocnt,d0
@@ -4177,14 +4177,14 @@ nanna:
 	move.l a0,-(a7)
 	lsr #2,d0
 	cmp #2,d0
-	ble llaleg
+	ble.s llaleg
 	move #2,d0
 llaleg:	neg d0
 	add #2,d0
 	bsr xbon 
 ;	bsr xbonx
 	move.l (A7)+,a6
-	bra ennd
+	bra.s ennd
 mist:
 .if ^^defined ALWAYS_CHEAT
 	;bra ennd
@@ -4205,7 +4205,7 @@ fade:
 ; go into FADE after merging screen3 to current screen and turning off BEASTIES+64
 
 	tst beasties+76
-	bmi ofade
+	bmi.s ofade
 	move.l #ps_screen3,a0
 	move.l gpu_screen,a1
 	moveq #0,d0
@@ -4216,10 +4216,10 @@ fade:
 	moveq #0,d4
 	moveq #0,d5
 	tst mfudj
-	beq pmf2
+	beq.s pmf2
 	sub #8,d3
 pmfade: tst mfudj
-	beq pmf2 
+	beq.s pmf2 
 	add #8,d5
 	clr mfudj
 pmf2:	jsr MergeBlock
@@ -4264,7 +4264,7 @@ spup: move.l d1,-(a7)
 	asr.l #3,d0
 	add.l d0,grndvel
 	tst psycho
-	bne agagg
+	bne.s agagg
 	lea m7msg1,a0
 	clr.l d0
 	move.l #$8000,d1
@@ -4280,7 +4280,7 @@ vicend: move.l #failfade,demo_routine
 
 
 draw_gate: tst psycho
-	bne dopsy
+	bne.s dopsy
  	move 8(a6),d4
 	move vp_y,d5
 	and #$8000,d4
@@ -4300,7 +4300,7 @@ dopsy:	move 42(a6),d4	;get Type
 
 icondraws: dc.l rrts,arup,ardn,zappy,pyrri
 ardn: 	move.l #$80,d0
-	bra rup
+	bra.s rup
 arup:	clr.l d0
 rup:	lea arr,a1
 zqz:	move.l #9,d4
@@ -4329,7 +4329,7 @@ dsclaw: move.l 4(a6),d2
 	swap d6
 	and #$07,d6
 	cmp #95,40(a6)
-	bne snop2
+	bne.s snop2
 	add #8,d6
 snop2:	lsl #2,d6
 	lea sclaws,a1
@@ -4337,7 +4337,7 @@ snop2:	lsl #2,d6
 	bra zqz
 
 noicon: tst psycho
-	beq polygate
+	beq.s polygate
 
  	move.l #$130000,d4
 	move.l #128,d3
@@ -4403,10 +4403,10 @@ failcount: sub #1,pongx
 ffade:  add #1,pongy
  	move pongy,d0
 	and #$03,d0
-	bne failfade
+	bne.s failfade
  	tst.b pongz+1
-	beq failfade
-	bmi ffinc
+	beq.s failfade
+	bmi.s ffinc
 	sub.b #2,pongz+1
 ffinc:  add.b #1,pongz+1
 failfade: move.l #(PITCH1|PIXEL16|WID384),d0
@@ -4516,7 +4516,7 @@ m7test: tst psycho
 	move frames,d7
 	and #$7f,d7
 	sub #$3f,d7
-	bpl haha1
+	bpl.s haha1
 	neg d7
 haha1:	add #4,d7
 	and.l #$ff,d7
@@ -4537,7 +4537,7 @@ haha1:	add #4,d7
 	move frames,d0
 	and #$7f,d0
 	sub #$3f,d0
-	bpl wwear
+	bpl.s wwear
 	neg d0
 wwear:	and.l #$ff,d0
 	move.l d0,44(a0)
@@ -4667,7 +4667,7 @@ npsu1: 	move.l #0,gpu_mode
 ;	jsr gpuwait
 
 joyz:	btst.b #5,pad_now
-	beq skankzz
+	beq.s skankzz
 	lea m7yinc,a0
 	lea m7ydec,a1
 	lea m7zinc,a2
@@ -4764,7 +4764,7 @@ dohiscores: clr ud_score
 	lea hscom1,a0			;point at compressed HS table
 	clr d1				;count of current scores
 hiscch1: cmp.l (a0),d0		;check against score
-	bpl gotscore		;he got a hiscore
+	bpl.s gotscore		;he got a hiscore
 	lea 8(a0),a0		;next score slot
 	addq #1,d1
 	cmp #10,d1
@@ -4772,18 +4772,18 @@ hiscch1: cmp.l (a0),d0		;check against score
 	bra hiscch1
 
 gotscore: cmp #9,d1
-	beq setscore		;It is the bottom score, just replace it.
+	beq.s setscore		;It is the bottom score, just replace it.
 	lea hscom1+64,a1		;Point to penultimate score
 shftscore: move.l (a1),8(A1)
 	move.l 4(a1),12(a1)	;move it down
 	cmp.l a1,a0		;are we now pointed at where we wanna go?
-	beq setscore
+	beq.s setscore
 	lea -8(a1),a1
 	bra shftscore		;no so loop until we are
 
 setscore: move.l d0,(a0)+	;set us a new score
 	movem.l d1/a0,-(a7)
-	bsr getinitials
+	bsr.s getinitials
 	movem.l (a7)+,d1/a0	;get player initials
 	tst z
 	bne rrrts		;abort if player did reset
@@ -4794,7 +4794,7 @@ setscore: move.l d0,(a0)+	;set us a new score
 	move.b d4,(a0)+		;this will be level got to
 
 	tst d1
-	bne setdsplay		
+	bne.s setdsplay		
 	bsr getbrag
 
 	lea hscom1,a0
@@ -4835,7 +4835,7 @@ nohiscore: cmp #15,t2k_max
 	bpl okey		;Player was already using a Key, go update it
  	move akeys,d0	;No hi score but may get key
 	cmp #3,d0
-	blt newkey		;Key available, ask for initials
+	blt.s newkey		;Key available, ask for initials
 	lea keys,a0
 	move t2k_max,d0
 	sub #1,d0
@@ -4844,7 +4844,7 @@ nohiscore: cmp #15,t2k_max
 chkbig:	move.b 3(a0),d1
 	and #$ff,d1
 	cmp d0,d1
-	bmi newkey		;Bigger, can replace
+	bmi.s newkey		;Bigger, can replace
 	lea 4(a0),a0
 	dbra d7,chkbig
 	bra setdsplay		;Unlucky, nothin doin
@@ -4854,7 +4854,7 @@ newkey: move #3,ennum
 	move.l #nkeym1,enl1
 	move.l #nkeym2,enl2
 	move.l #nkeym3,enl3
-	bsr initgo	
+	bsr.s initgo	
 	bra setdsplay
 	
 stditals: move #3,ennum
@@ -4867,14 +4867,14 @@ initgo:	bsr txenter
 	ble rrrts		;No way dude! Come back when you can play!
 	move akeys,d0		;Get # of active keys.
 	cmp #3,d0
-	beq deerdeer		;Tut tut. Full.
-	bsr fplace		;Find new place OR where you already were...
+	beq.s deerdeer		;Tut tut. Full.
+	bsr.s fplace		;Find new place OR where you already were...
 	tst d4
-	beq setkey		;New table place. Use SETKEY.
+	beq.s setkey		;New table place. Use SETKEY.
 gakey:	move.b 3(a0),d5
 	and #$ff,d5
 	cmp t2k_max,d5		;Check level reached
-	bmi setkey		;Was greater so go and overwrite
+	bmi.s setkey		;Was greater so go and overwrite
 	rts
 
 setkey: move #2,d4
@@ -4886,7 +4886,7 @@ skey:	move.b (a1)+,(a0)+	;a1/a0 already set by FPLACE
 	move.b d0,(a0)		;set/renew Level
 	jmp xkeys
 
-deerdeer: bsr fplace		;Look for possible Key already existing
+deerdeer: bsr.s fplace		;Look for possible Key already existing
 	tst d4
 	bmi gakey		;You were lucky.
 	lea keys,a0
@@ -4895,7 +4895,7 @@ deerdeer: bsr fplace		;Look for possible Key already existing
 lfbop:	move.b 3(a0),d5
 	and #$ff,d5
 	cmp d5,d3		;Look for lower
-	bmi lfbop1
+	bmi.s lfbop1
 	move d5,d3
 	move.l a0,a2		;save address of lowest
 	move d5,d6		;save level of lowest
@@ -4916,12 +4916,12 @@ lkey0:	move #2,d4
 	move.l a0,a3
 lkeys:	move.b (a2)+,d5
 	cmp.b (a3)+,d5
-	bne snextk
+	bne.s snextk
 	dbra d4,lkeys		;If you fall out of here you already on the table.
 	rts			;return -1 in d4, a0
 snextk:
 	tst d0
-	bpl lkey1		;If you fall out of here a0 points to where you wanted and d4 is 0.
+	bpl.s lkey1		;If you fall out of here a0 points to where you wanted and d4 is 0.
 	clr d4
 	rts
 lkey1:	sub #1,d0
@@ -5015,7 +5015,7 @@ txen:	jsr fw_run
 
  	move.l pad_now,d0
 	btst.b #3,sysflags
-	beq flann
+	beq.s flann
 	move.l pad_now+4,d0
 flann:	and.l #allbutts,d0
 	beq jtxen
@@ -5024,40 +5024,40 @@ flann:	and.l #allbutts,d0
 	lsr #6,d0
 	and #$1f,d0	
 	cmp #30,d0		;this is DEL
-	beq doolete
+	beq.s doolete
 	cmp #31,d0
-	bne ischaa	
+	bne.s ischaa	
 	move.l pongxv,a0
 	move.b #0,(a0)
-	bra xxen
+	bra.s xxen
 
 
 doolete: move ennum,d0
 	cmp enmax,d0
-	beq jtxen		;if = cant delete nomore
+	beq.s jtxen		;if = cant delete nomore
 	move.l pongxv,a0
 	move.b #'.',(a0)	;del the char displayed
 	sub.l #1,pongxv
 	add #1,ennum
-	bra ddb
+	bra.s ddb
 
 	
 
 ischaa:	sub #1,ennum
-	bne nnnum
+	bne.s nnnum
 xxen:	move #1,x_end
 	move.l #rrts,routine
 	rts
 nnnum:	add.l #1,pongxv
 ddb:	move #0,pongy
-	bra inc_aa
+	bra.s inc_aa
 
 jtxen: 	move.l #rrts,a0
 	move.l a0,a1
 	move.l #inchar,a2
 	move.l #dechar,a3
 	btst.b #3,sysflags
-	bne up2e
+	bne.s up2e
 	jmp gjoy
 up2e: move.b pad_now+5,d0
 	bra ggjj
@@ -5123,7 +5123,7 @@ sletloop: move.l d7,d0
 	bgt sletend
 	move #192,d3
 	sub d0,d3
-	bpl slet01
+	bpl.s slet01
 	neg d3
 slet01: swap d3
 	clr d3
@@ -5150,7 +5150,7 @@ slet01: swap d3
 	move.l d0,32(a0)	;x
 	move.l #$6a,d0
 	tst pal
-	beq hnotpal
+	beq.s hnotpal
 	add.l #10,d0
 hnotpal: move.l d0,36(a0)	;y
 	move.l #4,gpu_mode
@@ -5170,7 +5170,7 @@ sletooo: add.l #$40,d7
 	and #$1f,d5
 	bra sletloop
 sletend: cmp.l #rrts,routine
-	beq stettin
+	beq.s stettin
 	
 	move.l pongxv,a0
 	move pongx+2,d0
@@ -5241,7 +5241,7 @@ showscores: move.l #rrts,routine
 	move.l a4,a0			;point at winners msg
 	move #100+3,d0
 	tst pal
-	beq nnnpal
+	beq.s nnnpal
 	add #10,d0
 nnnpal:	jsr centext
 
@@ -5250,7 +5250,7 @@ nnnpal:	jsr centext
 	move #8,d3
 	move #120,d0
 	tst pal
-	beq ctl
+	beq.s ctl
 	add #20,d0
 ctl:	movem.l d0/a0,-(a7)
 	jsr centext
@@ -5388,14 +5388,14 @@ yakscreen: move.l #rrts,routine
 	move.l #cfont,a1
 	move #6+12,d0
 	tst pal
-	beq snopal
+	beq.s snopal
 	add #10,d0
 snopal:	jsr centext
 	lea testpage,a5
 	move #46,d0
 	move #20+16,d1
 	tst pal
-	beq snopal2
+	beq.s snopal2
 	add palfix2,d1
 snopal2: jsr pager
 	move d7,-(a7)
@@ -5415,24 +5415,24 @@ snopal2: jsr pager
 yakhead:
  	sub #1,pongx
 	cmp #1,pongx
-	bne yhead
+	bne.s yhead
 
 ;	move #48,pongx
 ;	bra yhead
 
 	move.l #yakhead2,demo_routine
 	clr pongy
-	bra yhead
+	bra.s yhead
 
 yakhead2: sub.l #$4000,pongz
 	cmp.l #$220000,pongz
-	bgt yhead
+	bgt.s yhead
 	move.l #yakhead3,demo_routine
-	bra yhead
+	bra.s yhead
 
 yakhead3: add.b #2,pongxv
 	add.b #3,pongxv+1
- 	bra yhead
+ 	bra.s yhead
 
 
 yhead: 	move.l #0,gpu_mode
@@ -5492,12 +5492,12 @@ yhead: 	move.l #0,gpu_mode
 	move.l #$030007,d0	;srce start pixel address
 	move.l #$730086,d1	;srce size
 	tst joby
-	bne notjob
+	bne.s notjob
 	lea pic5,a2
 	move.l #$5b00d2,d0
 	move.l #$6b006c,d1
 notjob:	cmp #1,joby
-	bne notatari
+	bne.s notatari
 	lea pic5,a2
 	move.l #$ec,d0
 	move.l #$38004a,d1
@@ -5550,7 +5550,7 @@ dyakhead: lea in_buf,a0
 	move.l d6,d0
 	add.l #$200000,d6
 	tst.l d0
-	bmi xane			;no point in drawing -ves
+	bmi.s xane			;no point in drawing -ves
 ;	sub.l vp_z,d0
 	move.l d0,(a0)+	;Dest x,y,z
 .if ^^defined JAGUAR
@@ -5674,7 +5674,7 @@ rexfb:
 	move.l #$0000,(a0)+	;Dest centre position
 	move.l #-$6c0000,d0
 	tst pal
-	beq nopaldude
+	beq.s nopaldude
 	move.l #-$8c0000,d0
 nopaldude: move.l d0,(a0)+
 	move.l #$1100000,(a0)+
@@ -6215,10 +6215,10 @@ gringbull: move.l #3,gpu_mode	;Multiple images stretching towards you in Z
 	lea in_buf,a0
 	move.l #pic2,(a0)+	;srce screen for effect
 	move.l #$8300d7,(a0)+	;srce start pixel address
-	bra ringa2
+	bra.s ringa2
 
 cringbull: move.l #3,gpu_mode
-	bra ringa	
+	bra.s ringa	
 
 ringbull: move.l #4,gpu_mode	;Multiple images stretching towards you in Z
 ringa:	lea in_buf,a0
@@ -6630,7 +6630,7 @@ sintens: move.b 0(a0,d0.w),d1
 	move d1,ppoly3+20
 	move d1,ppoly4+20
 
-	bra jj
+	bra.s jj
 
 
 ;polydemo2: move.l #poly1,in_buf
@@ -6710,7 +6710,7 @@ sintens: move.b 0(a0,d0.w),d1
 ;
 jj:	move.l pad_now,d0
 	and.l #allbutts,d0
-	beq nobuts
+	beq.s nobuts
 	cmp.l #allbutts,d0
 	bne rrts
 
@@ -7043,10 +7043,10 @@ rtp:	jsr rannum
 nrseti:	move.l pad_now,d0
 	and.l #allbutts,d0
 	cmp.l #allbutts,d0
-	beq skank
+	beq.s skank
 
 	btst.b #5,pad_now
-	beq skank00
+	beq.s skank00
 	lea iypos,a0
 	lea dypos,a1
 	lea dxpos,a2
@@ -7055,7 +7055,7 @@ nrseti:	move.l pad_now,d0
 
 
 skank00: btst.b #1,pad_now
-	beq skank0
+	beq.s skank0
 	lea drang,a0
 	lea irang,a1
 	lea ddelta,a2
@@ -7063,7 +7063,7 @@ skank00: btst.b #1,pad_now
 	bsr gjoy
 
 skank0:	btst.b #5,pad_now+2
-	beq skank	
+	beq.s skank	
 
 	lea dxscl,a0
 	lea ixscl,a1
@@ -7075,7 +7075,7 @@ skank: move.l feedline,a4
 	jmp (a4)
 polyfb: move.l pad_now,d0
 	and.l #$22002000,d0
-	bne njoy
+	bne.s njoy
  	lea prevshape,a0
 	lea nextshape,a1
 	lea away,a2
@@ -7097,7 +7097,7 @@ njoy:	move frames,d0
 	and #$fc,d2
 	lea shapes,a2
 	move.l 0(a2,d2.w),d2
-	bpl shokk
+	bpl.s shokk
 	clr pongx
 	move.l #draw_sflipper,d2
 shokk:	move.l d2,a2
@@ -7257,24 +7257,24 @@ attr:	clr ud_score
 	clr e_attract
 	clr optpress
 ;	move pauen,_pauen
-timr:	bsr thang
+timr:	bsr.s thang
 	tst e_attract
-	bne arts
+	bne.s arts
 	move.l pad_now,d0
 	and.l #allbutts,d0
 	bne timr		;wait for no buttons
-dbnce:	bsr thang
+dbnce:	bsr.s thang
 	tst pawsed
 	bne dbnce
 	sub #1,attime
-	bpl intime
+	bpl.s intime
 	move #-1,z
 intime:	tst optpress
 	bne gogx
 	tst z
 	bne gogx
 	tst e_attract
-	bne arts
+	bne.s arts
 	move.l pad_now,d0
 	or.l pad_now+4,d0
 	and.l #allbutts,d0
@@ -7287,10 +7287,10 @@ thang:	bsr db				;sync with frame int, receive new drawscreen base, do user rout
 	move.l demo_routine,a0
 	jsr (a0)
 	tst pawsed
-	beq mooocow
+	beq.s mooocow
 	jsr paustuff
 mooocow: tst unpaused
-	beq nunpa
+	beq.s nunpa
 	jsr eepromsave
 	clr unpaused	
 nunpa: 	
@@ -7308,7 +7308,7 @@ gogame:  move #1,screen_ready		;as above, attract mode version
 ;	move pauen,_pauen
 gog:	bsr thang
 	tst z
-	bne gogx
+	bne.s gogx
 	tst x_end
 	beq gog
 gogx:	clr _pauen
@@ -7365,22 +7365,22 @@ ppong: move.l pongxv,d0
 	add.l d0,pongx
 	move.l pongyv,d0
 	add.l d0,pongy
-	bra pingzz
+	bra.s pingzz
 
 pingpong: move.l pongx,d0
 	add.l pongxv,d0
-	bmi bouncex
+	bmi.s bouncex
 	cmp.l #$1800000,d0
-	blt pingy
+	blt.s pingy
 bouncex:
 	sub.l pongxv,d0
  	neg.l pongxv
 pingy:	move.l d0,pongx
  	move.l pongy,d0
 	add.l pongyv,d0
-	bmi bouncey
+	bmi.s bouncey
 	cmp.l #$ff0000,d0
-	blt pingz
+	blt.s pingz
 bouncey:
 	sub.l pongyv,d0
  	neg.l pongyv
@@ -7397,22 +7397,22 @@ pingzz:
 	move.l #dscal,a1		;for DOWN
 	move.l #dang,a2		;for LEFT
 	move.l #iang,a3		;for RIGHT
-	bra gjoy		;do joy con
+	bra.s gjoy		;do joy con
 
 dang:	btst.b #5,pad_now+2
-	beq aang1
+	beq.s aang1
 	sub.l #$100000,pongz
 	rts
 aang1:	sub #1,pongang
 sang:	move pongang,in_buf+22
 	rts
 dscal:	move.l #-1,d1
-	bra sscal
+	bra.s sscal
 iscal:	move.l #1,d1
 sscal:	lea pongscale,a0
 	lea in_buf+12,a1
 	btst.b #5,pad_now+2	;fire C held modifies other scale parameter
-	beq sscal0
+	beq.s sscal0
 	lea pongscale2,a0
 	lea in_buf+16,a1
 sscal0:	move.l (a0),(a1)
@@ -7421,7 +7421,7 @@ sscal0:	move.l (a0),(a1)
 
 
 iang:	btst.b #5,pad_now+2
-	beq aang2
+	beq.s aang2
 	add.l #$100000,pongz
 	rts
 aang2:
@@ -7429,17 +7429,17 @@ aang2:
 	bra sang
 
 pgjoy: move.b ppad+1,d0
-	bra ggjj
+	bra.s ggjj
 gjoy: move.b pad_now+1,d0	;General purtpose keypad responder
 ggjj:	btst #4,d0		;test Up
-	beq gjoy1
+	beq.s gjoy1
 	jsr (a0)
-	bra gjoy2
+	bra.s gjoy2
 gjoy1:	btst #5,d0		;Down
-	beq gjoy2
+	beq.s gjoy2
 	jsr (a1)
 gjoy2:	btst #6,d0		;Left
-	beq gjoy3
+	beq.s gjoy3
 	jmp (a2)
 gjoy3:	btst #7,d0
 	beq rrts
@@ -7449,28 +7449,28 @@ curcon: move.b pad_now+1,d0		;byte with UDLR in
 	move cursx,d1
 	move cursy,d2
 	btst #4,d0		;test Up
-	beq curc1
+	beq.s curc1
 	sub #2,d2		;it's halflines remember
-	bra curc2
+	bra.s curc2
 curc1:	btst #5,d0		;Down
-	beq curc2
+	beq.s curc2
 	add #2,d2
 curc2:	btst #6,d0		;Left
-	beq curc3
+	beq.s curc3
 	sub #2,d1
-	bra curc4
+	bra.s curc4
 curc3:	btst #7,d0
-	beq curc4
+	beq.s curc4
 	add #2,d1
 curc4:	tst d1
-	bmi curcy
+	bmi.s curcy
 	cmp #(width-48),d1
-	bge curcy
+	bge.s curcy
 	move d1,cursx
 curcy:	tst d2
-	bmi curset
+	bmi.s curset
 	cmp #((height*2)-60),d2
-	bge curset
+	bge.s curset
 	move d2,cursy
 curset:	move cursx,beasties+64
 	move cursy,beasties+68	;put x and y into RMW object's data struct.
@@ -7492,7 +7492,7 @@ it: move.l #$ff00,z_top		;top intensity (z=1) **16 bits**
 
 	move #1,mfudj
 	tst lives
-	bpl zarka
+	bpl.s zarka
 	move #1,finished
 	rts 			; was bra treset
 zarka:	bsr setlives
@@ -7564,7 +7564,7 @@ h2hin:	bsr h2hclaws
 	move #8,afree
 
 
-	bra go_in			;go do H2H mode
+	bra.s go_in			;go do H2H mode
 	
 
 stdinit:
@@ -7615,16 +7615,16 @@ setweb: lea _web,a0
 
 sweb:
 	tst h2h
-	beq stdwebsel
+	beq.s stdwebsel
 	move cweb,d0
 	and #$0f,d0
 	lea h2hwebs,a0
 	move.b 0(a0,d0.w),d0
 	and #$ff,d0
 	subq #1,d0
-	bra wbsel
+	bra.s wbsel
 stdwebsel: tst dnt
-	bpl sweboo
+	bpl.s sweboo
 	clr dnt
 sweboo:
 
@@ -7653,7 +7653,7 @@ wbsel:	asl #2,d0
 	move.l d6,46(a6)	;solid Web that was the source
 
 	tst tblock
-	bne gnosis
+	bne.s gnosis
 	move cwave,d0
 	lsr #4,d0
 	and #$07,d0
@@ -7668,7 +7668,7 @@ clbulls: clr.l (a0)+
 	clr bully
 	move #18,noclog
 	tst t2k
-	beq clokay
+	beq.s clokay
 	move #21,noclog
 clokay:	
 	move.l #$70007,shots
@@ -7685,9 +7685,9 @@ rsetw:	move cwave,d0		;move to next wave
 	move d0,d1
 	clr.l d2
 	tst t2k
-	bne dontwrap		;t2k really does have 100 levels in the ltab...
+	bne.s dontwrap		;t2k really does have 100 levels in the ltab...
 	cmp #48,d0
-	blt dontwrap
+	blt.s dontwrap
 	and #$0f,d0
 	lea tradmax,a0
 	asl #2,d0
@@ -7700,13 +7700,13 @@ rsetw:	move cwave,d0		;move to next wave
 	clr d2
 	lsr.l #7,d2
 	
-	bra iwo 	
+	bra.s iwo 	
 
 
 dontwrap: lea waves,a0
 	asl #2,d0
 	move.l 0(a0,d0.w),d0
-	bne iw
+	bne.s iw
 	clr cwave
 	bra rsetw
 iw: 	move.l d0,a0
@@ -7718,10 +7718,10 @@ iwo:
 
 	move d1,d3
 	tst t2k
-	beq setemm
+	beq.s setemm
 	move #16,d3
 setemm:	cmp #127,d3
-	bne billy
+	bne.s billy
 	move #127,d3
 billy:	lsr #4,d3
 	lea rospeeds,a0
@@ -7775,7 +7775,7 @@ billy:	lsr #4,d3
 	asr #3,d0
 	and #$1e,d0
 	tst h2h
-	beq dntclr
+	beq.s dntclr
 	clr d0
 dntclr:	lea webcols,a0
 	move 0(a0,d0.w),webcol	;set the right colours for this web
@@ -7797,7 +7797,7 @@ dntclr:	lea webcols,a0
 	lsl #8,d0		;web-colour to top of conn word
 	move.l 40(a1),a1	;now points at this object's c-list
 paintweb: move (a1)+,d1		;get vertex ID
-	beq painted		;zero, it's done
+	beq.s painted		;zero, it's done
 pverts:	move (a1)+,d1
 	and #$ff,d1		;strip-off conn stuff
 	beq paintweb		;zero, it was last this vtx
@@ -7810,31 +7810,31 @@ painted:
 	clr sflip_prob3
 	move d1,d3
 	sub #16,d3
-	bmi neveer
+	bmi.s neveer
 	cmp #127,d3
-	ble setp3
+	ble.s setp3
 	move #127,d3
 setp3:	lsl #1,d3
 	move d3,sflip_prob3
 	
 neveer:	cmp #127,d1
-	ble inrng0
+	ble.s inrng0
 	move #127,d1
 inrng0:	move d1,d2
 	lsl #1,d2
 	move d2,sflip_prob2	
 	cmp #63,d1
-	ble inrnge
+	ble.s inrnge
  	move #63,d1
 inrnge: lsl #2,d1		;this makes SFlipper prob 1
 	move d1,sflip_prob1
 	asr #3,d0
 	cmp #3,d0
-	ble iww
+	ble.s iww
 	move #3,d0
 iww:	move d0,ashots
 	tst beastly
-	beq nomaxx
+	beq.s nomaxx
 	move #7,ashots		;Loadsa shots in Beastly Mode
 nomaxx:	move cwave,d0
 	and #1,d0
@@ -7851,16 +7851,16 @@ nomaxx:	move cwave,d0
 	move #0,jenable
 	move.l #$38000,d0
 	tst pal
-	beq gnotpal
+	beq.s gnotpal
 	move.l #$43333,d0		;pal speed
 gnotpal: tst beastly
-	beq sass
+	beq.s sass
 	lsr.l #1,d0
 sass:	move.l d0,shotspeed
 	move.l d0,bshotspeed
 	bsr clzapa	
 	tst t2k
-	beq nt2k_reset
+	beq.s nt2k_reset
 	move #$1c,bulland
 	move #7,bullmax	
 nt2k_reset:
@@ -7893,14 +7893,14 @@ sweb0:	move.l #rrts,routine
 .else
 	cmp #99,cwave
 .endif	
-	blt wwoo
+	blt.s wwoo
 	clr _pauen
 	clr pauen
 	move #1,term		;quit if someone beat t2k
 	move #1,gb
 	rts	
 wwoo: 	tst warpy
-	bpl swip1
+	bpl.s swip1
 	move #2,warpy
 	move.l #ps_screen3,a0
 	move #192,d0			;Clear screen a0
@@ -7924,7 +7924,7 @@ wwoo: 	tst warpy
 	move.l (a7)+,vp_z
 swip1:	bsr sweb
 	tst startbonus		;check to add starting web's bonus
-	beq sweb00
+	beq.s sweb00
 	move #-1,startbonus
 	move.l score,a0
 	lea lbonus+8,a1
@@ -7935,10 +7935,10 @@ addbon:	move.b -(a1),d2		;bonus digit
 	add.b -(a0),d2		;add existing score
 	add.b d1,d2		;carry over
 	cmp.b #10,d2
-	blt abon1		;no carry
+	blt.s abon1		;no carry
 	sub.b #10,d2
 	move #1,d1
-	bra abon2
+	bra.s abon2
 abon1:	clr d1
 abon2:	move.b d2,(a0)		;new score dig
 	dbra d0,addbon		;loop all digits	
@@ -7964,7 +7964,7 @@ swebcol: lea _web,a0		;set all the web to current colour
 	lsl #8,d0		;web-colour to top of conn word
 	move.l 40(a1),a1	;now points at this object's c-list
 paintwb: move (a1)+,d1		;get vertex ID
-	beq paintd		;zero, it's done
+	beq.s paintd		;zero, it's done
 pvers:	move (a1)+,d1
 	and #$ff,d1		;strip-off conn stuff
 	beq paintwb		;zero, it was last this vtx
@@ -7979,13 +7979,13 @@ swebpsych: lea _web,a0		;set all the web to psychedelic colours
 	move frames,d7
 	asl #1,d7
 	tst holiday
-	bmi kzkk
+	bmi.s kzkk
 	asl #2,d7
 kzkk:	bsr pulser
 	move d6,40(a0)
 	move.l 40(a1),a1	;now points at this object's c-list
 pintwb: move (a1)+,d1		;get vertex ID
-	beq pintd		;zero, it's done
+	beq.s pintd		;zero, it's done
 pers:	add #2,d7
  	bsr pulser
 	move d6,d0		;paint web in current web-colour
@@ -8003,7 +8003,7 @@ pintd:	rts
 
 fields: dc.l siney,siney
 
-circa:	bsr slebon		;set level bonus
+circa:	bsr.s slebon		;set level bonus
 
 ;	lea testmap,a1
 ;	bra initmstarfield	;mapped star field init
@@ -8071,7 +8071,7 @@ siney:
 
 	move cwave,d0
 	cmp #31,d0
-	bne sinies
+	bne.s sinies
 	move #163,d0
 sinies:	and #$ff,d0
 	move d0,d4
@@ -8128,33 +8128,33 @@ rundroid: clr whichclaw
 	move flashcol,40(A6)
 
 	cmp #2,entities			;did we start with 2 entities (driod is permanent)?
-	beq always_2
+	beq.s always_2
 	cmp #-2,wave_tim
-	bne always_2
+	bne.s always_2
 	move #1,50(a6)			;FG Unlink Please
 	rts
 
 always_2: sub.b #1,droidel			;Droid's firing rate
-	bpl nodfire
+	bpl.s nodfire
 	move.b droidel+1,droidel
 	tst locked
-	bne nodfire
+	bne.s nodfire
 	tst shots+2
-	bmi nodfire		
+	bmi.s nodfire		
 	cmp #1,34(a6)
-	bne nodfire
+	bne.s nodfire
 	sub #1,shots+2
 	move.l a6,a1
 	move #$80,d7			;marker for bullets to distinguish pl. 1 and pl 2 shots
 	move.l _chevre,d5		;graphic is the chevron
 	bsr frab0			;frab0 is fire w. arbitrary graphic
 nodfire: tst 44(a6)
-	bne movedroid			;mode non0 means droid is moving.
+	bne.s movedroid			;mode non0 means droid is moving.
 
 	move droid_data,d0		;this is the closest enemy to the top of the Web
-	bsr lor				;ask Left or Right to get there
-	bne droidright			;init droid motion to the right.
-	bra droidleft			;init droid motion to the left.
+	bsr.s lor				;ask Left or Right to get there
+	bne.s droidright			;init droid motion to the right.
+	bra.s droidleft			;init droid motion to the left.
 
 movedroid: move.l 20(a6),d0
 	add.l d0,4(a6)
@@ -8174,7 +8174,7 @@ droidright:
 	move d4,d6
 	move d5,d7
 	bsr r_webinfo
-	bra droim
+	bra.s droim
 
 droidleft:
 ;
@@ -8208,29 +8208,29 @@ lor:
 
 	move 16(a6),d1			;Flipper current pos
 	cmp d0,d1
-	bne nntrv
+	bne.s nntrv
 	tst auto
-	beq nntrv
+	beq.s nntrv
 	move #-1,d1
 	rts
 nntrv:	tst connect
-	bne _lor1			;Wrap mode if web is circular
+	bne.s _lor1			;Wrap mode if web is circular
 	sub d0,d1
-	bgt lor0
-	ble lor1
+	bgt.s lor0
+	ble.s lor1
 ;	bra zz
 _lor1: move web_max,d2
 	asr #1,d2			;half distance around web
  	sub d0,d1
-	bgt _lll
-	ble _rrr
+	bgt.s _lll
+	ble.s _rrr
 ;	bra zz
 _lll:	sub d2,d1
-	blt lor0
-	bra lor1
+	blt.s lor0
+	bra.s lor1
 _rrr:	neg d1
 	sub d2,d1
-	blt lor1
+	blt.s lor1
 
 
 lor0:	clr d1
@@ -8288,7 +8288,7 @@ h2hclaws: move.l freeobjects,a6
 	jsr insertobject
 
 	move #webz-76,d0		;make the players' mirrors.  Always at (C-2) object.
-	bsr makemirr
+	bsr.s makemirr
 	move #webz+76,d0
 makemirr: swap d0
 	clr d0
@@ -8327,17 +8327,17 @@ setclaw: move.l a6,a0
 	move #1,42(a6)		;scaler value
 	move #$0303,48(a6)	;fire timer	(0303 std)
 	tst beastly
-	beq knobby
+	beq.s knobby
 	move #$0606,48(a6)
 knobby:	cmp #2,players
-	beq setdouble
+	beq.s setdouble
 	move #16,46(a6)
-	bra set_rezclaw		;Not 2-player simul mode
+	bra.s set_rezclaw		;Not 2-player simul mode
 setdouble: move d7,d0
 	add #14,d0
 	move d0,46(a0)		;Select appropriate clawcon routine; save it in 44()
  	cmp #1,d7		;this routine entered with player claw no. in d7
-	bne set_rezclaw		;modifications for player 2's claw
+	bne.s set_rezclaw		;modifications for player 2's claw
 	move #95,40(a0)		;Colour of second claw
 	add #2,16(a0)		;Second claw rezzes nearby
 set_rezclaw: move #$f000,36(a6)
@@ -8535,7 +8535,7 @@ fire:
 	move.l fire_3,d0
 	move.l pad_now,d1
 	cmp #2,players			;combine players firebuttons in 2pl mode
-	bne snglsmart
+	bne.s snglsmart
 	move.l pad_now+4,d2
 	move d1,d3
 	or d2,d3			;combined...
@@ -8547,9 +8547,9 @@ fire:
 	bne rrts			;someone smarted, but it's already happening
 	clr p2smarted
 	and.l d0,d2			;did player 2 smart?		
-	beq snglsmart
+	beq.s snglsmart
 	move #1,p2smarted		;Player 2 smarted!
-	bra gsmart		
+	bra.s gsmart		
 snglsmart: and.l d0,d1
  	beq rrts
 	tst szap_avail
@@ -8557,7 +8557,7 @@ snglsmart: and.l d0,d1
 	tst szap_on
 	bne rrts			;You are already Superzapping!
 gsmart:	sub #1,szap_avail
-	bmi nmsg
+	bmi.s nmsg
 	lea zmes1,a0
 	clr.l d0
 	move.l #$8000,d1
@@ -8581,7 +8581,7 @@ hgoaty:	move bully,d0
 	and d1,d0
 	lea 0(a3,d0.w),a2		;point to this bulls slot
 	move.l (A2),d0
-	beq hfreeslot
+	beq.s hfreeslot
 	add #4,bully
 	bra hgoaty			;find 1
 hfreeslot: add #4,bully
@@ -8605,7 +8605,7 @@ hfreeslot: add #4,bully
 run_h2hshot:
 	add #3,28(a6)		;make it flicker
 moomoomoo: move.l 36(a6),d0
-	bmi upweb
+	bmi.s upweb
 	add.l d0,12(a6)
 	move 12(a6),d0		;this bull's Z
 	move 16(a6),d1
@@ -8614,11 +8614,11 @@ moomoomoo: move.l 36(a6),d0
 	move.l 56(a4),a4	;p1's Shield
 	move.l 56(a4),a4	;p2's Shield
 	cmp 12(a4),d0		;check against the Shield
-	bmi np2sh		
+	bmi.s np2sh		
 	tst practise
-	bne reflshot
+	bne.s reflshot
 	cmp 16(a4),d1
-	bne np2sh		;check for same lane
+	bne.s np2sh		;check for same lane
 	tst 34(a4)		;is it On?
 	beq biu2
 reflshot: neg.l 36(a6)
@@ -8638,12 +8638,12 @@ upweb: add.l d0,12(a6)
 	move.l 56(a4),a4	;p1's Shield
 	move 16(a6),d0
 	cmp 16(a4),d0
-	bne np1sh		;same lane chec
+	bne.s np1sh		;same lane chec
 	move 12(a6),d0		;this bull's Z
 	cmp 12(a4),d0		;check against the Shield
-	bpl np1sh
+	bpl.s np1sh
 	tst 34(a4)		;is it On?
-	beq biu1
+	beq.s biu1
 	neg.l 36(a6)
 	move #$13,sfx
 	move #3,sfx_pri
@@ -8653,9 +8653,9 @@ np1sh:	cmp #webz-81,12(a6)
 	bmi kllit
 	rts
 
-biu2:	bsr biu
+biu2:	bsr.s biu
 	bra np2sh
-biu1:	bsr biu
+biu1:	bsr.s biu
 	bra np1sh
 
 biu:	move.l 60(a4),a4
@@ -8667,7 +8667,7 @@ h2hckill: tst _won
 	move #-1,48(a4)		;start it exploding!
 	bsr zson		;make it go boom
 	cmp.l _claw,a4
-	beq bunce_p2
+	beq.s bunce_p2
 bunce_p1: add #1,l_sc
 	move #1,l_ud
 	cmp #4,l_sc
@@ -8685,7 +8685,7 @@ bunce_p2: add #1,r_sc
 	cmp #4,r_sc
 	bne rrts
 	tst practise
-	bne p2_prac
+	bne.s p2_prac
 	move.b #'2',wonmsg+7
 	add #1,p2wins
 	lea wonmsg,a0
@@ -8716,7 +8716,7 @@ goaty:	move bully,d0
 	and d1,d0
 	lea 0(a3,d0.w),a2		;point to this bulls slot
 	move.l (A2),d0
-	beq freeslot
+	beq.s freeslot
 	add #4,bully
 	bra goaty			;find 1
 freeslot: add #4,bully
@@ -8735,7 +8735,7 @@ freeslot: add #4,bully
 	move d7,32(a0)			;bullet ID (player ownership) changed from 44() to 32()
 	move.l #1,52(a0)		;not alien and Type
 	tst blanka
-	bne oaafire
+	bne.s oaafire
 	move #1,sfx
 	jsr fox
 	bra insertobject
@@ -8743,7 +8743,7 @@ freeslot: add #4,bully
 oaafire:	move.l #$b6000a,d0
 	move.l #$070007,d1
 	tst 32(a0)
-	beq konk
+	beq.s konk
 	move.l #$b60000,d0
 	move.l #$090009,d1
 konk:	move.l #$10000,d2
@@ -8756,7 +8756,7 @@ konk:	move.l #$10000,d2
 	move.l d1,46(a0)	
 	move.l d2,20(a0)
 	tst laser_type
-	bne oaafire2
+	bne.s oaafire2
 	move #5,sfx
 	move #1,sfx_pri
 	jsr fox
@@ -8803,7 +8803,7 @@ make_h2hball: move.l freeobjects,a0
 run_h2hball: add #3,30(a6)
 	add #1,32(a6)
 	tst 18(a6)
-	bmi inspr
+	bmi.s inspr
 	sub #1,18(a6)
 inspr:	move 20(a6),d0
 	lea h2hballmodes,a0	
@@ -8812,10 +8812,10 @@ inspr:	move 20(a6),d0
 	jsr (a0)
 
 	bsr collie
-	beq hballmove
+	beq.s hballmove
 	move #$2,d0
 	tst h2h_sign
-	bpl hball
+	bpl.s hball
 	neg d0
 hball:	move d0,48(a6)
 hballmove: move 48(a6),d0
@@ -8824,12 +8824,12 @@ hballmove: move 48(a6),d0
 	asr.l #2,d0
 	add.l d0,12(a6)
 	cmp #webz+80,12(A6)
-	bpl got_someone
+	bpl.s got_someone
 	cmp #webz-80,12(a6)
 	bpl rrts
 got_someone: move #30,18(a6)
  	cmp #webz,12(a6)
-	bgt zp2
+	bgt.s zp2
 	move.l _claw,a4
 xeq:	neg 48(a6)
 	bra h2hckill
@@ -8878,7 +8878,7 @@ run_h2hgen: add #1,28(a6)
 	tst practise
 	bne rrts
 	tst h2h_sign
-	bmi hupweb
+	bmi.s hupweb
 	cmp #webz+50,12(a6)
 	bpl rrts			;already close enough
 	add #1,12(a6)
@@ -8894,14 +8894,14 @@ gstartmove: 	bsr webinfo			;get info on our lane
 	move d4,d6
 	move d5,d7			;preserve midpoint of our channel
 gsmove:	tst 22(a6)
-	bmi gleft	
+	bmi.s gleft	
 	bsr r_webinfo
-	bra ggot
+	bra.s ggot
 gleft:	bsr l_webinfo			;get info on the channel to the left
 ggot:	cmp d4,d6
-	bne nuchan
+	bne.s nuchan
 	cmp d5,d7
-	bne nuchan			;check for channel the same (hit the edge of the web)
+	bne.s nuchan			;check for channel the same (hit the edge of the web)
 	neg 22(a6)
 	bra gsmove			;go init move other direction
 nuchan:	swap d4
@@ -8931,7 +8931,7 @@ gmove: sub.b #1,24(a6)
 	move.l 40(a6),d0
 	add.l d0,8(a6)			;move 1/16 of the way to target
 	cmp #8,44(a6)
-	bne gmove1			;check for halfway acress
+	bne.s gmove1			;check for halfway acress
 	move 46(a6),16(a6)		;set dest channel=our channel
 gmove1:	sub #1,44(a6)
 	bne rrts
@@ -8957,7 +8957,7 @@ ggen:	clr 20(A6)
 	jsr toweb
 	move.l #$0001ffff,d0
 	tst practise
-	beq arse
+	beq.s arse
 	neg d0
 arse:	move.l d0,44(A6)
 	move #-3,48(a6)
@@ -9010,12 +9010,12 @@ afid:	cmp #-2,wave_tim
 	move.l _shot,d0
 	clr 20(a0)
 	tst blanka
-	beq vfyre
+	beq.s vfyre
 ;	bsr rannum
 ;	cmp sflip_prob1,d0
 ;	bmi slongfur	
 	move.l #-3,d0
-	bra vfyre
+	bra.s vfyre
 slongfur: move.l #-7,d0
 	move #1,20(a0)
 vfyre:	move.l d0,(a0)		;header of shot data
@@ -9040,14 +9040,14 @@ run_ashot: add #4,28(a6)		;spin the shot
 ;	tst 44(a6)
 ;	bne rash1
 	bsr xzcollie
-	bne kill_ashot		
+	bne.s kill_ashot		
 	move #webz-80,d0
 	tst 20(a6)
-	beq chove
+	beq.s chove
 	move #10,d0
 chove:	cmp 12(a6),d0
 ;	blt rrts
-	bpl rash1
+	bpl.s rash1
 ;	move #1,44(a6)
 	bsr checlane
 	bne rrts
@@ -9059,8 +9059,8 @@ shouch:	cmp #-2,wave_tim
 	move.l #$8000,d1
 	bsr setmsg
 	move.l (a7)+,a0
-	bsr ouch
-	bra kill_ashot
+	bsr.s ouch
+	bra.s kill_ashot
 rash1:	add #13,30(a6)
 	add #15,32(a6)			;make it tumble once it leaves the web
 	tst 12(a6)
@@ -9073,13 +9073,13 @@ kill_ashot: add #1,ashots
 ouch:	clr l_soltarg
 	clr.l 20(a0)			;stop Claw moving	
 	tst lives
-	beq ouch1p
+	beq.s ouch1p
 	cmp #2,players
-	bne ouch1p
+	bne.s ouch1p
 ;	add #1,dying
 	move #20,54(a0)			;blow up one claw while allowing play to proceed with the other
 	move #0,52(a0)
-	bra ow
+	bra.s ow
 	
 
 ouch1p:
@@ -9099,7 +9099,7 @@ ow:	move.l _zap,(a0)		;Claw shape to zap
 	bra zapson
 
 tsphkillme: move #2,48(a6)	;spheres density 1-4
-	bra ospher
+	bra.s ospher
 
 sphkillme: move #1,48(a6)
 ospher:
@@ -9107,7 +9107,7 @@ ospher:
 	and #$f,d0
 	lsl #4,d0
 	move d0,46(a6)
-	bra kime
+	bra.s kime
 
 killme:
 ;
@@ -9139,10 +9139,10 @@ changex:	bsr webinfo
 	beq vectorzap			;Enhanced mode uses pixel explosion graphics
 
 	tst bolt_lock
-	beq nobobo
+	beq.s nobobo
 
 	tst t2k
-	beq nobobo		;powerups only on t2k
+	beq.s nobobo		;powerups only on t2k
 
 dpring:	move #11,34(a6)			;get ready for Pring explosion
 	move #16,46(a6)
@@ -9162,7 +9162,7 @@ nobobo:
 	tst t2k
 	beq nopup
 	tst h2h
-	bne nopup
+	bne.s nopup
 	move #9,sfx
 	move #3,sfx_pri
 	jsr fox
@@ -9175,7 +9175,7 @@ nobobo:
 	clr 52(a6)
 	move #25,54(a6)		;type PUP	
 	cmp #3,cwave
-	bgt noidiot
+	bgt.s noidiot
 	lea pupmes,a0
 	clr.l d0
 	move.l #$8000,d1
@@ -9189,7 +9189,7 @@ badd:	cmp #7,bonum
 
 nopup:
 	cmp #2,48(a6)
-	beq setsphk
+	beq.s setsphk
 	clr 48(a6)
 	bra dpring
 
@@ -9199,7 +9199,7 @@ setsphk: move #1,48(a6)
 	move.l #$10000,d2
 	move.l #$10000,d3
 	move.l 46(a6),d4
-	bsr xpixex
+	bsr.s xpixex
 	move.l d4,46(a6)
 	move #13,34(a6)
 	rts
@@ -9214,7 +9214,7 @@ xpixex:
 	rts
 
 run_pup: tst 48(a6)
-	bmi domopup
+	bmi.s domopup
 	sub #4,48(a6)
 	rts
 domopup: cmp #$0a,44(a6)
@@ -9241,9 +9241,9 @@ doita:
 ;	jsr fox
 
 	cmp #-2,wave_tim
-	beq stdpu1		;NEVER if zooming!!!
+	beq.s stdpu1		;NEVER if zooming!!!
 	cmp #1,dnt
-	bne stdpu1
+	bne.s stdpu1
 	move #-1,dnt
 	move #$0b,44(a6)	
 	lea puptxt2,a0
@@ -9253,9 +9253,9 @@ doita:
 	bra adenoid		;Get the early Droid if we got this
 	
 stdpu1:	cmp #-2,wave_tim	;if we are zooming give a droid next time
-	bne stdpu
+	bne.s stdpu
 	tst dnt
-	bne agdroid
+	bne.s agdroid
 	move #$0b,44(a6)	
 	lea drtxt,a0
 	clr.l d0
@@ -9270,24 +9270,24 @@ agdroid: move #1,bonum
 
 stdpu:	move bonum,d2
 	cmp #4,d2
-	bne nadr
+	bne.s nadr
 	tst dnt
-	bpl nadr
+	bpl.s nadr
 	add #1,bonum
 	add #1,d2		;in case we already had the early droid
 nadr:
 	asl #2,d2
 	cmp #20,d2		;special case if warp Thang
-	bne pupdoo
+	bne.s pupdoo
 
 	lea wtxts,a0
 	move warpy,d3
-	bpl dopoo1
+	bpl.s dopoo1
 	clr d3
 dopoo1:	lsl #2,d3
 	move.l 0(a0,d3.w),a0
 	move #1,show_warpy
-	bra juju
+	bra.s juju
 
 pupdoo:	lea puptxts,a0
 	move.l 0(a0,d2.w),a0
@@ -9318,10 +9318,10 @@ xtoend:
 pupvex: dc.l hilaser,suprise,jenab,suprise,addroid,sprzap,suprise,suprise
 
 suprise: tst startbonus
-	bne bonnk
+	bne.s bonnk
  	jsr rannum
 	cmp #$08,d0
-	bgt bonnk
+	bgt.s bonnk
  	move #1,szap_on
 	move #1,inf_zap		;Infinite zapper yeah!
 douttah: lea ohtxt,a0
@@ -9352,11 +9352,11 @@ hilaser: move #1,laser_type
 	move.l _claw,a0
 	move.l #$48000,d0
 	tst pal
-	beq onopal
+	beq.s onopal
 	move.l #$56666,d0	
 onopal:	move #$0202,48(a0)
 	tst beastly
-	beq sass2
+	beq.s sass2
 	lsr.l #1,d0
 	move #$0404,48(a0)
 sass2: move.l d0,shotspeed
@@ -9386,7 +9386,7 @@ adenoid: move #$3c,bulland	;for test droid mode
 	rts
 
 sprzap: tst warpy
-	bmi knibble
+	bmi.s knibble
  	sub #1,warpy
 knibble: move.l #pic,a2
 	move.l #$6e0089,d0
@@ -9405,9 +9405,9 @@ knibble: move.l #pic,a2
 	rts
 
 xr_pixex: sub.l #$8000,24(a6)
-	bmi run_pixex
+	bmi.s run_pixex
 	cmp #webz+80,12(a6)
-	bge run_pixex
+	bge.s run_pixex
 	move.l 24(a6),d0
 	add.l d0,12(a6)
 	rts
@@ -9423,12 +9423,12 @@ run_pixex: move.l 20(a6),d0
 
 run_prex: add #1,44(a6)
 	cmp #13,34(a6)
-	beq biggrx
+	beq.s biggrx
 	cmp #50,44(a6)
-	bgt kikik
+	bgt.s kikik
 	rts
 biggrx: cmp #255,44(a6)
-	bgt kikik
+	bgt.s kikik
 	rts
 
 vectorzap: move.l _zap,(a6)		;Explosion header frame
@@ -9501,7 +9501,7 @@ adgmove: jsr collie
 zappage: jsr collie
 	bne blowmeaway
 	cmp #-2,wave_tim
-	beq nzppa
+	beq.s nzppa
  	jsr checlane_only
 	beq frouch		;fry player if on lane and zapping!
  	add #3,28(a6)
@@ -9512,7 +9512,7 @@ zappage: jsr collie
 nzppa:	rts	
 
 uppweb: jsr mcollie
-	beq arab
+	beq.s arab
 	bsr dxle		;spatter any shots
 	move.l flip_zspeed,d0
 	lsl.l #5,d0
@@ -9529,7 +9529,7 @@ arab: 	move.l flip_zspeed,d0
 	rts
 
 
-make_beast: bsr maflip
+make_beast: bsr.s maflip
 	bmi rrts
 	move #5,44(a6)		;Sflipper 5
 	move #2,46(a6)		;current Level
@@ -9541,7 +9541,7 @@ make_beast: bsr maflip
 
 
 
-make_sflip3: bsr maflip
+make_sflip3: bsr.s maflip
 	bmi rrts
 	move #3,44(a6)		;Sflipper 3
 	move #-1,26(a6)		;No delay
@@ -9551,7 +9551,7 @@ make_sflip3: bsr maflip
 	rts
 
 
-make_sflip2: bsr maflip
+make_sflip2: bsr.s maflip
 	bmi rrts
 	move #2,44(a6)		;Sflipper 2
 	move #-1,26(a6)		;No delay
@@ -9568,7 +9568,7 @@ make_flipper:
 ;	bra make_mirr
 
 	tst t2k
-	beq maflip
+	beq.s maflip
 
 	bsr rannum
 	cmp sflip_prob3,d0
@@ -9580,7 +9580,7 @@ maflip:	tst afree
 	move.l freeobjects,a0
 	move.l _flipper,d0
 	tst blanka			;check for solid flag
-	beq nsf
+	beq.s nsf
 	move.l #-1,d0			;solid #1 is the flipper
 nsf:	move.l d0,(a0)
 	move #webz+80,12(a0)
@@ -9621,8 +9621,8 @@ run_flipper:
 ; move the Flipper enemy
 	
 	tst _sz
-	beq flipok
-	bmi flipok
+	beq.s flipok
+	bmi.s flipok
 ;	move #-1,_sz
 	bsr zappit
 	bra fkillme
@@ -9641,7 +9641,7 @@ rail:	move 44(a6),d0			;get Sflipper mode
 railopts: dc.l stdrail,h2hrail,stdrail,stdrail,stdrail,beastrail
 
 beastrail: bsr mcollie
-	beq ssar
+	beq.s ssar
 
 	move 46(a6),d0		;get Level
 	beq fkillme		;Final, go kill me
@@ -9662,12 +9662,12 @@ h2hrail: bsr collie
 	bne fkillme
  	move.l flip_zspeed,d0
 	tst 46(a6)
-	bpl srail
+	bpl.s srail
 	add.l d0,12(a6)
 	cmp #webz+80,12(a6)
 	blt rrts
 	move #webz+80,12(A6)
-	bra sra	
+	bra.s sra	
 
 
 
@@ -9685,15 +9685,15 @@ flipimm: move #1,24(a6)			;change flipper mode to Flip
 	rts
 
 flipto: cmp #3,44(a6)
-	bne flipto1
+	bne.s flipto1
 	move.l flip_zspeed,d0
 	sub.l d0,12(a6)
 	cmp #webz-80,12(A6)
-	bgt fspesh0
+	bgt.s fspesh0
 	move #4,44(a6)
-	bra flipto1
+	bra.s flipto1
 fspesh0: sub.b #1,46(a6)
-	bpl flipto1
+	bpl.s flipto1
 	move.b 47(a6),46(a6)
 ;	bsr afid			;try to Fire more often	
 flipto1: move 20(a6),d0
@@ -9704,7 +9704,7 @@ flito:	move 28(a6),d1
 	ext d1
 	and #$ff,d1
 	sub d1,d0			;compare to th' dest
-	bne flipcollie			;same, not there yet, go and detecoll
+	bne.s flipcollie			;same, not there yet, go and detecoll
 	move #2,24(a6)			;mode to Stop
 	move #0,36(a6)			;default centre
 	move #28,sfx
@@ -9716,10 +9716,10 @@ flito:	move 28(a6),d1
 
 flipcollie: ext d0
 	tst d0
-	bpl possie
+	bpl.s possie
 	neg d0				;dist from targ is positive.
 possie: cmp #52,d0			;<32, I say it can be shot.
-	bgt flipcolyou			;Nope
+	bgt.s flipcolyou			;Nope
 	bsr collie
 	bne fkillme			;Zap, baby
 	rts	 
@@ -9727,8 +9727,8 @@ flipcolyou:
 	move 38(a6),d0
 	bmi rrts		;Not if out of a tanker	
 	tst h2h
-	beq ucolyou
-	bsr h2hclan
+	beq.s ucolyou
+	bsr.s h2hclan
 	bne rrts
 h2hgotu: move.l a0,a4
 	jsr h2hckill
@@ -9736,7 +9736,7 @@ h2hgotu: move.l a0,a4
 
 ucolyou: move players,d1
 	move.l _claw,a0
-	bsr clan		;see if we are in any player's lane
+	bsr.s clan		;see if we are in any player's lane
 	beq gotu			;catch player if he moves to your Lane
 	rts
 
@@ -9747,11 +9747,11 @@ checlane:
 
 
 	tst h2h
-	beq chchc
+	beq.s chchc
 	move 16(a6),d0
 h2hclan: move.l _claw,a0		;get claw 1
 	cmp #webz,12(a6)
-	blt h2hcol1
+	blt.s h2hcol1
  	move.l 56(a0),a0	;get claw 2
 h2hcol1: cmp 16(a0),d0		;same lane? (If in this phase they are already on the web end)
 	rts	
@@ -9760,18 +9760,18 @@ chchc:	move players,d1
 	move.l _claw,a0
 	move 16(A6),d0
 clan:	tst 52(a0)		;check Vuln flag
-	beq clnxt
+	beq.s clnxt
 	cmp 16(a0),d0
-	beq clan2
+	beq.s clan2
 clnxt:	sub #1,d1
-	beq snee
+	beq.s snee
 	move.l 56(a0),a0
 	bra clan
 snee:	move #1,d0
 	rts
 clan2: 	move 12(a6),d2		;get bullet pos
 	sub 12(a0),d2		;cmp against claw
-	bpl rokki
+	bpl.s rokki
 	neg d2
 rokki:	cmp #2,d2
 	bgt clnxt
@@ -9782,11 +9782,11 @@ checlane_only:	move players,d1
 	move.l _claw,a0
 	move 16(A6),d0
 oclan:	tst 52(a0)		;check Vuln flag
-	beq oclnxt
+	beq.s oclnxt
 	cmp 16(a0),d0
-	beq oclan2
+	beq.s oclan2
 oclnxt:	sub #1,d1
-	beq osnee
+	beq.s osnee
 	move.l 56(a0),a0
 	bra oclan
 osnee:	move #1,d0
@@ -9810,8 +9810,8 @@ sstopmodes: dc.l stdstop,sustop1,sustop1,sustop1,sustop1,stdstop
 
 
 sustop1: tst 48(A6)
-	beq stdstop
- 	bpl gclock
+	beq.s stdstop
+ 	bpl.s gclock
 	add #1,48(a6)
 	jsr flip_set_left
  	cmp #2,24(a6)			;if not wrapped Web (stopped Flipper reached edge)...
@@ -9827,7 +9827,7 @@ gclock: sub #1,48(a6)
 stdstop: bsr collie			;Coll det
 	bne fkillme	
  	tst 38(a6)
-	bpl stoplgl
+	bpl.s stoplgl
 	cmp #-2,38(a6)
 	beq topulsar			;make this Flipper a pulsar
  	clr 24(a6)			;Special case for flipper out of a tanker
@@ -9836,9 +9836,9 @@ stdstop: bsr collie			;Coll det
 	rts
 stoplgl:
 	bsr checlane
-	bne notgt
+	bne.s notgt
 	tst h2h 
-	beq gotu
+	beq.s gotu
 	bra h2hgotu
 notgt:	tst beastly
 	bne flip_set		;Flippers never pause in beastly mode
@@ -9857,10 +9857,10 @@ gotu: 	cmp #-2,wave_tim		;-2 means the zoom has started and player is safe
 	jsr fox
 	move handl,handl2
 	cmp #2,players
-	bne singl_snatch		;do single player get caught
+	bne.s singl_snatch		;do single player get caught
 ;	add #1,dying
 	tst lives
-	beq singl_snatch
+	beq.s singl_snatch
 	move #13,54(a0)			;claw to godown mode
 	clr 52(A0)			;mode to not vuln
 	move #14,54(a6)			;flipper to godown mode
@@ -9882,47 +9882,47 @@ flip_set:
 ; try and flip towards the player's position
 
 	tst h2h
-	beq ufpset
+	beq.s ufpset
 	move.l _claw,a0
 	cmp #webz,12(a6)
-	blt luff
+	blt.s luff
 	move.l 56(a0),a0
-	bra luff
+	bra.s luff
 
 
 ufpset:	cmp #2,players			;2psim mode?
-	bne uflipset			;No, go do it like usual
+	bne.s uflipset			;No, go do it like usual
 	move.l _claw,a0
 fsetm:	tst 52(a0)			;check if claw is prey
-	beq fsetnxt			;No it is not.
-	bsr _fset			;get flip routine and dist
+	beq.s fsetnxt			;No it is not.
+	bsr.s _fset			;get flip routine and dist
 	move.l a1,a2
 	move d1,d3
-	bra _fset2
+	bra.s _fset2
 fsetnxt: move #500,d3			;prev claw was not a target
 	move.l #zzzz,a2
 _fset2:	move.l 56(a0),a0
 	tst 52(a0)
-	beq fsetfinal
-	bsr _fset
-	bra _fset3
+	beq.s fsetfinal
+	bsr.s _fset
+	bra.s _fset3
 fsetfinal: move #500,d1
 	move.l #zzzz,a1
 _fset3:
 	cmp d3,d1	;which is closer?
-	blt toclaw2	;Player One is.
-	bgt toclaw1	;Player Two is.
+	blt.s toclaw2	;Player One is.
+	bgt.s toclaw1	;Player Two is.
 	cmp #500,d1	;same: are they at default max?
 	beq zzzz	;They are, so we will not Flip.
 	bsr rannum
 	btst #0,d0
-	beq toclaw2	;random L or R flip if distance is eq
+	beq.s toclaw2	;random L or R flip if distance is eq
 
 toclaw1: jmp (a2)	;Flip to claw 1.
 toclaw2: jmp (a1)	;Flip to claw 2.
 	
 uflipset: move.l _claw,a0
-luff: 	bsr _fset
+luff: 	bsr.s _fset
 ;	beq rrts			;allow for flipper halt by zzzz
 	jmp (a1)			;only one claw: just go wherever it sez
 
@@ -9931,34 +9931,34 @@ _fset:
 	move 16(a6),d1			;Flipper current pos
 	move d1,38(a6)			;Coll detect alternative (for you!)
 	tst connect
-	bne seekwrap			;Wrap mode if web is circular
+	bne.s seekwrap			;Wrap mode if web is circular
 	sub d0,d1
 	move d1,d4
-	bgt fsl
-	blt fsr
-	bra zz
+	bgt.s fsl
+	blt.s fsr
+	bra.s zz
 seekwrap: move web_max,d2
 	asr #1,d2			;half distance around web
  	sub d0,d1
 	move d1,d4
-	bgt lll
-	blt rrr
-	bra zz
+	bgt.s lll
+	blt.s rrr
+	bra.s zz
 lll:	sub d2,d1
-	blt fsl
-	bra fsr
+	blt.s fsl
+	bra.s fsr
 rrr:	neg d1
 	sub d2,d1
-	blt fsr
-	bra fsl
+	blt.s fsr
+	bra.s fsl
 
 fsl:	lea flip_set_left,a1		;set flipset call, invert it for mode 3 Flippers
 	cmp #3,44(a6)
-	bne abs
+	bne.s abs
 	lea flip_set_right,a1
 abs:	move d4,d1
 	tst d1
-	bpl tart
+	bpl.s tart
 	neg d1
 tart:	rts
 fsr:	lea flip_set_right,a1
@@ -9973,9 +9973,9 @@ flip_set_left:
 
 
 	tst 16(a6)			;are we in lane zero?
-	bne fset0
+	bne.s fset0
 	tst connect
-	bne fset1			;special if web is connected
+	bne.s fset1			;special if web is connected
 	bra flip_set_right
 
 zzzz:	move #2,24(a6)			;stop a Flipper
@@ -9988,7 +9988,7 @@ fset1:  bsr webinfo
 	move web_max,d6
 	sub #1,d6
 	move d6,16(a6)			;Wrap anticlockwize
-	bra fset
+	bra.s fset
 fset0:  bsr webinfo			;get info. on lane endpoints
 	sub #1,16(a6)			;where we're going
 fset:	move 16(a6),d7
@@ -10001,7 +10001,7 @@ fset:	move 16(a6),d7
 	move #9,36(a6)			;Offset X centre
 	move flip_rospeed,d7		;The speed of flipping
 	cmp #2,44(a6)
-	bne xflip
+	bne.s xflip
 	lsl #1,d7			;Super levels 2 or over twice as fast Walkers
 xflip:	neg d7				;Negative to flip anticlockwise
 	move d7,20(a6)			;set ro speed
@@ -10020,9 +10020,9 @@ flip_set_right:
 	move web_max,d0
 	sub #1,d0
 	cmp 16(a6),d0			;are we in the end lane?
-	bne fset2
+	bne.s fset2
 	tst connect
-	bne fset3			;special if web is connected
+	bne.s fset3			;special if web is connected
 	bra flip_set_left
 	move #2,24(a6)			;stop a Flipper
 	move #0,36(a6)			;restore default x-centre		
@@ -10030,7 +10030,7 @@ flip_set_right:
 
 fset3:  bsr webinfo
 	clr 16(a6)			;Wrap anticlockwize
-	bra fset4
+	bra.s fset4
 fset2:  bsr webinfo			;get info. on lane endpoints
 	add #1,16(a6)			;where we're going
 fset4:	move 16(a6),d7
@@ -10043,7 +10043,7 @@ fset4:	move 16(a6),d7
 	move #-9,36(a6)			;Offset X centre
 	move flip_rospeed,d7		;The speed of flipping
 	cmp #2,44(a6)
-	bne xflip2
+	bne.s xflip2
 	lsl #1,d7			;Super levels 2 or over twice as fast Walkers
 xflip2:	move d7,20(a6)			;set ro speed
  	swap d2
@@ -10078,11 +10078,11 @@ m_ptank:
 ;	move.b ptank_freq+1,ptank_freq
 	move #2,d3			;tanker-type
 	tst blanka
-	beq upvt
+	beq.s upvt
 	move.l #-8,d2
-	bra maketank
+	bra.s maketank
 upvt:	move.l _pulstank,d2
-	bra maketank
+	bra.s maketank
 
 make_futanker:
 ;
@@ -10090,21 +10090,21 @@ make_futanker:
 
 	move #1,d3			;tanker-type
 	tst blanka
-	beq vft
+	beq.s vft
 	move.l #-6,d2
-	bra maketank
+	bra.s maketank
 vft:	move.l _fusetank,d2
-	bra maketank
+	bra.s maketank
 
 make_tanker:
 ;
 ; Make an enemy of type FLIPPER TANKER
 
 	tst blanka
-	beq mtv
+	beq.s mtv
 	move.l #-2,d2
 	clr d3
-	bra maketank
+	bra.s maketank
 
 mtv:	move.l _fliptank,d2
 	clr d3
@@ -10134,7 +10134,7 @@ maketank: cmp #2,afree
 	bra ipix
 
 run_tanker: bsr collie			;Coll det
-	bne opentanker		;I'm dead! Go spawn 2 meanies.
+	bne.s opentanker		;I'm dead! Go spawn 2 meanies.
 	move.l tank_zspeed,d0
 	sub.l d0,12(a6)			;move Flipper vertically
 	cmp #webz-80,12(a6)
@@ -10165,13 +10165,13 @@ openflippers: move.l a6,a5		;mummy's address save
 	bsr newflipper			;new flipper in this lane
 	bsr flip_set_right
 	move #0,d1
-	bsr superflip			;make Super Flippers sometimes
+	bsr.s superflip			;make Super Flippers sometimes
 	move #-1,38(a6)			;tells it to stop Flipping after one flip
 	move.l freeobjects,a6
-	bsr newflipper
+	bsr.s newflipper
 	bsr flip_set_left
 	move #1,d1
-	bsr superflip
+	bsr.s superflip
 	move #-1,38(a6)
 	move.l a5,a6
 	bra tsphkillme
@@ -10187,7 +10187,7 @@ superflip: tst t2k
 	and #3,d0
 	add #1,d0
 	tst d1
-	beq suprf1
+	beq.s suprf1
 	neg d0
 suprf1: move d0,48(a6)		;set random scarper value
 	move.l #-21,(a6)
@@ -10204,7 +10204,7 @@ newflipper: move.l 4(a5),4(a6)
 	move.l 12(A5),12(a6)		;copy XYZ pos
 	move.l _flipper,d0
 	tst blanka
-	beq nfvv
+	beq.s nfvv
 	move.l #-1,d0
 nfvv:	move.l d0,(a6)		;def
 	move.l 16(a5),16(a6)		;pos
@@ -10225,18 +10225,18 @@ nfvv:	move.l d0,(a6)		;def
 openfuseballs: move.l a6,a5		;mummy's address save
 	move.l freeobjects,a6
 	add #1,16(a5)
-	bsr newfuseball			;new flipper in this lane
+	bsr.s newfuseball			;new flipper in this lane
 	bsr set_fuseright
 	sub #1,16(a5)
 	move.l freeobjects,a6
-	bsr newfuseball
+	bsr.s newfuseball
 	bsr set_fuseleft
 	move.l a5,a6
 	bra tsphkillme
 
 newfuseball: move.l _fuse1,d0
 	tst blanka
-	beq nufu
+	beq.s nufu
 	move.l #-4,d0
 nufu:	move.l d0,(a6)
 	move.l 12(a5),12(a6)
@@ -10267,7 +10267,7 @@ openpulsars: move.l a6,a5		;mummy's address save
 	bsr flip_set_right
 	move.l _pus+12,d0
 	tst blanka
-	beq vop
+	beq.s vop
 	move.l #-5,d0
 vop:	move.l d0,(a6)		;header is a Pulsar
 	move #-1,26(a6)		;No delay
@@ -10328,10 +10328,10 @@ make_spike:
 	move #6,54(a0)			;Type=RUN_SPIKE
 	clr 20(a0)
 	tst t2k
-	beq uspike
+	beq.s uspike
 	jsr rannum
 	cmp sflip_prob2,d0
-	bpl uspike
+	bpl.s uspike
 	move #1,20(a0)			;set Super Spike
 uspike:	move.l a6,-(a7)			;coz it will be called from an active Spiker
 	move.l a0,a6
@@ -10346,7 +10346,7 @@ run_spike: move 12(a6),d0
 	move d0,12(a6)			;our 'position' is the height of our Spike
 
 	tst 20(a6)
-	beq nospf
+	beq.s nospf
 	move flashcol,40(a6)
 nospf:
 
@@ -10358,12 +10358,12 @@ nospf:
 ;	move 16(a0),d0
 ;	cmp 16(a6),d0			;in Claw lane?
 	bsr checlane_only
-	bne rspik1			;naaw
+	bne.s rspik1			;naaw
 	move 12(a0),d0			;Claw Z pos
 	cmp #webz+80,d0
-	bge rspik1
+	bge.s rspik1
 	cmp 12(a6),d0
-	blt rspik1
+	blt.s rspik1
 	move (a7)+,12(a6)
 	jsr zzoomoff			;cancel warping sound/yes yes yes
 	bsr setsnatch	;deer deer, you got spiked
@@ -10383,7 +10383,7 @@ zson:	move #$0a,sfx
 
 
 rspik1:	bsr colok			;so do a detecol (not allowing SuperZap)
-	bne decspike
+	bne.s decspike
 rspik2:	move (a7)+,12(a6)
 	rts
 decspike: move (a7)+,12(a6)
@@ -10437,7 +10437,7 @@ spiker_vex: dc.l newspike,climbspike,descendspike
 
 run_spiker: add #4,28(a6)		;He spins
 	bsr collie
-	bne sfkillme			;You can kill him
+	bne.s sfkillme			;You can kill him
 	lea spiker_vex,a0
 	move 44(a6),d0
 	asl #2,d0
@@ -10454,14 +10454,14 @@ newspike: lea spikes,a0		;Pointer to table of existing spikes.
 	clr d0		;Total # of lanes spikes can go in.
 
 nuspik: move.l (a0),d4		;Get next spike table entry
-	bne is_spike		;Non zero if it is a spike
+	bne.s is_spike		;Non zero if it is a spike
 	add #1,d1		;inc free spikes ctr
 	move d0,(a1)+		;spike number to scratch ram
-	bra nxtspik		;jump past is_spike
+	bra.s nxtspik		;jump past is_spike
 
 is_spike: move.l d4,a2
 	cmp 36(a2),d2		;compare length of indicated spike with current shortest
-	blt nxtspik		;not as short, ignore
+	blt.s nxtspik		;not as short, ignore
 	move.l a2,a3		;save the address of the shorter spike
 	move 36(a2),d2		;make it the current shortest
 
@@ -10471,7 +10471,7 @@ nxtspik: lea 4(a0),a0		;next spiketable entry
 	blt nuspik
 	bne nuspik		;loop for all possible spikes on this web.
 	tst d1			;were there any lanes without spikes?
-	bne setnewspike		;yes, go and make one
+	bne.s setnewspike		;yes, go and make one
 gotospike: move.l 16(a3),16(a6)	;get the web pos of the chosen spike
 	move #1,44(a6)		;mode to climb
 	move.l a3,24(a6)	;save the address of 'our' spike
@@ -10479,7 +10479,7 @@ gotospike: move.l 16(a3),16(a6)	;get the web pos of the chosen spike
 	bra toweb		;fix in position and go.
 
 setnewspike: tst afree		;**CHECK** to see if there is a free slot to build a spike in.
-	bpl nuspik1
+	bpl.s nuspik1
 	cmp #200,d2		;check to see if there are already other spikes
 	bne gotospike		;go and lengthen another instead
 
@@ -10507,7 +10507,7 @@ climbspike: bsr alienfire
  	move.l spiker_zspeed,d0
 	sub.l d0,12(a6)		;move up
 	cmp #webz-70,12(a6)
-	blt sdesc
+	blt.s sdesc
 	move.l 24(a6),a0	;address of 'our' spike
 	move 36(a0),d2		;current spike height
 	move #webz+80,d1
@@ -10517,7 +10517,7 @@ climbspike: bsr alienfire
 	add.l 36(a0),d0		;inc spike
 	swap d0
 	cmp #150,d0		;max allowed spike length
-	bge nolonger
+	bge.s nolonger
 	swap d0
 	move.l d0,36(a0)	;store longer spike
 nolonger: sub #1,36(a6)		;dec build duration
@@ -10560,7 +10560,7 @@ make_mirr:
 
 rumirr: add #1,28(a6)
 	cmp #webz-40,12(a6)	;check nearest approach
-	ble gomirr
+	ble.s gomirr
 	move.l 20(a6),d0
 	sub.l d0,12(a6)		;move it closer to the player
 gomirr:	jsr mcollie
@@ -10598,7 +10598,7 @@ refsht2: add #4,28(a6)
 	jsr colok		;absorbs non powered up shots, falls thru to standard refshot, no smart bomb
 	move.l shotspeed,d0
 	asr.l #1,d0
-	bra reshh
+	bra.s reshh
 
 refsht: move.l shotspeed,d0
 reshh:	sub.l d0,12(a6)		;move towards player!
@@ -10624,7 +10624,7 @@ make_fuseball:
 	move.l freeobjects,a0
 	move.l _fuse1,d0
 	tst blanka
-	beq mfusb
+	beq.s mfusb
 	move.l #-4,d0
 mfusb: 	move.l d0,(a0)
 	move #webz+80,12(a0)
@@ -10656,17 +10656,17 @@ mfusb: 	move.l d0,(a0)
 fuse_vex: dc.l climbrail,crossrail,blowaway
 
 run_fuseball: tst _sz
-	beq rfb
+	beq.s rfb
 	bsr collie		;so they will always smart bomb
 	bne blowmeaway
 rfb: 	add #2,28(a6)		;make 'em spin
  	move.l _fuse1,d1
 	bsr rannum
 	and #1,d0
-	bne r_fuse1
+	bne.s r_fuse1
 	move.l _fuse2,d1
 r_fuse1: tst blanka
-	beq r_fuse2
+	beq.s r_fuse2
 	move.l #-4,d1
 r_fuse2:  move.l d1,(a6)			;animate the Fuseball
 	lea fuse_vex,a0
@@ -10676,7 +10676,7 @@ r_fuse2:  move.l d1,(a6)			;animate the Fuseball
 	jmp (a0)
 
 climbrail: cmp #webz-80,12(a6)
-	blt crail1			;check for top of Web
+	blt.s crail1			;check for top of Web
 	move.l fuse_zspeed,d0
 	sub.l d0,12(a6)
 crail1: sub.b #1,46(a6)
@@ -10691,34 +10691,34 @@ crail1: sub.b #1,46(a6)
 	move 16(a6),d1			;Flipper current pos
 	move d1,38(a6)			;Coll detect alternative (for you!)
 	tst connect
-	bne seekfwrap			;Wrap mode if web is circular
+	bne.s seekfwrap			;Wrap mode if web is circular
 	sub d0,d1
-	bgt set_fuseleft
-	ble set_fuseright
+	bgt.s set_fuseleft
+	ble.s set_fuseright
 seekfwrap: move web_max,d2
 	asr #1,d2			;half distance around web
  	sub d0,d1
-	bgt flll
-	ble frrr
+	bgt.s flll
+	ble.s frrr
 flll:	cmp d2,d1
-	blt set_fuseleft
-	bra set_fuseright
+	blt.s set_fuseleft
+	bra.s set_fuseright
 frrr:	neg d1
 	cmp d2,d1
-	blt set_fuseright
-	bra set_fuseleft
+	blt.s set_fuseright
+	bra.s set_fuseleft
 	
 
 set_fuseleft: tst 16(a6)		;are we in lane zero?
-	bne fuset0
+	bne.s fuset0
 	tst connect
-	bne fuset1			;special if web is connected
+	bne.s fuset1			;special if web is connected
 	rts
 
 fuset1:	move web_max,d6
 	sub #1,d6
 	move d6,16(a6)			;Wrap anticlockwize
-	bra fuset
+	bra.s fuset
 fuset0:	sub #1,16(a6)			;where we're going
 fuset: 	bsr webinfo
   	sub d2,d0
@@ -10755,17 +10755,17 @@ set_fuseright: bsr webinfo
 	rts
 
 crossrail: cmp #4,36(a6)		;only kill if in lane centre
-	blt nokll
+	blt.s nokll
 	cmp #12,36(a6)
-	bgt nokll
+	bgt.s nokll
 	tst 18(a6)
-	bmi nokll
+	bmi.s nokll
  	bsr collie
 	bne blowmeaway
 nokll:	cmp #webz-80,12(a6)		;if we are at top we can kill player
-	bgt nopkll
+	bgt.s nopkll
 	cmp #-2,wave_tim
-	beq nopkll			;(not if we are already zooming)
+	beq.s nopkll			;(not if we are already zooming)
 ;	move.l _claw,a0
 ;	move 16(a0),d0
 ;	cmp 16(a6),d0
@@ -10783,16 +10783,16 @@ nopkll: sub.b #1,48(a6)
 	bpl rrts
 	clr 44(a6)			;set to rail ride again
 	tst 38(a6)
-	beq crail0
+	beq.s crail0
  	move web_max,d0			;change lane #
 	sub #1,d0
  	cmp 16(a6),d0		;are we in lane zero?
-	bne furset0
+	bne.s furset0
 	tst connect
-	bne furset1			;special if web is connected
+	bne.s furset1			;special if web is connected
 	rts
 furset1: clr 16(a6)			;Wrap anticlockwize
-	bra crail0
+	bra.s crail0
 furset0: add #1,16(a6)			;where we're going
 crail0: bsr webinfo			;get info. on lane endpoints
  	swap d0
@@ -10821,7 +10821,7 @@ m_puls:	sub #1,afree
 	move.l freeobjects,a0
 	move.l _pus,d0
 	tst blanka
-	beq vop2
+	beq.s vop2
 	move.l #-5,d0
 vop2:	move.l d0,(a0)
 	move #webz+80,12(a0)
@@ -10851,7 +10851,7 @@ topulsar:
 
 run_pulsar: lea _pus,a0
 	tst blanka
-	bne vop3
+	bne.s vop3
 	move pucnt,d0
 	and #$0f,d0			;get pu frame ctr
 	lea pucycl,a1
@@ -10887,7 +10887,7 @@ vop3:	move.l pulsar_zspeed,d0
 	cmp #7,d0		;check for Deadly
 	bne rrts
 	tst zapdone		;do we need to start a zap sound?
-	bne zd0			;no, someone already did
+	bne.s zd0			;no, someone already did
 	move #1,zapdone
 	move #$07,sfx
 	move #51,sfx_pri
@@ -10909,7 +10909,7 @@ zd0:	move 16(a6),d0
 ;	move.l _claw,a0
 ;	cmp 16(a0),d0
 	bsr checlane_only
-	beq frouch		;Kill player if we are in his Lane
+	beq.s frouch		;Kill player if we are in his Lane
 	rts
 
 frouch:	move.l a0,-(a7)
@@ -10958,20 +10958,20 @@ run_pspark: bsr checlane
 	move web_max,d0
 	sub #1,d0
 	tst 46(a6)		;check motion sign
-	bmi propleft
+	bmi.s propleft
 propright: add #1,16(a6)	;propagate to right
 	cmp 16(a6),d0
 	bpl toweb
 	tst connect
-	bne wwrap
+	bne.s wwrap
 	neg 46(a6)
-	bra propleft
+	bra.s propleft
 wwrap:	clr 16(a6)
 	bra toweb
 propleft: sub #1,16(a6)
 	bpl toweb
 	tst connect
-	bne wwrap2
+	bne.s wwrap2
 	neg 46(a6)
 	bra propright
 wwrap2: move d0,16(a6)
@@ -10985,7 +10985,7 @@ xbon:	move d0,-(a7)
 	add #4,d0
 	bsr doscore
 	tst warped
-	bne ntfx
+	bne.s ntfx
 	move #8,sfx
 	move #3,sfx_pri
 	jsr fox
@@ -11095,7 +11095,7 @@ do_oneup: add #1,lives
 	move #150,46(a0)		;duration
 
 	tst blanka
-	beq veconeup
+	beq.s veconeup
 	move #7,34(a0)			;type DRaw Oneup
 
 veconeup: bsr insertobject
@@ -11125,7 +11125,7 @@ go_downc:
 ;
 ; two player Claw going down
 
-	bsr go_down
+	bsr.s go_down
 	blt rrts		;go_down return >0 if we are at the btm
 llost:
 ;	sub #1,dying
@@ -11137,20 +11137,20 @@ loiter: tst dying
 	bne rrts
 	move #1,ud_score
 	sub #1,lives
-	bmi killp2
+	bmi.s killp2
 	move #webz-80,12(a6)	;restart new claw on top of web after godown
 	bra set_rezclaw		;re-rez claw in
 
 killp2:
 	move #-1,54(a6)		;make him Dead
 	clr 34(a6)		;make him Not Drawn
-	bra setsnatch
+	bra.s setsnatch
 
 go_downf:
 ;
 ; Flipper go-down
 
-	bsr go_down
+	bsr.s go_down
 	blt rrts
 	move #1,50(a6)		;Unlink in FG
 	rts
@@ -11217,24 +11217,24 @@ npss:	move.l _zap,(a0)		;Claw shape to zap
 
 
 xzcollie: tst _sz		;special szap detect - not sz if this is second time (for bulls)
-	beq colok
-	bmi colok
+	beq.s colok
+	bmi.s colok
 	tst szap_avail
-	bmi colok
-	bra zappit
+	bmi.s colok
+	bra.s zappit
 	
 mcollie: move #1,d6		;This entry just finds the bullet that hit us, if any
-	bra colok1
+	bra.s colok1
 
 collie:
 ;
 ; Collision detect the current object with all currently active bulls. Return with non-0 for a hit, and kill the bull.
 
 	tst _sz
-	beq colok
-	bmi colok
+	beq.s colok
+	bmi.s colok
 zappit: tst inf_zap
-	bne zizzit
+	bne.s zizzit
 	move #-1,_sz
 zizzit:	move.l 4(a6),boltx
 	move.l 8(a6),bolty
@@ -11249,29 +11249,29 @@ colok1:	move 16(a6),d0
 	move bullmax,d7		;8 bullets max
 	lea bulls,a5
 dog:	move.l (a5)+,d2
-	beq yap
+	beq.s yap
 	move.l d2,a4		;A real bull
 	cmp 16(a4),d0
-	bne yap			;Not on our web seg
+	bne.s yap			;Not on our web seg
 	move 12(a4),d3
 	sub d1,d3
-	bpl bone
+	bpl.s bone
 	neg d3
 bone:	cmp #6,d3		;Abs collision threshold
-	blt bite		;We got one!
+	blt.s bite		;We got one!
 yap:	dbra d7,dog		;Loop for all possibull bulls
 	clr d0
 	rts			;Return zero, no collision
 bite:	tst d6
 	bne rrts		;Return with bullet in a4
 	tst h2h
-	bne h2h_special
+	bne.s h2h_special
 	cmp #10,34(a4)		;draw mode #10 is particle beam, does not stop
-	bge xle3			;Use XLE only to make ring bullets spark off end of Spikes
+	bge.s xle3			;Use XLE only to make ring bullets spark off end of Spikes
 	tst blanka
-	beq jstop		;in old Tempest mode, bulls just stop
+	beq.s jstop		;in old Tempest mode, bulls just stop
 	cmp #6,54(a6)
-	beq xle			;bullets off Spikes spatter
+	beq.s xle			;bullets off Spikes spatter
 jstop:	move.l a4,a0
 kbull:	move.l 24(a0),a1	;Clear coll table entry
 	clr.l (a1)
@@ -11281,8 +11281,8 @@ xle2:	move #1,d0		;return a hit
 h2h_special: move 36(a4),h2h_sign
 	bra jstop
 xle:	tst 20(a6)		;is this a Super Spike?
-	beq dxle
-	bsr dxle
+	beq.s dxle
+	bsr.s dxle
 	move #0,d0		;spatter but return no hit for s.s.
 	rts
 dxle:	move.l 24(a4),a1
@@ -11305,7 +11305,7 @@ toweb:
 ; Fix an object in the Web according to its web position in 16(a6), and return useful
 ; stuff about the lane it is on.
 
-	bsr webinfo
+	bsr.s webinfo
 	swap d4
 	clr d4
 	swap d5
@@ -11321,25 +11321,25 @@ toweb:
 
 l_webinfo: move 16(a6),d0		;current lane
 	sub #1,d0
-	bpl webinf			;-1 is positive, OK
+	bpl.s webinf			;-1 is positive, OK
 	tst connect
-	beq websame			;not connected, return current lane
+	beq.s websame			;not connected, return current lane
 	add web_max,d0			;wrap it
-	bra webinf
+	bra.s webinf
 
 r_webinfo: move 16(a6),d0
 	add #1,d0
 	move web_max,d1
 	cmp d0,d1
-	bgt webinf			;check for on web
+	bgt.s webinf			;check for on web
 	tst connect
-	beq websame			;not connected, return this lane
+	beq.s websame			;not connected, return this lane
 	sub d1,d0			;wrap me baby
-	bra webinf
+	bra.s webinf
 
 websame: move 16(a6),d0	
 webinf: move d0,-(A7)				;call webinfo with an arbitrary d0 which is preserved
-	bsr webi
+	bsr.s webi
 	move (a7)+,d0
 	rts
 
@@ -11385,7 +11385,7 @@ rotate_web: lea _web,a6
 	bne rrts
 iclaw:	move.l #moveclaw,routine		;rotate-in finished
 	tst solidweb
-	beq znazm
+	beq.s znazm
 	move #248,l_soltarg
 ;	move camroll,g_load		;get appropriate GPU modules
 znazm: 	lea _web,a0
@@ -11409,7 +11409,7 @@ rez_claw: tst h2h
 	cmp #$8f,40(a6)
 	bne rrts
 	tst practise
-	beq gwave
+	beq.s gwave
 	clr 34(a6)
 	clr 54(A6)
 	move.l 56(a6),a0
@@ -11422,12 +11422,12 @@ gwave:	move.l a6,-(a7)
 	lsl #2,d0
 	move 2(a0,d0.w),d1
 	move 0(a0,d0.w),d0
-	bmi nogenn
+	bmi.s nogenn
 	move d1,-(a7)
 	jsr make_h2hgen		;make the enemies
 	move (a7)+,d1
 nogenn:  tst d1
-	bmi noball 
+	bmi.s noball 
 balls:	move d1,-(a7)	
 	jsr make_h2hball
 	move (a7)+,d1
@@ -11445,19 +11445,19 @@ srezclaw:
 ; move #2,34(a6)	;make sure we are displayed
 	move #17,34(a6)
  	add #$40,36(A6)	;close rez spacing
-	bne go_con
+	bne.s go_con
 	
 	move.l _claw,d0
 	cmp.l (a6),d0
-	bne ncjmp		;only clear jmp if this is a claw
+	bne.s ncjmp		;only clear jmp if this is a claw
 
 	clr.l cjump		;use as jump indicator/velocity
 ncjmp:	tst blanka
-	beq vclaw
+	beq.s vclaw
 	cmp #21,46(a6)
-	beq vclaw		;standard vector rez if a droid
+	beq.s vclaw		;standard vector rez if a droid
 	move #16,34(a6)		;this is draw solid claw
-	bra rclaw
+	bra.s rclaw
 vclaw:	move #1,34(a6)		;set drawmode normal
 rclaw:	move 46(a6),54(a6)	;set clawcon as intrinsic routine
 	move #-1,52(a6)		;set mode to Vuln
@@ -11468,29 +11468,29 @@ go_con: move 46(a6),d0		;skip on to clawcon (can move and fire during rezz)
 	jmp (a0)
 
 dsclaw2: cmp #21,46(a6)
-	beq droidyo
+	beq.s droidyo
  	jsr nutargg
 droidyo: jmp draw_z
 
 moveclaw:
  	bsr vp_xform			;do dynamic vp
 	tst h2h
-	bne h2hrun
+	bne.s h2hrun
 	bsr run_wave			;run the wave generator
 .if ^^defined ALWAYS_CHEAT
 	move #1,chenable
 .endif
 	tst chenable
-	beq nofire
+	beq.s nofire
 	cmp #-2,wave_tim
-	beq nofire
+	beq.s nofire
  	btst.b #1,pad_now+2		;look for Option
-	beq noptcheat
+	beq.s noptcheat
 	jsr douttah
-	bra nofire
+	bra.s nofire
 noptcheat: move.l pad_now,d0
 	and.l #six,d0
-	beq nofire			;needs this on pad 1 too!
+	beq.s nofire			;needs this on pad 1 too!
 	jsr swarp
 nofire:	bsr fire
 	bsr run_objects			;control active objects
@@ -11511,18 +11511,18 @@ h2hrun: bsr run_objects
 	rts
 
 run_h2hclaw: tst 48(a6)
-	beq clawrunn
+	beq.s clawrunn
 	move.l 56(a6),a0
 	move.l 56(a0),a0
 	clr 34(a0)
 	tst 48(a6)
-	bpl addii
+	bpl.s addii
 
 	sub #1,48(a6)
 	cmp #-64,48(A6)
 	bgt rrts
 	tst _won
-	bmi roga
+	bmi.s roga
 	add #1,48(a6)
 	rts
 roga:	move #150,48(a6)
@@ -11533,7 +11533,7 @@ clawrunn: move.l pad_now,d0
 	clr conswap
 	move #1,whichclaw
 	cmp #$8f,40(a6)			;Green claw is p2
-	bne h2hcc
+	bne.s h2hcc
 	move #2,whichclaw
 	move.l pad_now+4,d0
 	move #1,conswap
@@ -11549,7 +11549,7 @@ h2hcc:	move.l d0,-(a7)
 	move.l 8(a6),8(a4)
 	move.l 16(a6),16(a4)
 	and.l fire_1,d0
-	bne nomirr
+	bne.s nomirr
 	tst 48(a6)
 	bne rrts
 	move #1,34(a4)
@@ -11558,7 +11558,7 @@ nomirr:	move #0,34(a4)
 	move frames,d1
 	move.l #$40000,d0
 	cmp #$8f,40(a6)
-	bne nomirr1
+	bne.s nomirr1
 	neg.l d0
 	add #3,d1
 nomirr1: and #7,d1
@@ -11579,19 +11579,19 @@ claw_con1:
 
 	move #1,whichclaw
  	tst auto
-	beq sclawr
+	beq.s sclawr
 
 	move.l pad_now,-(a7)
 	move droid_data,d0		;this is the closest enemy to the top of the Web
 	bsr lor				;ask Left or Right to get there
-	bpl moveme
+	bpl.s moveme
 	clr.l 20(a6)			;stop claw on ok lane
 	move.l fire_1,pad_now
-gscl:	bsr sclawr
+gscl:	bsr.s sclawr
 	move.l (a7)+,pad_now
 	rts
 
-moveme:	bne clawright			;init claw motion to the right.
+moveme:	bne.s clawright			;init claw motion to the right.
 	move.l fire_1,d0
 	or.l #$00400000,d0
 	move.l d0,pad_now
@@ -11604,14 +11604,14 @@ clawright: move.l fire_1,d0
 sclawr:
 	move.l fire_1,d0
 	and.l pad_now,d0
-	beq cc2
+	beq.s cc2
 	sub.b #1,48(a6)
-	bpl cc2
+	bpl.s cc2
 	move.b 49(a6),48(a6)
 	tst shots
-	bmi cc2
+	bmi.s cc2
 	tst locked
-	bne cc2
+	bne.s cc2
 	sub #1,shots
 	move.l a6,a1
 	clr d7
@@ -11620,7 +11620,7 @@ cc2:
 	tst t2k			;T2K specific action
 	beq cce			;T2K not on.
 	move.l cjump,d0		;check for jump running...
-	beq chek4jump
+	beq.s chek4jump
   	add.l d0,12(a6)
 	move.l 12(a6),d1
 	move #webz-80,d2
@@ -11635,9 +11635,9 @@ cc2:
 ;	move.l 8(a6),vp_ytarg
 	add.l #$c11,cjump
 	tst.l d0
-	bmi cce
+	bmi.s cce
 	cmp #webz-80,12(a6)
-	blt cce
+	blt.s cce
 	move #webz-80,12(a6)
 	clr 14(a6)
 	clr.l cjump
@@ -11645,29 +11645,29 @@ cc2:
 	and.l #$fffc0000,vp_ztarg	
 
 chek4jump: cmp #-2,wave_tim
-	beq cce
+	beq.s cce
 	tst jenable
-	beq cce
+	beq.s cce
  	move.l fire_2,d0
 	and.l pad_now,d0	;check fire 2 for jump button
-	beq cce
+	beq.s cce
 	move.l #-$20000,cjump	;Start a jump
 	move #6,sfx
 	jsr fox			;Make a v. silly noise
 cce:	move.l pad_now,d0
-	bra clawcon
+	bra.s clawcon
 
 claw_con2:
 ; btst.b #3,pad_2
 	move #2,whichclaw
 	move.l pad_now+4,d0
 	and.l fire_1,d0
-	beq cc3
+	beq.s cc3
 	sub.b #1,48(a6)
-	bpl cc3
+	bpl.s cc3
 	move.b 49(a6),48(a6)
 	tst shots+2
-	bmi cc3		
+	bmi.s cc3		
 	sub #1,shots+2
 	move.l a6,a1
 	move #$80,d7			;marker for bullets to distinguish pl. 1 and pl 2 shots
@@ -11682,7 +11682,7 @@ clawcon: move.l 20(a6),d1
 
 	swap d0
 	and #$c0,d0			;check for pad left or right
-	bne pad_pressed			;go do action if pressed
+	bne.s pad_pressed			;go do action if pressed
 ;	bra pad_pressed
 stopclaw: clr.l 20(a6)
 	bra domove		;stop the claw
@@ -11690,52 +11690,52 @@ pad_pressed:
 
 	move.b sysflags,d7		;Rotary controller test hack
 	and #$18,d7
-	beq joyconn			;Using standard controller
+	beq.s joyconn			;Using standard controller
 	tst auto
-	bne joyconn
+	bne.s joyconn
 
 	cmp #1,whichclaw
-	bne notc1
+	bne.s notc1
 	btst #3,d7
-	beq joyconn
+	beq.s joyconn
 	move.l rot_cum,20(a6)
 	clr.l rot_cum
 	clr.l 24(a6)
-	bra domove			;Use absolute speed value if we are on the rotary controller
+	bra.s domove			;Use absolute speed value if we are on the rotary controller
 
 
 notc1:  cmp #2,whichclaw
-	bne joyconn			;must be the droid or a demo
+	bne.s joyconn			;must be the droid or a demo
 	btst #4,d7
-	beq joyconn
+	beq.s joyconn
 	move.l rot_cum+4,20(a6)
 	clr.l rot_cum+4
 	clr.l 24(a6)
 	tst conswap
-	beq domove
+	beq.s domove
 	neg.l 20(a6)			;reverse p2 controls in h2h mode
-	bra domove
+	bra.s domove
 
 
 joyconn: btst #7,d0
-	bne claw_right
+	bne.s claw_right
 	tst conswap
-	bne c_rgt			;this is so h2h player 2 is the right way around
+	bne.s c_rgt			;this is so h2h player 2 is the right way around
 c_lft2: tst.l 20(a6)			;check direction we were moving
-	beq c_lft			;zero, movement starting, ok
+	beq.s c_lft			;zero, movement starting, ok
 	bpl stopclaw			;stop before reversing
 c_lft:	neg.l d3			;negate speed limiter
 	sub.l d2,d1			;add acceleration to velocity
 	cmp.l d1,d3
-	bgt domove			;too fast
-	bra a_ok			;update speed
+	bgt.s domove			;too fast
+	bra.s a_ok			;update speed
 claw_right: tst conswap
 	bne c_lft2
 c_rgt: tst.l 20(a6)			;check direction
 	bmi stopclaw			;stop before reverse
 	add.l d2,d1
 	cmp.l d3,d1
-	bgt domove
+	bgt.s domove
 a_ok: 	move.l d1,20(a6)
 
 domove:	move.l lanes,a1
@@ -11748,18 +11748,18 @@ domove:	move.l lanes,a1
 	move.b d1,2(a2)		;Set this line to blue
  	move.l 20(a6),d1
 	add.l 16(a6),d1
-	bpl ulchk
+	bpl.s ulchk
 	swap d1
 	tst connect
-	beq spdone
+	beq.s spdone
 	move web_max,d1
 	sub #1,d1
-	bra spok 
+	bra.s spok 
 ulchk:  swap d1
 	cmp web_max,d1
-	blt spok
+	blt.s spok
 	tst connect
-	beq spdone
+	beq.s spdone
 	clr d1
 spok:	swap d1
 	move.l d1,16(a6)	
@@ -11812,7 +11812,7 @@ spdone:	move 16(a6),d0
 	move.l d0,4(a6)
 	move.l d1,8(a6)			;place claw on th web
 	cmp #17,34(a6)
-	bne nutargg
+	bne.s nutargg
 	rts
 	
 nutargg: move.l 16(a6),d0
@@ -11822,7 +11822,7 @@ nutargg: move.l 16(a6),d0
 	and #$1c,d0
 	move.l #1,d2			;h.scale valu
 	and #$20,d1
-	bne noflipme
+	bne.s noflipme
 	neg.l d2
 	move #$1c,d1
 	sub d0,d1
@@ -11838,7 +11838,7 @@ noflipme: lea claws,a0
 	rts
 
 vp_set: cmp #1,players
-	bne vp_set2
+	bne.s vp_set2
 	move.l _claw,a0
 	move 4(a0),d2
 	move 8(a0),d3
@@ -11856,7 +11856,7 @@ dshrnk:	move view,d0
 	move 4(a0,d0.w),vp_ztarg
 	move.l vp_ztarg,vp_zbase
 	cmp #1,view
-	bne dpshift
+	bne.s dpshift
 	move 0(a0,d0.w),vp_xtarg
 	move 2(a0,d0.w),vp_ytarg
 	rts
@@ -11889,51 +11889,51 @@ vp_xform:
 	add d0,camrx
  	move.l vp_x,d0
 	cmp.l vp_xtarg,d0
-	beq xtargr
+	beq.s xtargr
  	move.l vp_x,d0
 	move.l vp_xtarg,d1		;Doing the viewpoint transformation smoothly
 	move.l #$4000,d2		;VP xform speed
 	tst.l cjump
-	beq cjj1
+	beq.s cjj1
 	asl.l #1,d2
 cjj1:	cmp.l d0,d1
-	beq xtargr
-	bpl xtar1
+	beq.s xtargr
+	bpl.s xtar1
 	neg.l d2
 xtar1:	add.l d2,vp_x
 xtargr:  move.l vp_y,d0
 	cmp.l vp_ytarg,d0
-	beq ytargr
+	beq.s ytargr
  	move.l vp_y,d0
 	move.l vp_ytarg,d1
 	move.l #$4000,d2
 	tst.l cjump
-	beq cjj2
+	beq.s cjj2
 	asl.l #1,d2
 cjj2:	cmp.l d0,d1
-	beq ytargr
-	bpl ytar1
+	beq.s ytargr
+	bpl.s ytar1
 	neg.l d2
 ytar1:	add.l d2,vp_y
 ytargr:move.l vp_ztarg,d3
 	tst h2h
-	beq ratch
+	beq.s ratch
 	sub.l #$100000,d3	;h2h views are more distant, sub this constant
 ratch:	move.l vp_z,d0
 	cmp.l d3,d0
-	beq ztargr
+	beq.s ztargr
  	move.l vp_z,d0
 	move.l d3,d1
 	move.l #$8000,d2
 	cmp.l d0,d1
-	beq ztargr
-	bpl ztar1
+	beq.s ztargr
+	bpl.s ztar1
 	neg.l d2
 ztar1:	add.l d2,vp_z
 ztargr: rts
 
 donkeys: tst s_db
-	beq kcon
+	beq.s kcon
 	move.l pad_now,d0
 	or.l pad_now+4,d0
 	and.l #allkeys,d0
@@ -11944,29 +11944,29 @@ kcon:
 
 	move.l pad_now,d0
 	cmp #2,players
-	beq mmmm
+	beq.s mmmm
 	tst h2h
-	beq nmmmm
+	beq.s nmmmm
 mmmm:	or.l pad_now+4,d0
 nmmmm:	move.l d0,d1
 	and.l #view1,d1
-	beq cpad1
+	beq.s cpad1
 	clr view
 	rts
 cpad1:	move.l d0,d1
 	and.l #view2,d1
-	beq cpad2
+	beq.s cpad2
 	move #1,view
 	rts
 cpad2:	move.l d0,d1
 	and.l #view3,d1
-	beq cpad3
+	beq.s cpad3
 	move #2,view
 	rts
 cpad3:	and.l #$10,d0		;check 0 (all Music off)
 	beq cpad6
 	tst modstop
-	beq cpad33		;test if tune already off
+	beq.s cpad33		;test if tune already off
 	move.b oldvol,vols
 intune:	move.b vols,d0
 	and.l #$ff,d0
@@ -12000,9 +12000,9 @@ swarp:	move #-1,warpy
 
 rightit: move camrx,d0			;zero roll during warp down if roll is happening
 	and #$fe,d0
-	beq zoo1
+	beq.s zoo1
 	cmp #$80,d0
-	blt zdec
+	blt.s zdec
 	add #4,d0
 zdec:	sub #2,d0
 	move d0,camrx
@@ -12033,7 +12033,7 @@ czoom2:
 ; same thing for zoom 2
 
 	cmp #2,34(a6)
-	beq zinit
+	beq.s zinit
 	move #2,34(a6)			;ensure m-mode
 	move #0,36(a6)
 	move #-1,38(a6)
@@ -12091,7 +12091,7 @@ sclawt:
 	move entities,plc+2
 	move.l _claw,a1
 scloop:	tst 54(a1)
-	bmi isded
+	bmi.s isded
 	move d0,54(a1)
 isded:  move.l 56(a1),a1
 	sub #1,plc+2
@@ -12115,7 +12115,7 @@ zoomup:	add.l #1,zoopitch
 	move vvol1,d4
 	add d2,d4
 	cmp d4,d5
-	bpl chv1
+	bpl.s chv1
 	move.l #$08,d0		;8=change pitch and volume
 chv1:	move handl1,d1
 	move #1,d3
@@ -12128,7 +12128,7 @@ chv1:	move handl1,d1
 	move vvol2,d4
 	add d2,d4
 	cmp d4,d5
-	bpl chv2 
+	bpl.s chv2 
 	move.l #$08,d0
 chv2:
 	move handl2,d1
@@ -12160,7 +12160,7 @@ zoomoff:  movem.l d0-d3,-(a7)
 	move handl2,d1
 	jsr CHANGEFX
 	tst modstop
-	beq modzon
+	beq.s modzon
 	;jsr DISABLE_FX		;any SFX to off
 	;jsr ENABLE_FX		;any SFX to off
 	jsr kill_all_sfx
@@ -12190,7 +12190,7 @@ zoom1:	bsr rightit
 	move.l zoomspeed,d4
 	add.l d4,20(a0)
 	cmp #260,vp_z			;by web Z=40 it will be off of the screen
-	bgt z1stop
+	bgt.s z1stop
 	cmp #webz+80,claud
 	blt nofire
 	rts
@@ -12219,9 +12219,9 @@ zoom3:	jsr dowf
  	lea _web,a0
 	add.l #$4000,warp_add
 	tst wason
-	beq zoom33
+	beq.s zoom33
 	sub #1,wason
-	bne zoom44
+	bne.s zoom44
 
 	move #22,sfx
 	move #101,sfx_pri
@@ -12299,13 +12299,13 @@ clrscreen: clr d0			;Clear screen a0
 	bra BlitBlock
 	
 make160: move #1,14(a0)
-	bra mit
+	bra.s mit
 
-makeit_rmw: bsr makeit
+makeit_rmw: bsr.s makeit
 	move #0,20(a0)
 	rts
 
-makeit_trans: bsr makeit
+makeit_trans: bsr.s makeit
 	move #1,20(a0)
 	rts
 
@@ -12363,11 +12363,11 @@ main: 	tst sync
 	move.l mainloop_routine,a0
 	jsr (a0)
 	tst z
-	bne rax
+	bne.s rax
 	move.l s_routine,d0
-	beq mloop
+	beq.s mloop
 	tst auto
-	beq nauty
+	beq.s nauty
 	clr.l s_routine
 	move #1,z
 	clr _pauen
@@ -12378,11 +12378,11 @@ nauty:	move.l d0,a0
 	jsr (a0)
 	clr.l s_routine
 mloop:	tst pawsed
-	beq mlooo
+	beq.s mlooo
 	jsr paustuff		;pause displayed if pressed.
 	
 mlooo: tst unpaused
-	beq nunpa2
+	beq.s nunpa2
 	jsr eepromsave
 	clr unpaused	
 nunpa2:
@@ -12414,7 +12414,7 @@ dboo:	tst sync
 db:	
 	; upload screen
 	; P2 TODO should really be a GPU command so irq can hit during this
-	bsr p2scrupload
+	bsr.s p2scrupload
 	move #1,sync			;request sync
 dboo:	tst sync
 	bne dboo
@@ -12488,11 +12488,11 @@ setdb:
 ;	lea 32(a0),a0		;skip background object
 
 	tst screen_ready	;is GPU ready with a new screen
-	beq no_new_screen	;no
+	beq.s no_new_screen	;no
 ;	tst pawsed
 ;	bne no_new_screen
 	tst sync
-	beq no_new_screen
+	beq.s no_new_screen
 	move.l cscreen,d1
 	move.l dscreen,cscreen
  	move.l d1,dscreen	;swap screens
@@ -12502,7 +12502,7 @@ no_new_screen:
 
 	move.l dlist,a0
 	move db_on,d7		;check for double buffer on (d7 holds # of contiguous DB'ed screens)
-	bmi no_db
+	bmi.s no_db
 
 
 
@@ -12527,15 +12527,15 @@ no_db:
 	jsr dowf
 
 	tst pal
-	bne dtoon
+	bne.s dtoon
 	add #1,tuntime		;do NTSC interrupts only 5/6 times
 	cmp #4,tuntime
-	ble dtoon
+	ble.s dtoon
 	cmp #6,tuntime
-	bne ntoon
+	bne.s ntoon
 	clr tuntime	
 dtoon:	tst modstop
-	bne ntoon
+	bne.s ntoon
 .if ^^defined JAGUAR
 	jsr NT_VBL
 .endif
@@ -12544,15 +12544,15 @@ ntoon:
 
 ; 	bsr readpad			;get joy values
 	tst pawsed
-	bne zial
+	bne.s zial
 	add #1,frames 
 	move.l fx,a0
 	jsr (a0)		;for plaette changes etc
 zial:
 	tst locked
-	beq doframe
+	beq.s doframe
 ;	move #1,drawhalt
-	bra loseframe
+	bra.s loseframe
 doframe: move.l routine,a0
 	jsr (a0)		;call do thangs routine
 	clr drawhalt
@@ -12560,7 +12560,7 @@ doframe: move.l routine,a0
 loseframe: bsr checkpause	;do pause and overriding reset command
 	bsr domod		;do music handling	
 	btst.b #0,sysflags
-	bne chit		;check for no h.interlace
+	bne.s chit		;check for no h.interlace
 	move frames,d0
 	and #$01,d0
 	add #SIDE,d0
@@ -12571,19 +12571,19 @@ chit:	movem.l (a7)+,d6-d7/a3-a6
 CheckTimer: move (a7)+,d0	;get back int status
 	move d0,-(a7)
 	btst #3,d0
-	beq exxit
+	beq.s exxit
 
 	tst roconon		;Rotary Controller enabled?
-	bne roco
+	bne.s roco
 	jsr dopad
-	bra exxit		;Yeah, interrupts at 8x normal speed, go do special stuff
+	bra.s exxit		;Yeah, interrupts at 8x normal speed, go do special stuff
 
 roco:	move pitcount,d1
 	and #$07,d1
-	bne rotonly
+	bne.s rotonly
 	jsr dopad
 rotonly: add #1,pitcount
-	bsr readrotary
+	bsr.s readrotary
 
 
 
@@ -12649,25 +12649,25 @@ rroco:	rol.b #2,d0			;Phase Bits to bottom of word
 	and #$03,d0			;Get juicy bits
 	move (a1),d4			;Get last value read
 	cmp d4,d0
-	beq decsens			;Did not move
+	beq.s decsens			;Did not move
 	move d0,(a1)			;Save value we just read
 	lea conseq,a0			;Point to sequence values
 	clr d5
 slocate: cmp.b 0(a0,d5.w),d4
-	beq slocated
+	beq.s slocated
 	addq #1,d5
 	bra slocate			;Locate last position on sequence
 slocated: subq #1,d5
 	and #3,d5
 	cmp.b 0(a0,d5.w),d0
-	beq rclaw_right			;(This is just a VERY rough L/R test)
+	beq.s rclaw_right			;(This is just a VERY rough L/R test)
 	addq #2,d5
 	and #3,d5
 	cmp.b 0(a0,d5.w),d0
-	beq rclaw_left
+	beq.s rclaw_left
 	clr.l d0
 	rts
-rclaw_left: bsr incsens
+rclaw_left: bsr.s incsens
 	neg.l d0
 	rts
 rclaw_right:
@@ -12710,11 +12710,11 @@ gamefx:	move.l vp_sfs,d0	;move the starfield's vp
 	bsr runmsg		;run the Messager
 	move l_soltarg,d0
 	cmp l_solidweb,d0
-	beq donowt
+	beq.s donowt
 	tst d0
-	bne inccc
+	bne.s inccc
 	sub #8,l_solidweb
-	bra donowt
+	bra.s donowt
 inccc:  add #8,l_solidweb
 
 donowt:	tst holiday
@@ -12730,12 +12730,12 @@ donowt:	tst holiday
 
 domod:	tst modnum
 	beq rrts		;see if anything is happening?
-	bmi deccount		;dec counter and set
+	bmi.s deccount		;dec counter and set
 	tst auto
-	bne iggi		;demo can't start tunes
+	bne.s iggi		;demo can't start tunes
 	move modnum,d0
 	cmp lastmod,d0		;same as module already running?
-	bne smod
+	bne.s smod
 iggi:	clr modnum
 	rts
 
@@ -12746,7 +12746,7 @@ smod:	move d0,lastmod
 	rts
 deccount:
 	tst modstop
-	bne decco1
+	bne.s decco1
  	sub #1,modtimer
 	bpl rrts
 	move modnum,d0
@@ -12770,7 +12770,7 @@ setmsg: move #100,msgtim1	;set default Messager parameters
 runmsg: tst.l msg		;run the Messager
 	beq rrts	
 	tst msgtim1
-	bmi runmsg2
+	bmi.s runmsg2
 	sub #1,msgtim1
 	rts
 runmsg2: move.l msgxv,d0
@@ -12801,7 +12801,7 @@ drawmsg: move.l msg,d6
 	lsl #1,d0
 	and #$ff,d0
 	sub #$7f,d0
-	bpl mpo1
+	bpl.s mpo1
 	neg d0
 mpo1:	sub #$3f,d0
 	swap d0
@@ -12823,12 +12823,12 @@ mpo1:	sub #$3f,d0
 	bne .wait
 .endif
 	cmp.l #wmes2,msg		;is it Superzapper?
-	beq xtra1
+	beq.s xtra1
 	cmp.l #zmes1,msg
 	bne rrts
 	lea in_buf,a0
 	move.l #zmes2,a3
-	bra xtra2
+	bra.s xtra2
 xtra1:	lea in_buf,a0
 	move.l #wmesx,a3
 xtra2:	move.l a3,(a0)
@@ -12889,15 +12889,15 @@ xtra2:	move.l a3,(a0)
 
 checkpause: move.l pad_now,d0
 	tst h2h
-	bne bothpau
+	bne.s bothpau
 	cmp #2,players
-	bne only1p
+	bne.s only1p
 bothpau: or.l pad_now+4,d0
 only1p: move.l d0,d1
 	and.l #bigreset,d0
-	beq chp1
+	beq.s chp1
 	cmp.l #bigreset,d0
-	bne chp1
+	bne.s chp1
 	move #1,z		;flag Stop Whatever You Are Doing And Reset!	
 ;	move #15,t2k_max
 ;	move #15,t2k_high
@@ -12905,11 +12905,11 @@ only1p: move.l d0,d1
 ;	move #15,trad_high	
 	clr auto
 chp1:	tst _auto
-	beq chron
+	beq.s chron
  	move.l d1,d0
 	move.l #allbutts,d1
 	and.l d0,d1
-	beq chron	
+	beq.s chron	
 	move #1,z
 	move #1,misstit
 chron:	move.l d1,-(a7)
@@ -12948,7 +12948,7 @@ paustuff: jsr text2_setup
 ;	jsr gpurun
 ;	jsr gpuwait
 	tst pausprite
-	beq npspri
+	beq.s npspri
 	lea in_buf,a0
 	move.l #$490074,32(a0)		;was 35
 	move.l #pautext,(a0) 
@@ -13015,7 +13015,7 @@ pauson: move.l pad_now,d0
 	clr tunon
 	clr fxon
 	tst wson
-	beq quoke
+	beq.s quoke
 	jsr zoomoff
 quoke:	jsr DISABLE_FX		;any SFX to off
 	rts			;debounce
@@ -13043,27 +13043,27 @@ psing:
 
 not_opt: move.l pad_now,d0
 	tst h2h
-	beq p2mrge
+	beq.s p2mrge
 	cmp #2,players
-	beq np2mrge
+	beq.s np2mrge
 p2mrge: or.l pad_now+4,d0
 np2mrge: move.l d0,ppad
  	move.l d0,d1
 	and.l #$00080008,d1
-	beq lpspr
+	beq.s lpspr
 	clr pausprite
 lpspr:	move.l d0,d1
 	and.l #abutton,d1
-	beq nottune
+	beq.s nottune
 	move.l #budb,routine
 	tst tunon
-	beq turnit_on
+	beq.s turnit_on
 tunoff:	clr.l d0
 	clr.l d1
 	jsr SET_VOLUME		;turn OFF the tune
 	clr tunon
 	move #-1,vadj
-	bra nottune
+	bra.s nottune
 
 turnit_on: move #1,tunon
 	clr fxon
@@ -13072,13 +13072,13 @@ nottune:
 	move.l ppad,d0
 
 	and.l #bbutton,d0
-	beq notfx
+	beq.s notfx
 	move.l #budb,routine
 	tst fxon
-	beq tfx_on
+	beq.s tfx_on
 	move #-1,vadj
 	clr fxon
-	bra notfx
+	bra.s notfx
 tfx_on: move #1,fxon
 
 	clr.l d0
@@ -13092,7 +13092,7 @@ notfx:
 chunp:	tst vadj
 	bmi ntsel
 	tst tunon
-	beq adjsfx
+	beq.s adjsfx
 	move.l #rrts,a2
 	move.l a2,a3
 	move.l #tvup,a0
@@ -13102,13 +13102,13 @@ chunp:	tst vadj
 	and.l #$ff,d0
 	clr d1
 	jsr SET_VOLUME	
-	bra ntsel
+	bra.s ntsel
 
 adjsfx: tst fxon
-	beq ntsel
+	beq.s ntsel
 	move pframes,d0
 	and #$1f,d0
-	bne villi
+	bne.s villi
 	move #$0b,sfx
 	jsr fox			;make noises
 villi:	move.b vols+1,d0
@@ -13137,9 +13137,9 @@ ntsel:	move.l pad_now,d0
 	jmp zoomon
 
 tvup:	tst.b vols
-	bne tvup1
+	bne.s tvup1
 	tst modstop
-	beq tvup1
+	beq.s tvup1
 	clr modstop
 	move lastmod,d0
 	clr modnum
@@ -13150,7 +13150,7 @@ tvup1: 	cmp.b #$ff,vols
 	add.b #1,vols
 	rts
 tvdn:	tst.b vols
-	beq stpmod
+	beq.s stpmod
 	sub.b #1,vols
 	rts
 stpmod: move #1,modstop
@@ -13168,18 +13168,18 @@ fxdn:	tst.b vols+1
 
 pausoff: move camry,d0
 	and #$fe,d0
-	beq p_off
+	beq.s p_off
 	cmp #$80,d0
-	blt decit
+	blt.s decit
 	add #4,d0
 decit: sub #2,d0
 	move d0,camry
 	rts
 p_off:	move.l pad_now,d0
 	cmp #2,players
-	beq mergem
+	beq.s mergem
 	tst h2h
-	beq nomergem
+	beq.s nomergem
 mergem: or.l pad_now+4,d0	
 nomergem: and.l #pausebutton,d0
 	bne rrts
@@ -13236,7 +13236,7 @@ RunBeasties: move.l blist,a0		;will use MakeScaledObject to build a list
 
 RBeasts: move d7,-(a7)
  move 12(a2),d0	; get mode
- bmi nxbeast
+ bmi.s nxbeast
  lea ModeVex,a3
  asl #2,d0
  move.l 0(a3,d0.w),a3
@@ -13263,7 +13263,7 @@ RBeasts: move d7,-(a7)
  move.l 16(a2),a1	;data pointer
  bsr MakeUnScaledObject
  move 20(a2),d0		;post-creation stuff?
- bmi nxbeast
+ bmi.s nxbeast
  lea postfixups,a3
  asl #2,d0
  move.l 0(a3,d0.w),a3
@@ -13271,7 +13271,7 @@ RBeasts: move d7,-(a7)
 nxbeast: move (a7)+,d7
  lea 64(a2),a2		;do 'em all 
  dbra d7,RBeasts
- bra StopList		;put a stopobject on the end  
+ bra.s StopList		;put a stopobject on the end  
 
 postfixups: dc.l make_rmw,make_trans
 
@@ -13346,13 +13346,13 @@ InitLists:
 ;	move.l d0,dlist
 	move.l a0,dlist
 ;	move.l d0,a0
-	bsr StopList
+	bsr.s StopList
 
 	move.l #list2,d0	;same for the other list
 	and.l #$ffffffe0,d0	;make sure it's quadphrase aligned
 	move.l d0,blist
 	move.l d0,a0
-	bra StopList
+	bra.s StopList
 
 StopList: 
 .if ^^defined JAGUAR
@@ -13852,13 +13852,13 @@ make_vo2d:
 
 	lea 32(a2),a0		;start of vector info
 gv:	move.b (a1)+,d0
-	bmi gv_end
+	bmi.s gv_end
 	move.b (a1)+,d1
 	cmp d0,d5		;check and set extent if necessary
-	bge gv1
+	bge.s gv1
 	move d0,d5
 gv1: 	cmp d1,d6
-	bge gv2
+	bge.s gv2
 	move d1,d6
 gv2:	move.b (a1)+,d2		;get 1 vertex
 	and.l #$ff,d0		;co-ordinates are 0-255
@@ -13888,29 +13888,29 @@ make_vo3d:
 
 	move.l vadd,a0
 	move.l a0,-(a7)
-	bsr initvo
+	bsr.s initvo
 	move #$0,d4			;use this for colour-info
 buildit: move #2,d2		;loop for three items..
 b3d1: 	move.b (a1)+,d0	;X
-	beq builtit		;zero means last vertex
+	beq.s builtit		;zero means last vertex
 	and.l #$ff,d0
 	move.l d0,(a2)+		;put it in the vertex list
 	dbra d2,b3d1		;get x,y and z
 
 	move.b (a1),d0		;test for zero connections from this point
-	bne dcnc
+	bne.s dcnc
 	lea 1(a1),a1
-	bra nxtvrt
+	bra.s nxtvrt
 
 dcnc:	move d3,(a3)+		;vertex # to connect list
 cnect:	move.b (a1)+,d0		;get connected vertex #
-	bpl stdvrt
+	bpl.s stdvrt
 	move.b (a1)+,d4
 	lsl #8,d4		;set nu colour
 	move.b (a1)+,d0
 
 stdvrt:	and #$ff,d0
-	beq zv
+	beq.s zv
 	or d4,d0
 zv:	move d0,(a3)+
 	bne cnect		;loop until a zero
@@ -13984,7 +13984,7 @@ xweb:	move (a1)+,d0
 	ext.l d0
 	ext.l d1
 	cmp d5,d1
-	blt xweb2
+	blt.s xweb2
 	move d1,d5		;save biggest X co-ordinate
 xweb2:	move.l d0,(a2)+
 	move.l d1,(a2)+
@@ -13994,7 +13994,7 @@ xweb2:	move.l d0,(a2)+
 	move.l d7,(a2)+		;far point
 	move d3,(a3)+		;vertex ID to conn list
 	tst d6
-	beq lastpoint		;special case for last point!
+	beq.s lastpoint		;special case for last point!
 	move d3,d4		;copy vertex #
 	addq #1,d4
 	move d4,(a3)+		;connect to n+1
@@ -14014,7 +14014,7 @@ lastpoint: addq #1,d3
 	move d3,(a3)+		;connect to n+1
 	move 4(a1),connect
 	tst connect
-	beq nconn1		;connect to vertex 1 if required
+	beq.s nconn1		;connect to vertex 1 if required
 	add #1,web_max
 	move #1,(a3)+
 	move #0,(a3)+
@@ -14061,7 +14061,7 @@ make_fw: tst afree
 	jmp insertobject
 	
 draw_fw: tst 32(a6)
-	bmi fw_ex		;Duration gone, go draw Explosion
+	bmi.s fw_ex		;Duration gone, go draw Explosion
  	lea in_buf,a0
 	move.l 4(a6),(a0)
 	move.l 8(a6),4(a0)
@@ -14123,7 +14123,7 @@ fw_ex:	lea in_buf,a0
 .endif
 
 run_fw: tst 32(a6)
-	bmi xpired
+	bmi.s xpired
 	move.l 16(a6),d0
 	add.l d0,4(A6)
 	move.l 20(a6),d0
@@ -14169,18 +14169,18 @@ run_objects:
 
 	move #1,diag
 	sub.b #1,pudel		;do Pulsar pulses
-	bpl zzonk
+	bpl.s zzonk
 	move.b pudel+1,pudel
 	add #1,pucnt	
 	and #$0f,pucnt
-	beq clzd
+	beq.s clzd
 zzonk:	cmp #7,pucnt
-	bne zonk
+	bne.s zonk
 	tst zapdone
-	bmi zonk
-	beq zonk
+	bmi.s zonk
+	beq.s zonk
 	move #-1,zapdone
-	bra zonk
+	bra.s zonk
 clzd:	clr zapdone
 zonk:
 	move #2,diag
@@ -14189,10 +14189,10 @@ zonk:
 	move.l activeobjects,a6
 	clr _sz
 	tst szap_on
-	beq r_obj		;check for superzap requested
+	beq.s r_obj		;check for superzap requested
 	move frames,d0
 	and #3,d0
-	bne r_obj
+	bne.s r_obj
 	move #1,_sz		;Kill something please...	
 r_obj:	cmpa.l #-1,a6
 	beq r_end
@@ -14204,46 +14204,46 @@ r_obj:	cmpa.l #-1,a6
 ;	bra r_obj	
 doitthen: lea run_vex,a0
 	move 34(a6),d0		;Collapsed to a pixel?
-	bpl notcolap
+	bpl.s notcolap
 	sub #2,12(a6)
 	clr d0
 	cmp #webz+80,12(a6)	;advance to edge of Web...
-	bgt r_o1		;no official action, we already did it
+	bgt.s r_o1		;no official action, we already did it
 	cmp #11,54(a6)
-	bne setxx
+	bne.s setxx
 	move pucnt,d1
 	and #$0f,d1
 	cmp #3,d1		;Make sure that a pulsar is not created in a dangerous phase
-	blt setxx
+	blt.s setxx
 	add #2,12(a6)
-	bra r_o1		;Makes pulsars wait until innocent before touchdown
+	bra.s r_o1		;Makes pulsars wait until innocent before touchdown
 
 setxx:	neg 34(a6)		;make it real now	
 
 notcolap: move 54(a6),d0
-	bpl r_o1		;-ve treated as no action
+	bpl.s r_o1		;-ve treated as no action
 	clr d0
 r_o1:	asl #2,d0
 	move.l 60(a6),-(a7)	;save address of current Next in case this object is unlinked
 	move.l 0(a0,d0.w),a0
 	tst 52(a6)		;'Enemy' flag
-	beq zokk		;(don't count player bulls)
-	bmi zokk		;(or claw VULNERABLE flags)
+	beq.s zokk		;(don't count player bulls)
+	bmi.s zokk		;(or claw VULNERABLE flags)
 	cmp 12(a6),d6		; check against previous nearest
-	blt gokk
+	blt.s gokk
 	swap d6
 	move 16(a6),d6		;get nearest one's Lane #
 	swap d6
 	move 12(a6),d6		;make this z nearest	
 gokk:	cmp 12(a6),d7
-	bgt zokk
+	bgt.s zokk
 	move 12(a6),d7
 zokk:	movem.l d6-d7,-(a7)
 	move #3,diag
 	move.l a0,diag+4
 	move.l a6,diag+8
 	tst locked		;>>>>> A nasty hack.
-	bne hack
+	bne.s hack
 	jsr (a0)		;call motion vector
 hack:	movem.l (a7)+,d6-d7		;retrieve furthest-z
 	move.l (a7)+,a6		;Next
@@ -14263,7 +14263,7 @@ szoom:	move #-2,wave_tim
 ;	bne zagga
 
  	tst dnt
-	bpl skagi
+	bpl.s skagi
 	clr dnt
 skagi:
 	clr szap_on
@@ -14276,7 +14276,7 @@ zagga:	move.l #zoom1,routine		;fly off the web
 	clr.l 20(a0)			;zoom velocity
 	clr.l 24(a0)
 	move.l #10,zoopitch
-	bsr zoomon
+	bsr.s zoomon
 banana:	cmp #3,cwave
 	blt rrts
 ;	tst inf_zap
@@ -14323,11 +14323,11 @@ zoomon:
 
 r_end1:	tst _sz			;did we Zap something?
 	beq rrts		;No
-	bmi someone_fried	;Yes
+	bmi.s someone_fried	;Yes
 ;	tst inf_zap
 ;	bne rrts
 	clr szap_on		;Superzap done
-	bra clzapa
+	bra.s clzapa
 someone_fried: tst szap_avail	;Was that a second, desperate Zap?
 	bpl rrts		;No
 ;	tst inf_zap
@@ -14341,13 +14341,13 @@ clzapa:	clr szap_on		;Yeah, he zaps 1 alien is all
 
 rob:	move.l activeobjects,a6
 r_ob:	cmpa.l #-1,a6
-	beq rob_end
+	beq.s rob_end
 	tst 50(a6)
-	bmi rob_end		;>>>>> KLUDGE to prevent a garbled list being traversed
+	bmi.s rob_end		;>>>>> KLUDGE to prevent a garbled list being traversed
  	lea run_vex,a0
 
  	move 54(a6),d0
-	bpl r_ob1		;-ve treated as no action
+	bpl.s r_ob1		;-ve treated as no action
 	clr d0
 r_ob1:	asl #2,d0
 	move.l 60(a6),-(a7)	;save address of current Next in case this object is unlinked
@@ -14362,12 +14362,12 @@ r_nxt: move.l 56(a6),a6
 
 dob: 	move.l activeobjects,a6
 d_ob:	cmpa.l #-1,a6
-	beq dobend
+	beq.s dobend
 	move 50(a6),d0		;'Unlink Me Please'
-	beq no_dunlink
+	beq.s no_dunlink
 	
 	move.l 56(a6),d1
-	bmi dtlink
+	bmi.s dtlink
 	move.l d1,a5
 	move.l 60(a6),60(a5)	;if interrupted, unlinking object is invisible to int routine now
 
@@ -14378,8 +14378,8 @@ dtlink:	move #-1,50(a6)		;mark it bad
 	move 32(a6),-(a7)	;save player ownership tag
 	move (a7)+,d1
 	move (a7)+,d0
-	bsr dafinc
-	bra nxtdob
+	bsr.s dafinc
+	bra.s nxtdob
 no_dunlink: lea draw_vex,a0
 	move 34(a6),d0		;-ve it is collapsed to a pixel!
 	asl #2,d0
@@ -14392,7 +14392,7 @@ nxtdob:	move.l (a7)+,a6		;this way i can even trash a6 if i need II
 
 dobend: bsr showscore
 	tst blanka
-	beq dodvec
+	beq.s dodvec
 	bsr drawpolyos		;draw pri-list full of poly objects
 dodvec:	bra drawmsg		;draw Messager thang if needed
 
@@ -14423,8 +14423,8 @@ stayhalt: tst drawhalt
 	and.l #$ff,d0
 	move.l d0,_sysflags		;pass sys flags to GPU
 	tst sf_on
-	bne dostarf
-	bra gwb
+	bne.s dostarf
+	bra.s gwb
 dostarf:
 ; 	tst solidweb
 ;	bne gwb
@@ -14507,9 +14507,9 @@ solweb:
 .endif
 ;	bra n_wb
 vweb:	tst t2k
-	beq gvweb
+	beq.s gvweb
 	cmp #1,webcol
-	bne gvweb
+	bne.s gvweb
 	add #1,wpt		;..are actually psychedelic vectors...
 ;	and #7,wpt		;in t2k
 ;	bne vweb		
@@ -14517,19 +14517,19 @@ vweb:	tst t2k
 gvweb:	move.l #2,gpu_mode	;Mode 2 is do-the-vectors-in-3d-thang
 	lea _web,a6
 	tst 34(A6)
-	beq n_wb
+	beq.s n_wb
 	bsr drawweb		;draw th' Web
 n_wb: 	move.l activeobjects,a6
-	bsr d_obj
+	bsr.s d_obj
 	bra odend
 
 d_obj:	cmpa.l #-1,a6
 	beq oooend
 	move 50(a6),d0		;'Unlink Me Please'
-	beq no_unlink
+	beq.s no_unlink
 
 	move.l 56(a6),d1
-	bmi tlink
+	bmi.s tlink
 	move.l d1,a5
 	move.l 60(a6),60(a5)	;if interrupted, unlinking object is invisible to int routine now
 
@@ -14550,12 +14550,12 @@ tlink:	move #-1,50(a6)		;mark it bad
 uls: dc.l afinc,ashinc,pshinc
 
 pshinc: tst d1		;player ownership of an unlinked bullet
-	beq ulsh1
+	beq.s ulsh1
 	add #1,shots+2
 ulo:	move #1,locked
 	bsr unlinkobject	
 	clr locked
-	bra nxt_o
+	bra.s nxt_o
 ulsh1: 	add #1,shots
 	bra ulo
 ashinc: add #1,ashots
@@ -14563,9 +14563,9 @@ afinc: add #1,afree
 	bra ulo
 no_unlink:	lea draw_vex,a0
 	move 34(a6),d0		;-ve it is collapsed to a pixel!
-	bpl notpxl
+	bpl.s notpxl
 	move.l #draw_pel,a0
-	bra apal	
+	bra.s apal	
 notpxl:	asl #2,d0
 	move.l 0(a0,d0.w),a0
 apal:	move.l 60(a6),-(a7)		;go to next object
@@ -14579,13 +14579,13 @@ oooend: rts
 
 odend: 	bsr showscore
 	tst blanka
-	beq odvec
+	beq.s odvec
 	bsr drawpolyos		;draw pri-list full of poly objects
 odvec:	bsr drawmsg		;draw Messager thang if needed
 	tst auto
-	beq namsg
+	beq.s namsg
 	cmp.l #vecoptdraw,demo_routine
-	beq namsg
+	beq.s namsg
 	lea bfont,a1
 	lea autom1,a0	
 	move #50,d0
@@ -14594,7 +14594,7 @@ odvec:	bsr drawmsg		;draw Messager thang if needed
 	lea autom2,a0	
 	move #180,d0
 	tst pal
-	beq dunfirst
+	beq.s dunfirst
 	add palfix2,d0
 dunfirst:	jsr centext
 
@@ -14606,7 +14606,7 @@ namsg: 	tst blanka
 	jsr WaitBlit
 	move.l _claw,a6
 	tst p2smarted
-	beq gp1smart
+	beq.s gp1smart
 	move.l 56(a6),a6	;make bolts out of p2's ship for 2pl mode
 gp1smart:	cmpa.l #-1,a6
 	beq xox1
@@ -14703,7 +14703,7 @@ gp1smart:	cmpa.l #-1,a6
 
 
 xox1: 	tst evon
-	beq nevon
+	beq.s nevon
 
 nevon:
 ;	move #380,d0
@@ -14777,7 +14777,7 @@ nodraw:  bsr clearscreen
 	move.l #2,gpu_mode	;Mode 2 is do-the-vectors-in-3d-thang
 	lea _web,a6
 	tst 34(A6)
-	beq noo_wb
+	beq.s noo_wb
 	bsr drawweb		;draw th' Web
 
 	add #128,32(a6)
@@ -14793,7 +14793,7 @@ noo_wb: move.l activeobjects,a6
 	lea ps_screen3,a0		;source screen for any score u/d xfers
 	move.l a0,a1
 	tst r_ud
-	beq nudl
+	beq.s nudl
 	clr.l d4
 	move #26,d2
 	move #32,d3
@@ -14811,7 +14811,7 @@ noo_wb: move.l activeobjects,a6
 	jsr BlitBlock
 	clr r_ud
 nudl:   tst l_ud
-	beq nudr
+	beq.s nudr
 	clr.l d4
 	move #26,d2
 	move #32,d3
@@ -14902,14 +14902,14 @@ draw_spike:
 	move.l d1,20(a1)	;Stretch spike towards player
 ;	sub.l #4,d1
 ;	move.l d1,32(a1)	;(Spike tip)
-	bra draw
+	bra.s draw
 
 draw_vxc:
 ;
 ; Draw, with a variable x-centre
 
 	move.l (a6),d0
-	bmi draw		;go if vector mode else do pri draw
+	bmi.s draw		;go if vector mode else do pri draw
 
 vvxc:
 	move #9,d4
@@ -14919,13 +14919,13 @@ vvxc:
 	move.l 12(a0),-(a7)
 	move.l d4,12(a0)	;centre is an offset from 9, the default Tempest thaang
 	move.l a0,-(a7)
-	bsr draw
+	bsr.s draw
 	move.l (a7)+,a0
 	move.l (a7)+,12(a0)	;restore old centre
 	rts
 
 
-draw_z: bsr draw		;draw original object
+draw_z: bsr.s draw		;draw original object
 	move 40(a6),-(a7)	;save orignal colour
 ;	move 44(a6),d0		;z images counter
 	move #2,d0
@@ -14964,7 +14964,7 @@ draw: 	move.l a6,oopss
 	move.l apriority,a1
 	move.l a1,a2
 chklp:	cmp.l #-1,a1		;no objects active?
-	bne prio1
+	bne.s prio1
 	bra insertprior		;we are at top of list then, if we are first a1=a2=-1
 
 prio1:	cmp.l 12(a1),d0		;check against stored 'z'
@@ -14990,7 +14990,7 @@ dpoloop: cmp.l #-1,a0
 	move.l (a0),a6		;Get object handle
 	move.l (a6),d0
 	move.l a0,-(a7)
-	bsr podraw		;Go do object type draw
+	bsr.s podraw		;Go do object type draw
 	jsr gpuwait
 	move.l (a7)+,a0
 	move.l 8(a0),-(a7)	;next object or -1
@@ -15034,7 +15034,7 @@ d2poloop: move.l (a0),a6		;Get object handle
 	jsr gpuwait
 	move.l (a7)+,a0
 	move.l 8(a0),d0
-	bmi travback
+	bmi.s travback
 	move.l d0,a0		;next Object
 	bra d2poloop
 travback:
@@ -15043,7 +15043,7 @@ travback:
 tback: 	move.l (a0),a6		;Get object handle
 	move.l (a6),d0
 	move.l a0,-(a7)
-	bsr r_podraw		;Go do object type draw
+	bsr.s r_podraw		;Go do object type draw
 	jsr gpuwait
 	move.l (a7)+,a0
 	move.l 4(a0),-(a7)	;next object or -1
@@ -15092,18 +15092,18 @@ drawweb: move.l a6,oopss
 	move.l 12(a6),d0
 	sub.l d5,d0
 	tst h2h
-	beq swebbo
+	beq.s swebbo
 	sub.l #$40000,d0	;hack to avoid floating Flippers
 swebbo:	move.l d0,(a0)+
 	tst h2h
-	beq dragg
+	beq.s dragg
 .if ^^defined JAGUAR
 	lea xvector,a2
 .endif
 .if ^^defined PROPELLER
 	move.w #MIKOGPU_SLOWVECTOR,a2
 .endif
-	bra draaa	
+	bra.s draaa	
 
 vector:	move.l d0,a1		;Get object header
 	lea in_buf+4,a0
@@ -15249,7 +15249,7 @@ fcolour: and.l #$ff,d6
 	movem.l (a7)+,d0-d5
 	move frames,d6
 	btst #2,d6
-	bne wittg
+	bne.s wittg
 	rts	
 
 
@@ -15268,7 +15268,7 @@ wittg:
 	swap d6
 	and #$07,d6
 	cmp #$8f,40(a6)
-	bne snopp2
+	bne.s snopp2
 	add #8,d6
 snopp2:	lsl #2,d6
 	lea sclaws,a1
@@ -15302,7 +15302,7 @@ draw_h2hball: tst 18(a6)	;check for are we zapping someone
 	move.l d1,(a0)+	;XYZ source
 	move.l _claw,a4
 	cmp #webz,12(a6)
-	bmi drh2hb1
+	bmi.s drh2hb1
 	move.l 56(a4),a4
 drh2hb1: move.l 4(a4),d0
 	sub.l vp_x,d0
@@ -15312,7 +15312,7 @@ drh2hb1: move.l 4(a4),d0
 	move.l d0,(a0)+
  	move.l 12(a4),d0
 	tst h2hor
-	beq nohorra
+	beq.s nohorra
 	move #webz,d6
 	swap d6
 	clr d6
@@ -15574,21 +15574,21 @@ MoveLink:
 
 
 mlink: cmpa.l #-1,a1		;Prev is -1?
- bne ML1
+ bne.s ML1
  move.l a2,(a4)		;Make Next entry current top of list
  cmpa.l a1,a2		;Check if Next is -1
- beq NewLink		;Yup, we were the only entry
+ beq.s NewLink		;Yup, we were the only entry
 ML1: cmpa.l #-1,a2	;Next link is -1?
- bne ML2		;Nope
+ bne.s ML2		;Nope
  move.l a2,60(a1)	;Make prev link-to-next -1
- bra NewLink
+ bra.s NewLink
 ML2: cmpa.l #-1,a1
- beq ml3
+ beq.s ml3
  move.l a2,60(a1)
 ml3: move.l a1,56(a2)		;Link 'em up
 NewLink: move.l (a3),a4	;Get address of first entry of dest list
  cmpa.l #-1,a4		;Check if link is real
- bne NL1		;Yup
+ bne.s NL1		;Yup
  move.l a0,(a3)		;Make ourselves the first entry
  move.l #-1,56(a0)
  move.l #-1,60(a0)
@@ -15663,9 +15663,9 @@ insertprior:
 	move.l #-1,4(a3)	;set object's prev to -1, now our obj is off free list
 
 	cmp.l #-1,a1		;first object on list special case
-	bne insp1
+	bne.s insp1
 	cmp.l a1,a2
-	beq vfo			;if list header is -1, go do very-first-object
+	beq.s vfo			;if list header is -1, go do very-first-object
 
 nvfo:	move.l a0,8(a2)		;us to Next		this is Very Last Object
 	move.l a2,4(a0)		;him to Prev
@@ -15678,10 +15678,10 @@ vfo:	move.l a0,apriority
 	rts
 
 insp1:	cmp.l #-1,4(a1)		;is he at the top of the lst?
-	bne gencase		;nope
+	bne.s gencase		;nope
 	move.l a0,apriority	;set us as the first object
 	move.l 4(a1),a3
-	bra insp2		;skip setting prev coz it's top of the lst	
+	bra.s insp2		;skip setting prev coz it's top of the lst	
 gencase:	
  	move.l 4(a1),a3		;get his/our prev
 	move.l a0,8(a3)		;put us there
@@ -15696,9 +15696,9 @@ unlinkprior:
 ; always unlink object a0 from top of apriority to top of fpriority
 
  	move.l 8(a0),d0
-	bpl ulp1
+	bpl.s ulp1
 	move.l d0,apriority	;sets to -1
-	bra ulp2
+	bra.s ulp2
 ulp1: 	move.l d0,a1
 	move.l d0,apriority
 	move.l #-1,4(a1)
@@ -15714,9 +15714,9 @@ bunlinkprior:
 ; unlink from bottom of apriority to top of fpriority
 
 	move.l 4(a0),d0
-	bpl ulp3
+	bpl.s ulp3
 	move.l d0,apriority	;sets to -1
-	bra ulp4
+	bra.s ulp4
 ulp3: 	move.l d0,a1
 	move.l #-1,8(a1)
 ulp4:	move.l #-1,4(a0)
@@ -15731,7 +15731,7 @@ ulp4:	move.l #-1,4(a0)
  move.l 8(a0),a2
  lea fpriority,a3
  lea apriority,a4
- bra MovePrior
+ bra.s MovePrior
 
 
 MovePrior:
@@ -15741,21 +15741,21 @@ MovePrior:
 
 
 mprio: cmpa.l #-1,a1		;Prev is -1?
- bne MP1
+ bne.s MP1
  move.l a2,(a4)		;Make Next entry current top of list
  cmpa.l a1,a2		;Check if Next is -1
- beq NewPLink		;Yup, we were the only entry
+ beq.s NewPLink		;Yup, we were the only entry
 MP1: cmpa.l #-1,a2	;Next link is -1?
- bne MP2		;Nope
+ bne.s MP2		;Nope
  move.l a2,8(a1)	;Make prev link-to-next -1
- bra NewPLink
+ bra.s NewPLink
 MP2: cmpa.l #-1,a1
- beq mp3
+ beq.s mp3
  move.l a2,8(a1)
 mp3: move.l a1,4(a2)		;Link 'em up
 NewPLink: move.l (a3),a4	;Get address of first entry of dest list
  cmpa.l #-1,a4		;Check if link is real
- bne NP1		;Yup
+ bne.s NP1		;Yup
  move.l a0,(a3)		;Make ourselves the first entry
  move.l #-1,4(a0)
  move.l #-1,8(a0)
@@ -15796,7 +15796,7 @@ setnewgen: lea wstuff,a1	;point at wave stuff table
 	lsr #1,d0
 	move d0,(a1)+		;set up free-running timer
 sngenl: move (a0)+,d0
-	bmi thaggit		;-1 here means it's the end
+	bmi.s thaggit		;-1 here means it's the end
 	move d0,(a1)+		;set max
 	move (a0)+,d0
 	move d0,(a1)+
@@ -15811,28 +15811,28 @@ thaggit: move d0,4(a1)		;-1 to terminate
 newgen: tst wave_tim
 	bmi rrts
 	tst startbonus
-	bpl nostab
+	bpl.s nostab
 	bsr do_oneup
 	clr startbonus
 nostab:
 	lea wstuff,a0
 	sub #1,6(a0)
-	bpl nugen1
+	bpl.s nugen1
 	move 4(a0),d0
-	bsr launch1
+	bsr.s launch1
 nugen1:	lea 8(a0),a0
 nugen2: move 4(a0),d0
 	bmi rrts
 	sub #1,6(a0)
-	bpl nugen3
-	bsr launch1
+	bpl.s nugen3
+	bsr.s launch1
 nugen3:	lea 8(a0),a0
 	bra nugen2
 
 launch1: tst t2k
-	bne doany
+	bne.s doany
 	cmp #6,d0
-	bgt shutoff
+	bgt.s shutoff
 doany: 	move noclog,d1
  	cmp afree,d1
 	bpl rrts
@@ -15878,7 +15878,7 @@ run_wave:
 
 ;	rts
 	tst wave_tim		;time or delay?
-	beq rwave0		;no
+	beq.s rwave0		;no
 	bmi rrts		;turned off
 	move wave_speed,d0
 	sub d0,wave_tim
@@ -15886,9 +15886,9 @@ run_wave:
 	clr wave_tim
 	rts			;timer then ret
 rwave:	cmp #1,d0
-	bne strin
+	bne.s strin
 rwave0:	tst startbonus
-	bpl nosb
+	bpl.s nosb
 	bsr do_oneup
 	clr startbonus
 nosb:	move noclog,d0
@@ -15898,7 +15898,7 @@ strin:	move.l wave_ptr,a6	;get current address in $
 rave:	move.b (a6)+,d0		;get cmd
 
 	cmp.b #'w',d0		;Wait time
-	bne rwav1
+	bne.s rwav1
 	move.b (a6)+,d0
 	and #$ff,d0
 	move d0,d1
@@ -15908,7 +15908,7 @@ rave:	move.b (a6)+,d0		;get cmd
 wok:	move.l a6,wave_ptr
 	rts
 rwav1:	cmp.b #'i',d0		;Init a meany
-	bne rwav2
+	bne.s rwav2
 	move.b (a6)+,d0
 	and #$ff,d0
 	lea inits,a0
@@ -15922,7 +15922,7 @@ rwav1:	cmp.b #'i',d0		;Init a meany
 	move #10,wave_tim	;Try again after 10 ticks
 	bra wok
 rwav2:	cmp.b #'(',d0		;Open loop?
-	bne rwav3
+	bne.s rwav3
 	move.b (a6)+,d0		;get loop-counter
 	and #$ff,d0
 	move.l wave_sp,a0	;get sp
@@ -15931,10 +15931,10 @@ rwav2:	cmp.b #'(',d0		;Open loop?
 	move.l a0,wave_sp
 	bra rave		;and go back to looking at $
 rwav3:	cmp.b #')',d0		;Close loop?
-	bne rwav4
+	bne.s rwav4
 	move.l wave_sp,a0	;get sp
 	sub #1,-2(a0)		;dec ctr
-	bmi unstak
+	bmi.s unstak
 	move.l -6(a0),a6	;set pointer from stack
 	bra rave
 unstak:	sub.l #6,wave_sp	;free stack space
@@ -15977,7 +15977,7 @@ isf:	bsr rannum
 	rts
 
 rs400: move #400,d5
-	bra rst
+	bra.s rst
 
 ringstars:
 ;
@@ -16017,7 +16017,7 @@ ring2:
 	and #$f0,d2
 	lsl #4,d2
 	ext d1
-	bpl sposss
+	bpl.s sposss
 	neg d1
 sposss:	swap d1
 	clr d1
@@ -16110,7 +16110,7 @@ immsf:	move d3,d0
 	move #7,d4
 	sub d1,d4		;d4 has the bit #
 	btst.b d4,0(a1,d0.w)	;Check if the bit's on
-	bne impixel		;It is on, go start a pixel
+	bne.s impixel		;It is on, go start a pixel
 nnpixel: dbra d3,immsf
 	dbra d2,imms0
 	bra imms1
@@ -16252,11 +16252,11 @@ ashowscore: clr ud_score		;fall thru to set lives display if requested
 	move #48,d4
 	move #10,d5
 sscore: move.b (a2)+,d0
-	bne sscore2
+	bne.s sscore2
 	dbra d6,sscore			;skip leading 0's
 	move #148,d0
 	jsr CopyBlock		;display one zero if there is no score
-	bra setlives		;and go do the lives
+	bra.s setlives		;and go do the lives
 					;return if none
 sscore2: and #$0f,d0
 	lsl #4,d0		;*16, pixel offset to digit position
@@ -16282,9 +16282,9 @@ setlives: move #148,d0
 	lea pic2,a0
 	move lives,d6
 	sub #1,d6
-	bmi lstliv
+	bmi.s lstliv
 	cmp #7,d6
-	ble dlives
+	ble.s dlives
 	move #7,d6
 dlives: jsr CopyBlock
 	add #32,d4
@@ -16342,20 +16342,20 @@ doscore: tst h2h
 	move.b 1(a1,d0.w),d1
 	move.b 0(a1,d0.w),d0
 scorer:	tst beastly
-	beq ndbl
+	beq.s ndbl
 	tst d1
-	bne shftit
+	bne.s shftit
 	move #1,d1
-	bra ndbl
+	bra.s ndbl
 shftit:	lsl #1,d1
 ndbl:	move d0,d2
 adddig: lea 0(a0,d0.w),a2
 	add.b #1,(a2)
 	cmp.b #10,(a2)
-	blt nnxtdig
+	blt.s nnxtdig
 	clr.b (a2)
 	sub #1,d0
-	bmi nnxtdig
+	bmi.s nnxtdig
 	cmp #3,d0		;check for 10's of thou
 	bne adddig
 	btst.b #0,0(a0,d0.w)	;if it is odd-going-even...
@@ -16394,22 +16394,22 @@ inertcon:
 
 	move d0,d1
 	and #3,d1
-	beq friction	;no accel, go do friction
+	beq.s friction	;no accel, go do friction
 	btst #0,d1
-	beq ininc	;go do add value
+	beq.s ininc	;go do add value
 
 dedec:	move.l (a0),d1	;get v
 	move.l 20(a0),d2	;get minv
 	cmp.l 16(a0),d2
-	beq nolim1	;if limits are equal there are no limits
+	beq.s nolim1	;if limits are equal there are no limits
 	cmp.l d2,d1
-	bmi instop	;minv>v, go stop inertia
+	bmi.s instop	;minv>v, go stop inertia
 	
 nolim1:	move.l 4(a0),d0	;get accel
 	move.l 24(a0),d2	;get maccel
 	neg.l d2	;negate coz this is dec
 	cmp.l d2,d0
-	bmi inmove	;no acceleration, already close to maccel
+	bmi.s inmove	;no acceleration, already close to maccel
 	
 	move.l 8(a0),d0
 	sub.l d0,4(a0)	;do accelerate
@@ -16421,9 +16421,9 @@ inmove: move.l 4(a0),d0
 ininc:	move.l (a0),d1	;get v
 	move.l 16(a0),d2	;get maxv
 	cmp.l 20(a0),d2
-	beq nolim2
+	beq.s nolim2
 	cmp.l d2,d1
-	bpl instop	;maxv<v, go stop inertia
+	bpl.s instop	;maxv<v, go stop inertia
 	
 nolim2:	move.l 4(a0),d0	;get accel
 	move.l 24(a0),d2	;get maccel
@@ -16442,7 +16442,7 @@ friction: move.l 4(a0),d0
 	move.l 12(a0),d1
 	move.l d1,d3
 	move.l d0,d2
-	bpl sposk
+	bpl.s sposk
 	neg.l d2
 	neg.l d3
 sposk:	cmp.l d1,d2
@@ -16490,32 +16490,32 @@ fw_run: sub #1,fw_del
 
 fw_cmd: move.b (a0)+,d0		;get cmd
 	cmp.b #'.',d0		;.=Launch at current XY
-	bne fw_c1
+	bne.s fw_c1
 	move.l a0,-(a7)
 	jsr make_fw
 	move.l (a7)+,a0
 	bra fw_cmd
 fw_c1:	cmp.b #'d',d0		;d=Set duration
-	bne fw_c2
+	bne.s fw_c2
 	move.b (a0)+,d0
 	and.l #$ff,d0
 	move d0,fw_dur
 	bra fw_cmd
 fw_c2: 	cmp.b #'c',d0		;c=Set colour
-	bne fw_c3
+	bne.s fw_c3
 	move.b (a0)+,d0
 	and.l #$ff,d0
 	move d0,fw_col
 	bra fw_cmd
 fw_c3:	cmp.b #'w',d0		;w=Wait frames
-	bne fw_c4
+	bne.s fw_c4
 	move.b (a0)+,d0
 	and.l #$ff,d0
 	move d0,fw_del
 	move.l a0,fw_ptr
 	rts
 fw_c4:	cmp.b #'(',d0		;(=Set loop and count
-	bne fw_c5
+	bne.s fw_c5
 	move.l fw_sp,a1
 	move.b (a0)+,d0
 	and #$ff,d0
@@ -16524,51 +16524,51 @@ fw_c4:	cmp.b #'(',d0		;(=Set loop and count
 	move.l a1,fw_sp
 	bra fw_cmd
 fw_c5:	cmp.b #')',d0		;)=Loop and dec count
-	bne fw_c6
+	bne.s fw_c6
 	move.l fw_sp,a1
 	sub #1,-6(a1)
-	bmi go_fw
+	bmi.s go_fw
 	move.l -4(a1),a0
 	bra fw_cmd
 go_fw:	sub.l #6,fw_sp
 	bra fw_cmd
 fw_c6:	cmp.b #'[',d0		;[=start Forever Loop
-	bne fw_c7
+	bne.s fw_c7
 	move.l fw_sp,a1
 	move.l a0,(a1)+
 	move.l a1,fw_sp
 	bra fw_cmd
 fw_c7:	cmp.b #']',d0		;]=loop Forever
-	bne fw_c8
+	bne.s fw_c8
 	move.l fw_sp,a1
 	move.l -4(a1),a0
 	bra fw_cmd
 fw_c8:	cmp.b #'+',d0		;inc col or dur
-	bne fw_c81
+	bne.s fw_c81
 	move.b (a0)+,d0
 	cmp.b #'d',d0
-	beq indur
+	beq.s indur
 	add #1,fw_col
 	bra fw_cmd
 indur:	add #5,fw_dur
 	bra fw_cmd
 fw_c81:	cmp.b #'-',d0		;inc col or dur
-	bne fw_c82
+	bne.s fw_c82
 	move.b (a0)+,d0
 	cmp.b #'d',d0
-	beq dedur
+	beq.s dedur
 	sub #1,fw_col
 	bra fw_cmd
 dedur:	sub #5,fw_dur
 	bra fw_cmd
 fw_c82:	cmp.b #'Z',d0		;X,Y or Z=set speeds
-	bgt fw_c9
+	bgt.s fw_c9
 	lea fw_dx,a2
 	sub.b #'X',d0
 	and #$ff,d0
 	lsl #2,d0
 	lea 0(a2,d0.w),a2
-	bra fw_setvar
+	bra.s fw_setvar
 fw_c9:	lea fw_x,a2		;x,y or z=set abs positions
 	sub.b #'x',d0
 	and #$ff,d0
@@ -16576,11 +16576,11 @@ fw_c9:	lea fw_x,a2		;x,y or z=set abs positions
 	lea 0(a2,d0.w),a2
 fw_setvar: move.b (a0)+,d0
 	cmp.b #'!',d0		;Negate
-	bne fw_sv1
+	bne.s fw_sv1
 	neg.l (a2)
 	bra fw_cmd
 fw_sv1: cmp.b #'=',d0		;Set equal to
-	bne fw_sv2
+	bne.s fw_sv2
 	move.b (a0)+,d0
 	ext d0
 	swap d0
@@ -16589,7 +16589,7 @@ fw_sv1: cmp.b #'=',d0		;Set equal to
 	move.l d0,(a2)
 	bra fw_cmd
 fw_sv2: cmp.b #'+',d0		;Add to
-	bne fw_sv3
+	bne.s fw_sv3
 	move.b (a0)+,d0
 	and.l #$ff,d0
 	swap d0
@@ -16597,7 +16597,7 @@ fw_sv2: cmp.b #'+',d0		;Add to
 	add.l d0,(a2)
 	bra fw_cmd
 fw_sv3: cmp.b #'-',d0		;Subtract from
-	bne fw_sv4
+	bne.s fw_sv4
 	move.b (a0)+,d0
 	and.l #$ff,d0
 	swap d0
@@ -16649,13 +16649,13 @@ cccl:	move.b #' ',(a2)+
 
 	lea 4(a1),a2	;Point to start.
 	cmp #9,d4	;Is this Score No. 1?
-	bne notnoone	;Nope
+	bne.s notnoone	;Nope
 
 	lea -2(a2),a2	;skip a couple of spaces back
 
 	move #5,d7	;copy vanity msg
 getvain: move.b (a3)+,d6
-	beq gotvain	;get until 0
+	beq.s gotvain	;get until 0
 	move.b d6,(a2)+
 	dbra d7,getvain
 gotvain: move.b #' ',(a2)+
@@ -16664,18 +16664,18 @@ gotvain: move.b #' ',(a2)+
 	lea 4(a0),a3
 	move #2,d7
 ginits:	move.b (a3)+,d6
-	bne sinsi
+	bne.s sinsi
 	move.b #' ',d6
 sinsi:	move.b d6,(a2)+
 	dbra d7,ginits
 	move.b #')',(a2)+
 	move.b #' ',(a2)+
-	bra xxnum
+	bra.s xxnum
 
 notnoone: lea 4(a0),a3
 	move #2,d7
 ginits1: move.b (a3)+,d6
-	bne sinsi1
+	bne.s sinsi1
 	move.b #' ',d6
 sinsi1:	move.b d6,(a2)+
 	dbra d7,ginits1		;grab initials
@@ -16720,7 +16720,7 @@ xscr2: 	divu #10,d2
 	and.l #$ff,d0
 	add #1,d0
 	cmp #99,d0
-	ble zokay
+	ble.s zokay
 	move #99,d0
 zokay:	move #2,d3
 xlvl:
@@ -16735,7 +16735,7 @@ xlvl:
 	move #2,d7
 	lea 1(a2),a4
 animal: move.b (a3)+,d0
-	bne anima1
+	bne.s anima1
 	dbra d7,animal
 
 anima1:	add.b #'0',d0
@@ -16865,9 +16865,9 @@ pager:
 	move.l #0,28(a0)		;text shear
 	move.l #0,36(a0)
 ;	bsr g_textlength
-nxline:	bsr g_getline		;returns length in d6, d7 is flag for text end
+nxline:	bsr.s g_getline		;returns length in d6, d7 is flag for text end
 	tst d6
-	beq nuline
+	beq.s nuline
 	move d1,d2
 	swap d2
 	move d0,d2
@@ -16890,11 +16890,11 @@ nuline:	tst d7
 	add 4(a1),d1
 	add #2,d1			;linefeed
 	cmp #2,d7
-	bne notbiglf
+	bne.s notbiglf
 	add #6,d1			;bigger LF
 notbiglf: move #220,d3
 	tst pal
-	beq palll
+	beq.s palll
 	move #250,d3
 
 palll: 	cmp d3,d1		;btm line of text
@@ -16915,13 +16915,13 @@ g_getline: move.l a5,a2	;d2.l points to 0term text
 	sub d6,d3		;maximum text position
 g_gtlin: move.b (a2)+,d5
 	cmp.b #'*',d5
-	beq retend		;found end of the text
+	beq.s retend		;found end of the text
 	cmp.b #'/',d5
-	beq morend		;return and say more
+	beq.s morend		;return and say more
 	cmp.b #'~',d5
-	beq morend2		;use for larger CR/LF gap
+	beq.s morend2		;use for larger CR/LF gap
 	cmp.b #'^',d5
-	bne g_gt1
+	bne.s g_gt1
 	lea fonties,a1
 	move.b (a2)+,d5
 	sub.b #'0',d5
@@ -16930,7 +16930,7 @@ g_gtlin: move.b (a2)+,d5
 	move.l 0(a1,d5.w),a1	;get new font
 	bra g_gtlin
 g_gt1: 	cmp.b #'>',d5
-	bne g_gt2
+	bne.s g_gt2
 	move.b (a2)+,d5
 	sub.b #'0',d5
 	and #$ff,d5
@@ -16977,11 +16977,11 @@ xkeys:
 	move #-1,d5
 xky:	move.l a1,a2
 	move.b 3(a0),d1		;get stored level
-	beq stetoff
+	beq.s stetoff
 	move.l a1,(a5)+
 	move #2,d7
 xnam:	move.b (a0)+,d0
-	bne xfacer
+	bne.s xfacer
 	move.b #' ',d0
 xfacer: move.b d0,(a2)+ 	
 	dbra d7,xnam		;copy over the initials
@@ -16990,7 +16990,7 @@ xfacer: move.b d0,(a2)+
 	and.l #$ff,d1
 	add #1,d1
 	cmp #99,d1
-	ble zokay2
+	ble.s zokay2
 	move #99,d1
 zokay2:	move #1,d3
 xlvl2:
@@ -17004,9 +17004,9 @@ xlvl2:
 	move #1,d7
 	lea 11(a1),a4
 animal2: move.b (a3)+,d0
-	bne nskipzer2
+	bne.s nskipzer2
 	dbra d7,animal2
-	bra azonk
+	bra.s azonk
 nskipzer2: add.b #'0',d0
 	move.b d0,(a4)+
 	move.b (a3)+,d0
