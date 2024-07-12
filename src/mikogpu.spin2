@@ -466,11 +466,14 @@ ovl_texter
               mov auxvals+6,textptr
               mov auxvals+7,dstxy
 
+              ' download entire font
               mov exmem_cmd,fontbase
-              mov exmem_len,#8
-              mov exmem_target,exmem_buffer_ptr
+              mov exmem_len,#8+(96*4)
+              mov fontbase,exmem_buffer_ptr
+              add fontbase,##384*2*2
+              mov exmem_target,fontbase
               call #ex_rdblock
-              rdfast #0,exmem_buffer_ptr
+              rdfast #0,fontbase
               rflong _bass
               movbyts _bass,#%%0123
               rflong ssize
@@ -499,8 +502,7 @@ ovl_texter
               sub r0,#32
               shl r0,#2
               add r0,fontbase
-              callpa r0,#ex_rdlong_pa
-              mov spixel,pa
+              rdlong spixel,r0
               movbyts spixel,#%%0123
               ' moveta textptr,textptr
               ' moveta fontbase,fontbase	;these will be bashed when the char is printed
@@ -618,18 +620,37 @@ ovl_texter
               getword blit_outercnt,ssize,#1
               debug("in texter ",uhex_long(ssize))
               'debug(uhex_long(spixel,_bass,blit_x,blit_y,blit_xinc,blit_yinc,blit_xstep,blit_ystep,ssize))
-.blitouter
 
-              mov exmem_cmd,tmp4
-              add tmp4,cryline320
-
+              ' Start grabbing font
               getword exmem_len,ssize,#0
-              shl exmem_len,#1 wz
-              fle exmem_len,##256*4 ' super safety
-              mov exmem_target,exmem_buffer_ptr
-        if_nz call #ex_rdblock
+              shl exmem_len,#1
+              fle exmem_len,cryline384 ' super safety
+              fge exmem_len,#1
 
-              rdfast bit31,exmem_buffer_ptr ' TODO: set bit31
+              mov exmem_target,exmem_buffer_ptr
+              testb blit_outercnt,#0 wc
+        if_c  add exmem_target,cryline384
+              mov exmem_cmd,tmp4
+              setnib exmem_cmd,#$B,#7 ' B stands for burst
+              setq #2
+              wrlong exmem_cmd,exmem_mailbox
+
+.blitouter
+              ' prefetch next line
+              mov exmem_target,exmem_buffer_ptr
+              testb blit_outercnt,#0 wc
+        if_nc add exmem_target,cryline384
+              add tmp4,cryline320
+              mov exmem_cmd,tmp4
+              setnib exmem_cmd,#$B,#7 ' B stands for burst
+              cmp blit_outercnt,#1 wz ' don't do it on last line
+              waitatn ' wait for current line to have been fetched
+        if_nz setq #2
+        if_nz wrlong exmem_cmd,exmem_mailbox
+
+              mov tmp2,exmem_buffer_ptr
+        if_c  add tmp2,cryline384
+              rdfast bit31,tmp2
 
               getword pa,ssize,#0
 
@@ -4934,5 +4955,5 @@ ovl_fline_end
 
 DAT ' data area
             orgh
-exmem_buffer long 0[384]
+exmem_buffer long 0[512]
 
