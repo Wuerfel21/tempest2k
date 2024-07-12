@@ -8,10 +8,10 @@ CON
 
 MAX_LINE_OBJ = 3
 
-PUB start(exmem,scanbuffer_ptr,lock)
+PUB start(exmem,scanbuffer_ptr,lock) : cog
 scanbuffer_base := scanbuffer_ptr
 exmem_mailbox := exmem
-coginit(HUBEXEC_NEW,@init,0)
+return coginit(HUBEXEC_NEW,@init,0)
 
 DAT
               orgh
