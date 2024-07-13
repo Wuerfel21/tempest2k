@@ -17044,7 +17044,7 @@ playtune_a0:
 	tst.l DSP_MAILBOX
 	bne .prewait
 	move.l a0,DSP_MAILBOX+4
-	dc.w MIKO68K_DUMPREGS
+	;dc.w MIKO68K_DUMPREGS
 	move.l #$80000000,DSP_MAILBOX
 	; don't need to wait afterwards, may take a hot second
 	rts
@@ -17057,7 +17057,7 @@ SET_VOLUME:
 	and.l #$FF,d0
 	lsl.w #3,d0
 	or.l #$81000000,d0
-	dc.w MIKO68K_DUMPREGS
+	;dc.w MIKO68K_DUMPREGS
 .prewait:
 	tst.l DSP_MAILBOX
 	bne .prewait
