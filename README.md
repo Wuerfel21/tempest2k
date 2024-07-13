@@ -6,6 +6,8 @@ This is a source port of Tempest 2000 by Jeff Minter for the Parallax Propeller 
 
 ## Build Instructions
 
+Instructions are provided for Ubuntu/Debian Linux. Windows 10+ users should use WSL.
+
 ### Build Requirements
 ```sh
 sudo apt install build-essentials bison
