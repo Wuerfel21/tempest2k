@@ -1,18 +1,10 @@
-Before release:
-- Add option to use shoulder buttons DONESKI
-- Grab screenshots DONESKI
-- Clean up p2config file DONESKI
 
 later:
+- Fix framebuffer glitch on game over screen on some boards
 - Rethink default controls (?)
 - Is the crosshair off-center in the Jaguar version, too?
 - Make it harder to skip end screen on accident
 - Fix 1-frame glitch on warp stage complete
-- Optimize ripplewarp/texter/prettypoly so menu screens all run fast on EVAL96MB
-  - Check performance on 4 bit bus! DONESKI (is ok)
-    - Figure out what actual good values for burst length are?
-- P2 minor adjustments (animation timers, button text, etc) PARTIAL
-  - beastly mode related texts need editing
 - Revist music assignments
 - Code cleanup (I think it's still including stub files for some things?)
 - Fix remaining MOD issues (only affects tune6.mod ??? (soundtest 12 !))

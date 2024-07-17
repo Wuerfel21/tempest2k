@@ -18,8 +18,9 @@ XADDPHR         EQU     $00000000       ; 00 - add phrase width and truncate
 ;	.extern GPUEND
 ;	.extern DSPORG
 
-;ALWAYS_CHEAT equ 1
-FIX_FLIPPER_LOD_COLOR equ 1
+ALWAYS_CHEAT equ 0 ; force enable cheat mode, also other testing things
+FIX_FLIPPER_LOD_COLOR equ 1 ; make enemy LOD color match flipper color in all levels
+CTYPE_ALWAYS_ENABLED equ 1 ; force enable controller type menu
 
 ;	.globl ENABLETIMER
 ;	.globl DISABLETIMER
@@ -450,7 +451,9 @@ crashedit:
 .endif
 
 spall:	btst.b #6,sysflags
+.if !CTYPE_ALWAYS_ENABLED
 	beq.s slopt
+.endif
 	move.l #o2s4,option2+20
 slopt:	clr palside
 	clr paltop
@@ -2578,7 +2581,9 @@ fago:	bsr fade
 gameopt: clr selected			;this does game option menu
 	move #2,selectable
 	btst.b #6,sysflags
+.if !CTYPE_ALWAYS_ENABLED
 	beq.s .no_ctype
+.endif
 	add #1,selectable
 .no_ctype:
 	move.l #option2,the_option
@@ -3417,7 +3422,7 @@ xono:
 	sub d1,d2
 	move d2,d1
 xono2:  cmp #$20,d1
-.if ^^defined ALWAYS_CHEAT
+.if ALWAYS_CHEAT
 	bra.s over 
 .endif
 	bgt.s notover	
@@ -4186,7 +4191,7 @@ llaleg:	neg d0
 	move.l (A7)+,a6
 	bra.s ennd
 mist:
-.if ^^defined ALWAYS_CHEAT
+.if ALWAYS_CHEAT
 	;bra ennd
 .endif
 	clr _pauen
@@ -7888,8 +7893,8 @@ sweb0:	move.l #rrts,routine
 ;	move #-1,db_on
 	tst t2k
 	beq swip1
-.if ^^defined ALWAYS_CHEAT
-	cmp #10,cwave
+.if ALWAYS_CHEAT
+	cmp #99,cwave
 .else
 	cmp #99,cwave
 .endif	
@@ -11477,7 +11482,7 @@ moveclaw:
 	tst h2h
 	bne.s h2hrun
 	bsr run_wave			;run the wave generator
-.if ^^defined ALWAYS_CHEAT
+.if ALWAYS_CHEAT
 	move #1,chenable
 .endif
 	tst chenable
@@ -11681,12 +11686,6 @@ clawcon: move.l 20(a6),d1
 	move.l #$6000,d3		;maximum permitted velocity
 
 	swap d0
-	and #$c0,d0			;check for pad left or right
-	bne.s pad_pressed			;go do action if pressed
-;	bra pad_pressed
-stopclaw: clr.l 20(a6)
-	bra domove		;stop the claw
-pad_pressed:
 
 	move.b sysflags,d7		;Rotary controller test hack
 	and #$18,d7
@@ -11717,7 +11716,14 @@ notc1:  cmp #2,whichclaw
 	bra.s domove
 
 
-joyconn: btst #7,d0
+joyconn: 
+	and #$c0,d0			;check for pad left or right
+	bne.s pad_pressed			;go do action if pressed
+;	bra pad_pressed
+stopclaw: clr.l 20(a6)
+	bra domove		;stop the claw
+pad_pressed:
+	btst #7,d0
 	bne.s claw_right
 	tst conswap
 	bne.s c_rgt			;this is so h2h player 2 is the right way around
@@ -12468,6 +12474,10 @@ fr:
 	; P2 TODO
 	move #0,-(a7)
 	bsr dopad
+	tst roconon		;Rotary Controller enabled?
+	beq.s .no_rocon
+	bsr readrotary
+.no_rocon:
 .endif
 
 
@@ -12606,7 +12616,7 @@ readrotary:
 
 .if ^^defined JAGUAR
 	btst.b #3,sysflags
-	beq op2
+	beq.s op2
 	move.l	#$f0fffffc,d1		; d1 = Joypad data mask   (Player 1)
 	moveq.l	#-1,d2			; d2 = Cumulative joypad reading
 	move.w	#$81fe,JOYOUT
@@ -12641,7 +12651,20 @@ op2: btst.b #4,sysflags
 	bsr rroco
 	add.l d0,rot_cum+4
 .endif
-	; P2 TODO
+.if ^^defined PROPELLER
+	btst.b #3,sysflags
+	beq.s op2
+	moveq #0,d0
+	bset.l #31,d0
+	dc.w MIKO68K_GETINPUT
+	add.l d0,rot_cum+0
+op2: 	btst.b #4,sysflags
+	beq rrts
+	moveq #1,d0
+	bset.l #31,d0
+	dc.w MIKO68K_GETINPUT
+	add.l d0,rot_cum+4
+.endif
 	rts
 
 
@@ -15386,7 +15409,7 @@ draw_pel: lea in_buf,a0
 	move.l d0,(a0)+
 	move 54(a6),d0
 	and #$ff,d0
-.if ^^defined FIX_FLIPPER_LOD_COLOR
+.if FIX_FLIPPER_LOD_COLOR
 	cmp #2,d0 ; 2 is flipper object id
 	bne.s .notflipper
 	move flipcol,d0
@@ -19274,7 +19297,7 @@ testpage: dc.b "ORIGINAL GAME DESIGNED BY/       dave theurer~"
 	dc.b "PRODUCED BY/ john skruch*"
 
 
-victpage: dc.b "you beat the game!//now try to beat tempest - the beastly mode!//press option on the "
+victpage: dc.b "you beat the game!//now try to beat tempest - the beastly mode!//press tab,select on the "
 	dc.b "level select screen to begin this harder version of the game.//all points scored in "
 	dc.b "beastly mode are doubled!//now go and have a nice cup of tea to calm down!*"
 

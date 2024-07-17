@@ -13,7 +13,7 @@ c: "libc"
 vga : "p2lib/TempestVGA"
 padmap : "p2lib/padmap_parser"
 usb: "p2lib/usbnew" | ACTIVITY_LED = -1, ERROR_LED = -1, USB_BASE_PIN = USB0_BASEPIN, USB_ENABLE_OFFSET = ENABLE_PIN, USB_DMINUS_OFFSET = DM_PIN, ...
-                 OVERLAP_MEMORY = true,  ...
+                 OVERLAP_MEMORY = true, HAVE_MOUSE = true, MOUSE_FULL_PROTOCOL = true,  ...
                  EMUPAD_KB_BT0 = $06, EMUPAD_KB_BT1 = $19, EMUPAD_KB_BT2 = $1B, EMUPAD_KB_BT3 = $1D, ...
                  EMUPAD_KB_BT4 = $16, EMUPAD_KB_BT5 = $07, ...
                  EMUPAD_KB_BT8 = $2b, EMUPAD_KB_BT9 = $29, ...
@@ -52,7 +52,9 @@ byte string_buffer[64]
 
 long exmem_cogs[8],exmem_banks[32],exmem_boot[8]
 
-PUB main() | tmp,player,pmf
+long mouse_prev_x, mouse_prev_wheel
+
+PUB main() | tmp,player,pmf,tmp2,tmp3
 
 vblank_lock := locknew()
 
@@ -153,32 +155,45 @@ repeat
     2:
       player := long[FUNC_MAILBOX+4]
       tmp := 0
-      if player +< 2
-        tmp.[20] := emupad[player].[usb.EMUPAD_UP_BIT]
-        tmp.[21] := emupad[player].[usb.EMUPAD_DOWN_BIT]
-        tmp.[22] := emupad[player].[usb.EMUPAD_LEFT_BIT]
-        tmp.[23] := emupad[player].[usb.EMUPAD_RIGHT_BIT]
-        tmp.[9]  := emupad[player].[usb.EMUPAD_BT8_BIT] ' option
-        tmp.[28] := emupad[player].[usb.EMUPAD_BT9_BIT] ' pause
-        tmp.[29] := emupad[player].[usb.EMUPAD_BT0_BIT] ' A
-        tmp.[25] := emupad[player].[usb.EMUPAD_BT1_BIT] ' B
-        tmp.[13] := emupad[player].[usb.EMUPAD_BT2_BIT] ' C
-        tmp.[12] := emupad[player].[usb.EMUPAD_BT3_BIT] ' D
-        tmp.[11] := emupad[player].[usb.EMUPAD_BT4_BIT] ' E
-        tmp.[10] := emupad[player].[usb.EMUPAD_BT5_BIT] ' F
-      if player == 0
-        tmp.[ 1] := usb.keystate(usb.KEY_3) || usb.keystate(usb.KEY_NUM3) ' 3
-        tmp.[ 2] := usb.keystate(usb.KEY_6) || usb.keystate(usb.KEY_NUM6) ' 6
-        tmp.[ 3] := usb.keystate(usb.KEY_9) || usb.keystate(usb.KEY_NUM9) ' 9
-        tmp.[ 5] := usb.keystate(usb.KEY_2) || usb.keystate(usb.KEY_NUM2) ' 2
-        tmp.[ 6] := usb.keystate(usb.KEY_5) || usb.keystate(usb.KEY_NUM5) ' 5
-        tmp.[ 4] := usb.keystate(usb.KEY_8) || usb.keystate(usb.KEY_NUM8) ' 8
-        tmp.[17] := usb.keystate(usb.KEY_1) || usb.keystate(usb.KEY_NUM1) ' 1
-        tmp.[18] := usb.keystate(usb.KEY_4) || usb.keystate(usb.KEY_NUM4) ' 4
-        tmp.[19] := usb.keystate(usb.KEY_7) || usb.keystate(usb.KEY_NUM7) ' 7
+      if player.[31] ' read rocon flag
+        if player&posx == 0
+          tmp2,_ := usb.mouse_xy()
+          tmp += (tmp2 - mouse_prev_x)<<9
+          mouse_prev_x := tmp2
+          _,tmp2 := usb.mouse_scroll()
+          tmp -= (tmp2 - mouse_prev_wheel)*$5000
+          mouse_prev_wheel := tmp2
+      else
+        if player +< 2
+          tmp.[20] := emupad[player].[usb.EMUPAD_UP_BIT]
+          tmp.[21] := emupad[player].[usb.EMUPAD_DOWN_BIT]
+          tmp.[22] := emupad[player].[usb.EMUPAD_LEFT_BIT]
+          tmp.[23] := emupad[player].[usb.EMUPAD_RIGHT_BIT]
+          tmp.[9]  := emupad[player].[usb.EMUPAD_BT8_BIT] ' option
+          tmp.[28] := emupad[player].[usb.EMUPAD_BT9_BIT] ' pause
+          tmp.[29] := emupad[player].[usb.EMUPAD_BT0_BIT] ' A
+          tmp.[25] := emupad[player].[usb.EMUPAD_BT1_BIT] ' B
+          tmp.[13] := emupad[player].[usb.EMUPAD_BT2_BIT] ' C
+          tmp.[12] := emupad[player].[usb.EMUPAD_BT3_BIT] ' D
+          tmp.[11] := emupad[player].[usb.EMUPAD_BT4_BIT] ' E
+          tmp.[10] := emupad[player].[usb.EMUPAD_BT5_BIT] ' F
+        if player == 0
+          tmp2 := usb.mouse_buttons()
+          tmp.[29] |= tmp2.[1] ' A = rmb
+          tmp.[25] |= tmp2.[2] ' B = mmb
+          tmp.[13] |= tmp2.[0] ' C = lmb
+          tmp.[ 1] := usb.keystate(usb.KEY_3) || usb.keystate(usb.KEY_NUM3) ' 3
+          tmp.[ 2] := usb.keystate(usb.KEY_6) || usb.keystate(usb.KEY_NUM6) ' 6
+          tmp.[ 3] := usb.keystate(usb.KEY_9) || usb.keystate(usb.KEY_NUM9) ' 9
+          tmp.[ 5] := usb.keystate(usb.KEY_2) || usb.keystate(usb.KEY_NUM2) ' 2
+          tmp.[ 6] := usb.keystate(usb.KEY_5) || usb.keystate(usb.KEY_NUM5) ' 5
+          tmp.[ 4] := usb.keystate(usb.KEY_8) || usb.keystate(usb.KEY_NUM8) ' 8
+          tmp.[17] := usb.keystate(usb.KEY_1) || usb.keystate(usb.KEY_NUM1) ' 1
+          tmp.[18] := usb.keystate(usb.KEY_4) || usb.keystate(usb.KEY_NUM4) ' 4
+          tmp.[19] := usb.keystate(usb.KEY_7) || usb.keystate(usb.KEY_NUM7) ' 7
       long[FUNC_MAILBOX+4] := tmp
       long[FUNC_MAILBOX] := 0
-      'c.printf(string("Input read %08X",10),tmp)
+      c.printf(string("Input read %08X %08X",10),player,tmp)
     16: ' read save data
       ifnot NO_FS
         tmp := c.fopen(@"/fs/T2000.SAV",@"rb")
