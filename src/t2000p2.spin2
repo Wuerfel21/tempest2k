@@ -245,9 +245,9 @@ PRI do_rotary(current,prev,sens,minsens,maxsens,sensstep) : increment,new_prev,n
   increment := current - prev
   new_prev := current
   if increment
-    new_sens := (sens - sensstep) #> minsens  
+    new_sens := (sens + sensstep) #> minsens  
   else
-    new_sens := (sens + sensstep) <# maxsens 
+    new_sens := (sens - sensstep) <# maxsens 
   increment *= sens
   
 
