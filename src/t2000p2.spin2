@@ -121,12 +121,9 @@ usb.start() ' cog 4
 
 ' initialize spinners
 if HAVE_ROTARY_P1
-  wrpin(ROTARY_P1_B,P_HIGH_15K)
-  pinh(ROTARY_P1_B)
-  wrpin(ROTARY_P1_A,P_HIGH_15K|P_OE|P_QUADRATURE|(((ROTARY_P1_B-ROTARY_P1_A)&3)<<24))
-  wxpin(ROTARY_P1_A,0)
-  wypin(ROTARY_P1_A,0)
-  pinh(ROTARY_P1_A)
+  init_rotary(ROTARY_P1_A,ROTARY_P1_B)
+if HAVE_ROTARY_P2
+  init_rotary(ROTARY_P2_A,ROTARY_P2_B)
 
 waitms(1500)
 
@@ -173,7 +170,11 @@ repeat
           tmp -= (tmp2 - mouse_prev_wheel)*$5000
           mouse_prev_wheel := tmp2
           if HAVE_ROTARY_P1
-            tmp2,rotary_prev[0],rotary_sens[0] := do_rotary(rdpin(ROTARY_P1_A),rotary_prev[0],rotary_sens[0],ROTARY_MINSENS,ROTARY_MAXSENS,ROTARY_SENSSTEP)
+            tmp2,rotary_prev[0],rotary_sens[0] := poll_rotary(rdpin(ROTARY_P1_A),rotary_prev[0],rotary_sens[0],ROTARY_MINSENS,ROTARY_MAXSENS,ROTARY_SENSSTEP)
+            tmp += tmp2
+        if player&posx == 1
+          if HAVE_ROTARY_P1
+            tmp2,rotary_prev[1],rotary_sens[1] := poll_rotary(rdpin(ROTARY_P2_A),rotary_prev[1],rotary_sens[1],ROTARY_MINSENS,ROTARY_MAXSENS,ROTARY_SENSSTEP)
             tmp += tmp2
 
       else
@@ -241,7 +242,7 @@ repeat
       long[FUNC_MAILBOX] := 0
 
 
-PRI do_rotary(current,prev,sens,minsens,maxsens,sensstep) : increment,new_prev,new_sens
+PRI poll_rotary(current,prev,sens,minsens,maxsens,sensstep) : increment,new_prev,new_sens
   increment := current - prev
   new_prev := current
   if increment
@@ -249,7 +250,14 @@ PRI do_rotary(current,prev,sens,minsens,maxsens,sensstep) : increment,new_prev,n
   else
     new_sens := (sens - sensstep) #> minsens 
   increment *= sens
-  
+
+PRI init_rotary(a,b)
+  wrpin(b,P_HIGH_15K)
+  pinh(b)
+  wrpin(a,P_HIGH_15K|P_OE|P_QUADRATURE|(((b-a)&3)<<24))
+  wxpin(a,0)
+  wypin(a,0)
+  pinh(a)
 
 
 PRI centext(text,x,y,xrep,yrep,color)
