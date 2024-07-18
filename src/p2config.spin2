@@ -87,6 +87,14 @@ USB0_BASEPIN = 16
 ENABLE_PIN   = 1              ' USB object enables port voltage protection
 DM_PIN       = 2              ' Add to BASEPIN
 
+HAVE_ROTARY_P1 = false
+ROTARY_P1_A = 40
+ROTARY_P1_B = 41
+
+
+ROTARY_MINSENS = $2000
+ROTARY_MAXSENS = $5000
+ROTARY_SENSSTEP = $1000
 
 '' Ignore stuff below
 

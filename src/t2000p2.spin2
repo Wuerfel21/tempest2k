@@ -52,7 +52,7 @@ byte string_buffer[64]
 
 long exmem_cogs[8],exmem_banks[32],exmem_boot[8]
 
-long mouse_prev_x, mouse_prev_wheel
+long mouse_prev_x, mouse_prev_wheel, rotary_prev[2],rotary_sens[2]
 
 PUB main() | tmp,player,pmf,tmp2,tmp3
 
@@ -119,6 +119,15 @@ ifnot NO_FS
 usb.set_emupad_ptr(@emupad)
 usb.start() ' cog 4
 
+' initialize spinners
+if HAVE_ROTARY_P1
+  wrpin(ROTARY_P1_B,P_HIGH_15K)
+  pinh(ROTARY_P1_B)
+  wrpin(ROTARY_P1_A,P_HIGH_15K|P_OE|P_QUADRATURE|(((ROTARY_P1_B-ROTARY_P1_A)&3)<<24))
+  wxpin(ROTARY_P1_A,0)
+  wypin(ROTARY_P1_A,0)
+  pinh(ROTARY_P1_A)
+
 waitms(1500)
 
 ifnot NO_FS
@@ -163,6 +172,10 @@ repeat
           _,tmp2 := usb.mouse_scroll()
           tmp -= (tmp2 - mouse_prev_wheel)*$5000
           mouse_prev_wheel := tmp2
+          if HAVE_ROTARY_P1
+            tmp2,rotary_prev[0],rotary_sens[0] := do_rotary(rdpin(ROTARY_P1_A),rotary_prev[0],rotary_sens[0],ROTARY_MINSENS,ROTARY_MAXSENS,ROTARY_SENSSTEP)
+            tmp += tmp2
+
       else
         if player +< 2
           tmp.[20] := emupad[player].[usb.EMUPAD_UP_BIT]
@@ -227,6 +240,16 @@ repeat
       'c.printf(string("Yuckie wucky $64: %08X",10),long[$64])
       long[FUNC_MAILBOX] := 0
 
+
+PRI do_rotary(current,prev,sens,minsens,maxsens,sensstep) : increment,new_prev,new_sens
+  increment := current - prev
+  new_prev := current
+  if increment
+    new_sens := (sens - sensstep) #> minsens  
+  else
+    new_sens := (sens + sensstep) <# maxsens 
+  increment *= sens
+  
 
 
 PRI centext(text,x,y,xrep,yrep,color)
