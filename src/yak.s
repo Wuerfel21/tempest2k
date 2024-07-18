@@ -21,6 +21,7 @@ XADDPHR         EQU     $00000000       ; 00 - add phrase width and truncate
 ALWAYS_CHEAT equ 0 ; force enable cheat mode, also other testing things
 FIX_FLIPPER_LOD_COLOR equ 1 ; make enemy LOD color match flipper color in all levels
 CTYPE_ALWAYS_ENABLED equ 1 ; force enable controller type menu
+WARP_ROTARY_SENSITIVITY_FIX equ 1; reduce sensitivity of warp stage rotary controls
 
 ;	.globl ENABLETIMER
 ;	.globl DISABLETIMER
@@ -16400,7 +16401,9 @@ iii:
 ;	neg.l 4(a0)
 ;	bra dedec
  	move.l roach,d0
+.if !WARP_ROTARY_SENSITIVITY_FIX
 	lsl.l #1,d0
+.endif
 	add.l (a0),d0
 	move.l 20(a0),d1
 	cmp.l d1,d0
