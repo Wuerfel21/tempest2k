@@ -193,7 +193,7 @@ repeat
           tmp.[19] := usb.keystate(usb.KEY_7) || usb.keystate(usb.KEY_NUM7) ' 7
       long[FUNC_MAILBOX+4] := tmp
       long[FUNC_MAILBOX] := 0
-      c.printf(string("Input read %08X %08X",10),player,tmp)
+      'c.printf(string("Input read %08X %08X",10),player,tmp)
     16: ' read save data
       ifnot NO_FS
         tmp := c.fopen(@"/fs/T2000.SAV",@"rb")
