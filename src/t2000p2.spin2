@@ -173,7 +173,7 @@ repeat
             tmp2,rotary_prev[0],rotary_sens[0] := poll_rotary(rdpin(ROTARY_P1_A),rotary_prev[0],rotary_sens[0],ROTARY_MINSENS,ROTARY_MAXSENS,ROTARY_SENSSTEP)
             tmp -= tmp2
         if player&posx == 1
-          if HAVE_ROTARY_P1
+          if HAVE_ROTARY_P2
             tmp2,rotary_prev[1],rotary_sens[1] := poll_rotary(rdpin(ROTARY_P2_A),rotary_prev[1],rotary_sens[1],ROTARY_MINSENS,ROTARY_MAXSENS,ROTARY_SENSSTEP)
             tmp -= tmp2
 
