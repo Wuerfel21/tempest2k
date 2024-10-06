@@ -29,7 +29,7 @@ t2000p2.dat: src/*.s
 	./rmac/rmac -fb -Isrc src/images_sounds.s -o bin_p2/images_sounds.o
 	./rln/rln -v -n -a 80000000 2000 r bin_p2/yak.cof bin_p2/vidinit_stub.cof bin_p2/stubsound.cof bin_p2/images_sounds.o -o t2000p2.dat
 	
-t2000p2.bix: src/*.spin2
+t2000p2.bix: src/*.spin2 src/p2lib/*.spin2
 	./spin2cpp/build/flexspin -2 -H 0x50000 --compress src/t2000p2.spin2 -l -o t2000p2.bix
 
 
