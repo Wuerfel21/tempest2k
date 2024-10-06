@@ -14,10 +14,11 @@ FADE_SPEED = SAMPLE_RATE/100 ' higher is slower
 P2F_HIGH = $50
 P2F_LOW = $6daf6d3f
 
-PUB start(mailbox,l,r)
+PUB start(mailbox,l,r,digmb)
 
   lpin := l
   rpin := r
+  mbpin := digmb
   sample_period := clkfreq/SAMPLE_RATE
   exmem_mailbox := mailbox
   coginit(COGEXEC_NEW,@entry,0)
@@ -61,6 +62,8 @@ entry
 smploop
 
               ' DAC adjust sample
+              mov tmp3,lsmp
+              rolword tmp3,rsmp,#0
               mov tmp1,dac_center
               mov tmp2,dac_center
               scas lsmp,dac_scas
@@ -72,6 +75,9 @@ smploop
         if_nc jmp #$-1
               wypin tmp1,lpin
               wypin tmp2,rpin
+              tjs mbpin,#.nodigital
+              wxpin tmp3,mbpin
+.nodigital
 
               add mod_ticktimer,#1
 
@@ -402,6 +408,7 @@ mod_fadeflag  long 0
 exmem_mailbox long 0
 lpin          long 0
 rpin          long 0
+mbpin         long 0
 sample_period long 0
 bufferbase    long @@@ex_buffers
 

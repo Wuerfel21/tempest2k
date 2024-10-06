@@ -58,7 +58,8 @@ PUB main() | tmp,player,pmf,tmp2,tmp3
 
 vblank_lock := locknew()
 
-vga.start(SCANLINE_CTR,0,@scanline_buffer,VIDEO_MODE,VGA_BASEPIN,VGA_VSYNC,VIDEO_SUBMODE) ' cog 1
+'vga.start(SCANLINE_CTR,0,@scanline_buffer,VIDEO_MODE,VGA_BASEPIN,VGA_VSYNC,VIDEO_SUBMODE) ' cog 1
+vga.start(ANALOG_BASEPIN&63 + (DIGITAL_BASEPIN&63)<<8 + (DIGITAL_REVERSED?64<<8:0),VSYNC_PIN&63,VIDEO_MODE,VIDEO_SUBMODE,@scanline_buffer+(384-320)*2,(384-320)*4,2,SCANLINE_CTR,$80000,vga.VIDEO_CLKFREQ/dsp.SAMPLE_RATE)
 
 _setbaud(2_000_000)
 'c.printf(string("Hello World!",10))
@@ -66,6 +67,10 @@ c.printf(string("Tempest 2000 for Parallax P2",10,"============================"
 
 
 exmem_start() ' cog 2
+
+repeat 240:tmp
+    wordfill($20000+tmp*768,tmp<<8,384)
+
 
 ' draw border around screen to help auto-adjust along
 repeat 240:tmp
@@ -78,6 +83,8 @@ screentext(@"by IRQsome Software non-inc.",37,12,1,1,$CF88)
 
 obj_cog := cry.start(@exmem_mailbox,@scanline_buffer,vblank_lock) ' cog 3
 exmem_setcog(obj_cog,exmem_cogs[obj_cog]|(1<<exmem.PRIORITY_BIT))
+
+dsp.start(@exmem_mailbox,AUDIO_LEFT,AUDIO_RIGHT,DIGITAL_BASEPIN) ' cog 4
 
 waitms(1)
 
@@ -117,7 +124,7 @@ ifnot NO_FS
 
 
 usb.set_emupad_ptr(@emupad)
-usb.start() ' cog 4
+usb.start() ' cog 5
 
 ' initialize spinners
 if HAVE_ROTARY_P1
@@ -137,9 +144,8 @@ waitms(1)
 
 c.printf(string("%08X",10),@exmem_mailbox)
 
-gpu.start(@exmem_mailbox,@funscii) ' cog 5
-cpu.start(@exmem_mailbox,vblank_lock) ' cog 6
-dsp.start(@exmem_mailbox,AUDIO_LEFT,AUDIO_RIGHT) ' cog 7
+gpu.start(@exmem_mailbox,@funscii) ' cog 6
+cpu.start(@exmem_mailbox,vblank_lock) ' cog 7
 
 repeat
   case tmp:=long[FUNC_MAILBOX]
