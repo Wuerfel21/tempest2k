@@ -8,6 +8,8 @@ CON
 SAMPLE_RATE = 44_100
 MAX_CHANNELS = 16
 
+DEBUG_DISABLE = true ' Debugging causes HDMI audio to glitch
+
 FADE_SPEED = SAMPLE_RATE/100 ' higher is slower
 
 ' Hardcoded for 44100Hz (3546895<<32)/44100)
@@ -20,6 +22,7 @@ PUB start(mailbox,l,r,digmb)
   rpin := r
   mbpin := digmb
   sample_period := clkfreq/SAMPLE_RATE
+  debug("DSP sample period ",udec(sample_period))
   exmem_mailbox := mailbox
   coginit(COGEXEC_NEW,@entry,0)
 
@@ -36,8 +39,8 @@ entry
               mul pa,#12
               add exmem_mailbox,pa
 
-              wrpin ##P_DAC_75R_2V|P_OE|P_DAC_DITHER_RND,lpin
-              wrpin ##P_DAC_75R_2V|P_OE|P_DAC_DITHER_RND,rpin
+              wrpin ##P_DAC_75R_2V|P_OE|P_DAC_DITHER_PWM,lpin
+              wrpin ##P_DAC_75R_2V|P_OE|P_DAC_DITHER_PWM,rpin
               wxpin sample_period,lpin
               wxpin sample_period,rpin
               mov ijmp1,#atn_isr
