@@ -398,7 +398,7 @@ tran_pending  long 0
 tran_current  long -1
 
 dac_center    long $7F80
-dac_scas      long $7F80
+dac_scas      long $3FC0
 
 clamp_min     long -$7FFF
 clamp_max     long +$7FFF
