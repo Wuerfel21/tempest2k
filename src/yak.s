@@ -1612,7 +1612,7 @@ draw_blueflip: lea blueflipper,a1
 	bra ccdraw
 
 draw_adroid: cmp #2,20(a6)	;check for are we zapping someone
-	bne.s dadr
+	bne dadr
 	movem.l d0-d5,-(a7)
 	move.l #192,xcent
 	move.l #120,d6
@@ -7403,7 +7403,7 @@ pingzz:
 	move.l #dscal,a1		;for DOWN
 	move.l #dang,a2		;for LEFT
 	move.l #iang,a3		;for RIGHT
-	bra.s gjoy		;do joy con
+	bra gjoy		;do joy con
 
 dang:	btst.b #5,pad_now+2
 	beq.s aang1
@@ -13295,7 +13295,7 @@ RBeasts: move d7,-(a7)
 nxbeast: move (a7)+,d7
  lea 64(a2),a2		;do 'em all 
  dbra d7,RBeasts
- bra.s StopList		;put a stopobject on the end  
+ bra StopList		;put a stopobject on the end  
 
 postfixups: dc.l make_rmw,make_trans
 
