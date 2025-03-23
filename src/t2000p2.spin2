@@ -115,7 +115,7 @@ ifnot NO_FS
   pmf := c.fopen(@"/fs/PADMAP.TXT",@"r")
   if pmf
     tmp := padmap.parse(long[$68],long[$6C],@c.fgetc,pmf,@"tempest2000")
-    c.sprintf(@string_buffer,@"PADMAP.TXT loaded, %d rules",tmp)
+    c.snprintf(@string_buffer,64,@"PADMAP.TXT loaded, %d rules",tmp)
     screentext(@string_buffer,37,25,1,1,$CF48)
     c.printf(string("%s",10),@string_buffer)
     c.fclose(pmf)
@@ -136,7 +136,9 @@ waitms(1500)
 
 ifnot NO_FS
   if load_rodata() < 0
-    c.printf(string("oops error %s",10),c.strerror(errno))
+    c.snprintf(@string_buffer,64,@"load error: %s",c.strerror(errno))
+    screentext(@string_buffer,37,34,1,1,$CFF0)
+    c.printf(string("%s",10),@string_buffer)
     repeat
   'repeat
 
@@ -331,9 +333,9 @@ repeat
     'quit ' debug: don't load all the data gunk
 c.fclose(f)
 c.printf(string("Loaded %d bytes of rodata with CRC %08X",10),ptr,crc)
-tmp := __builtin_alloca(64)
-c.sprintf(tmp,@"rodata CRC: %08X",crc)
-screentext(tmp,90,110,1,1,$8888)
+
+c.snprintf(@string_buffer,64,@"rodata CRC: %08X",crc)
+screentext(@string_buffer,90,110,1,1,$8888)
 
 
 PRI crc_chunk(running, ptr, len) : crc | w,poly
