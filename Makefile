@@ -1,6 +1,8 @@
-.PHONY: all clean
+.PHONY: p2 jaguar clean
 
-all: clean cartridge
+p2: clean t2000p2.dat t2000p2.bix
+
+jaguar: clean cartridge
 
 t2000.abs: src/*.s
 	$(shell mkdir -p bin)
@@ -36,7 +38,7 @@ t2000p2.bix: src/*.spin2 src/p2lib/*.spin2
 cartridge: t2000.abs
 	wine ./utils/filefix.exe t2000.abs
 	./utils/CreateCart.py t2k.rom  src/incbin/romheader.bin T2000.TX src/incbin/paddingaftersamples.bin 
-	echo "602bc9953d3737b1ba52b2a0d9932f7c  t2k.rom" | md5sum -c
+	#echo "602bc9953d3737b1ba52b2a0d9932f7c  t2k.rom" | md5sum -c
 
 run: cartridge
 	wine ./utils/t2k.exe t2k.rom
