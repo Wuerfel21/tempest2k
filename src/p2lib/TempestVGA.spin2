@@ -341,7 +341,7 @@ long 2              ' Alt-res NCO
 long 0              ' Unused
 long 2              ' Guard Bands (HDMI only - subtracts from H.BP)
 
-timing_lcd6_320x240 '' TODO broken for 512px
+timing_lcd6_320x240
 long VIDEO_CLKFREQ  ' CLKFREQ
 long 1              ' active line multiplier
 long 8              ' V front porch
