@@ -107,12 +107,11 @@ ifnot NO_FS
   c.printf(string("after mount",10))
   pmf := c.fopen(@"/fs/PADMAP.TXT",@"r")
   if pmf
-    tmp := padmap.parse(long[$68],long[$6C],@c.fgetc,pmf,@"tempest2000")
-    c.sprintf(@string_buffer,@"PADMAP.TXT loaded, %d rules",tmp)
+    tmp := padmap.parse(usb.get_emupad_rule_buffer(),usb.EMUPAD_MAX_RULES,@c.fgetc,pmf,@"tempest2000")
+    c.snprintf(@string_buffer,64,@"PADMAP.TXT loaded, %d rules",tmp)
     screentext(@string_buffer,37,25,1,1,$CF48)
     c.printf(string("%s",10),@string_buffer)
     c.fclose(pmf)
-  long[$68] := 0
   c.printf(string("after padmap",10))
 
 
