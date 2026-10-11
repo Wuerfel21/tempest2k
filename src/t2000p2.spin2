@@ -353,7 +353,7 @@ crc := !running
 crc := !crc
 
 
-PRI exmem_start() | tmp,cogs,banks,i,sizelen
+PRI exmem_start() | tmp,cogs,banks,i,sizelen,ctrlmb
 
 tmp := @exmem_boot 'c.malloc(8*4+8*4+32*4)
 cogs := @exmem_cogs
@@ -419,7 +419,22 @@ repeat i from 0 to HYPER_BANKS-1
 exmem_mailbox[0] := -1
 cogs := exmem.getDriverAddr()
 exmem_cog := coginit(COGEXEC_NEW,cogs,tmp)+1
-repeat while exmem_mailbox[0] ' wait for init so data structures can go dead
+ctrlmb := @exmem_mailbox+(exmem_cog-1)*12
+repeat while exmem_mailbox[0]
+
+#ifdef USE_HYPER
+' NEED to set latency register
+repeat i from 0 to HYPER_BANKS-1
+  long[ctrlmb][2] := $01_00_00_00
+  long[ctrlmb][1] := $6000 | ($8F0F<<16) | (((HYPER_LATENCY-5)&$f)<<20)
+  long[ctrlmb][0] := exmem.R_SETREG + (i<<24) '+ cogid()
+  repeat while long[ctrlmb][0]
+  ' possible 2nd die
+  long[ctrlmb][2] := $01_00_00_00
+  long[ctrlmb][1] := $6008 | ($8F0F<<16) | (((HYPER_LATENCY-5)&$f)<<20)
+  long[ctrlmb][0] := exmem.R_SETREG + (i<<24) '+ cogid()
+  repeat while long[ctrlmb][0]
+#endif
 
 PRI exmem_stop()
 if exmem_cog
