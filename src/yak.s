@@ -539,8 +539,7 @@ zaqw: move.b d2,wonmsg+7		;set who won...
 	; upload screen3
 	move.l #hub_screen,a0
 	move.l #ps_screen3,a1
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 	move.l #MIKOGPU_CLEAR,GPU_MAILBOX
 .clrwait2:
 	tst.l GPU_MAILBOX
@@ -582,8 +581,7 @@ dobeastly:
 	move.l #hub_screen,a0
 	move.l a0,gpu_screen
 	move.l #ps_tmpscreen,a1
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 	move.l #MIKOGPU_CLEAR,GPU_MAILBOX
 .clrwait:
 	tst.l GPU_MAILBOX
@@ -605,13 +603,11 @@ stvpa:	move #40,d0
 	; upload screen3
 	move.l #hub_screen,a0
 	move.l #ps_screen3,a1
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 	; restore temp screen
 	move.l #ps_tmpscreen,a0
 	move.l #hub_screen,a1
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 .endif
 
 	jsr settrue3
@@ -684,8 +680,7 @@ glocube: move #7000,attime
 	move.l dscreen,a0
 	move.l #hub_screen,a1
 	move.l a1,gpu_screen
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 .endif
 	move frames,d0
 	lea sines,a0
@@ -755,8 +750,7 @@ glopyr:	lea sines,a0
 	move.l dscreen,a0
 	move.l #hub_screen,a1
 	move.l a1,gpu_screen
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 .endif
 
 	lea sines,a0
@@ -986,8 +980,7 @@ nbmsg:	lea cfont,a1
 	; upload screen3
 	move.l gpu_screen,a0
 	move.l #ps_screen3,a1
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 .endif
 
  	lea beasties+64,a0
@@ -1972,8 +1965,7 @@ gofeed:
 	move.l dscreen,a0
 	move.l #hub_screen,a1
 	move.l a1,gpu_screen
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 .endif
 
 
@@ -2076,8 +2068,7 @@ clearfeed: move.l #(PITCH1|PIXEL16|WID384),d0
 	move.l dscreen,a0
 	move.l #hub_screen,a1
 	move.l a1,gpu_screen
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 .endif
 
 	move #10,d1
@@ -2162,8 +2153,7 @@ mypal:	move.l #pic5,a0
 	; upload screen3
 	move.l gpu_screen,a0
 	move.l #ps_screen3,a1
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 	; clear hub screen in anticipation of feedback effect
 	move.l #MIKOGPU_CLEAR,GPU_MAILBOX
 .clrwait:
@@ -2261,8 +2251,7 @@ versiondraw:
 	move.l dscreen,a0
 	move.l #hub_screen,a1
 	move.l a1,gpu_screen
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 .endif
 
 	tst v_on
@@ -4402,7 +4391,11 @@ viccount: sub #1,pongx
 
 failcount: sub #1,pongx
 	bpl rrrts
+.if ALWAYS_CHEAT
 	move #-1,x_end
+.else
+	move #-1,x_end
+.endif	
 	move #1,screen_ready
 	rts
 
@@ -4457,9 +4450,7 @@ failfade: move.l #(PITCH1|PIXEL16|WID384),d0
 	move.l dscreen,a0
 	move.l #hub_screen,a1
 	move.l a1,gpu_screen
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
-	rts
+	jmp p2scrcopy
 .endif
 
 
@@ -4510,8 +4501,7 @@ m7test: tst psycho
 	move.l dscreen,a0
 	move.l #hub_screen,a1
 	move.l a1,gpu_screen
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 .endif
 
 
@@ -4997,8 +4987,7 @@ clent:	move.b #'.',(a0)+
 	; upload screen3
 	move.l gpu_screen,a0
 	move.l #ps_screen3,a1
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 .endif
 
 	lea fw_test,a0
@@ -5270,8 +5259,7 @@ ctl:	movem.l d0/a0,-(a7)
 .if ^^defined PROPELLER
 	move.l gpu_screen,a0
 	move.l #ps_screen3,a1
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 .endif
 
 
@@ -5409,8 +5397,7 @@ snopal2: jsr pager
 	; upload screen3
 	move.l gpu_screen,a0
 	move.l #ps_screen3,a1
-	move.l #screensize,d0
-	dc.w MIKO68K_BURSTCOPY
+	jsr p2scrcopy
 .endif
 	jsr hisettrue3
 ;	move #$7fff,attime
@@ -12420,7 +12407,6 @@ dboo:	tst sync
 .if ^^defined PROPELLER
 db:	
 	; upload screen
-	; P2 TODO should really be a GPU command so irq can hit during this
 	bsr.s p2scrupload
 	move #1,sync			;request sync
 dboo:	tst sync
@@ -12431,15 +12417,27 @@ dboo:	tst sync
 p2scrupload:
 	tst.w screen_uploaded ; don't do it if screen already uploaded
 	bne.s .nope
-	movem.l a0/a1/d0,-(a7)
+	movem.l a0/a1/d0/d1,-(a7)
 	move.l dscreen,a1
 	move.l #hub_screen,a0
-	move.l #screensize,d0
+	bsr p2scrcopy
 	dc.w MIKO68K_BURSTCOPY
-	movem.l (a7)+,a0/a1/d0
+	movem.l (a7)+,a0/a1/d0/d1
 .nope:
 	clr.w screen_uploaded
 	move #1,screen_ready
+	rts
+
+p2scrcopy:
+	; copy screen from a0 to a1
+	; do it in chunks because burstcopy blocks interrupts
+	move.l #screensize/16,d0
+	moveq.l #16-1,d1
+.loop:
+	dc.w MIKO68K_BURSTCOPY
+	add.l d0,a0
+	add.l d0,a1
+	dbra d1,.loop
 	rts
 
 .endif
