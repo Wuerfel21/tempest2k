@@ -12313,9 +12313,9 @@ mit:	move.l d0,(a0)
 	move #-1,20(a0)		; post creation mod: -1=none, so default
 	rts
 
-wd: tst frames
- bpl wd
- rts
+;wd: tst frames
+; bpl wd
+; rts
 
 ; This loop runs the GPU/Blitter code.  I found that if you
 ; started up the GPU/Blitter pair from inside the FRAME
@@ -12421,7 +12421,6 @@ p2scrupload:
 	move.l dscreen,a1
 	move.l #hub_screen,a0
 	bsr p2scrcopy
-	dc.w MIKO68K_BURSTCOPY
 	movem.l (a7)+,a0/a1/d0/d1
 .nope:
 	clr.w screen_uploaded
